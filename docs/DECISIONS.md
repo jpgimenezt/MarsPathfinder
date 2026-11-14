@@ -35,3 +35,11 @@
 ## ADR-008 — Cache de fuentes por capa y pruebas sin servicios reales
 **Decisión:** mantener una instancia WMTS por capa durante la vida del mapa; solo el primer encendido consulta GetCapabilities. Apagar no destruye fuente; al volver a encender, conserva su estado y ruta. Una petición GetCapabilities fallida se puede reintentar tras alternar la capa. Al desmontar se abortan solicitudes pendientes.
 **Evidencia:** pruebas unitarias con fuente simulada y pruebas HTTP reales separadas, sin depender de Mars Trek durante `npm run test`.
+
+## ADR-009 — Huella visible y selección de puntos separadas
+**Decisión:** el límite de navegación local es el bbox CTX publicado (`CTX_EXTENT`), pero la edición de A/P/B permanece limitada al ROI demostrativo. El encuadre inicial deja margen para alejar; los controles de zoom se deshabilitan al alcanzar límites. Solo un modo explícito «Colocar»/«Mover» acepta un clic para cambiar la ruta; «Explorar» nunca la modifica. Se permite deshacer y restablecer.
+**Motivo:** limitar `View.extent` al ROI impedía alejar en pantallas grandes y confundía la navegación con la planificación. El bbox no verifica cobertura continua ni la transitabilidad.
+
+## ADR-010 — Contexto MOLA global, sin planificación planetaria
+**Decisión:** alternar entre dos vistas OpenLayers del mismo mapa: Jezero con sus fuentes locales y una vista global 2D que muestra solo el WMTS MOLA existente. El acercamiento global termina en el nivel correspondiente a la última matriz MOLA z7 (zoom 8 de `View`); puntos y segmentos quedan ocultos, la edición se bloquea, el plan se conserva y se recupera al regresar.
+**Motivo:** ofrecer contexto planetario sin extrapolar CTX/THEMIS locales ni convertir MOLA sombreado en altitudes numéricas. No hay navegación automática, datos globales de obstáculos ni 3D. Su visualización no valida detalle físico ni seguridad de una EVA.
