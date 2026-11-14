@@ -26,6 +26,14 @@ export async function loadWmts(source: SourceRecord, signal: AbortSignal): Promi
   if (!options || code !== marsProjection.getCode()) {
     throw new Error('PROJECTION_MISMATCH: revisar cuadrícula WMTS')
   }
-  if (!options.tileGrid?.getFullTileRange(0)) throw new Error('GetCapabilities: matriz WMTS inválida')
+  const grid = options.tileGrid
+  if (!grid) throw new Error('GetCapabilities: matriz WMTS inválida')
+  for (let zoom = 0; zoom < grid.getResolutions().length; zoom++) {
+    const range = grid.getFullTileRange(zoom)
+    if (!Number.isFinite(grid.getResolution(zoom)) ||
+        !range || ![range.minX, range.maxX, range.minY, range.maxY].every(Number.isFinite)) {
+      throw new Error('GetCapabilities: matriz WMTS inválida')
+    }
+  }
   return new WMTS({ ...options, crossOrigin: 'anonymous', attributions: source.attribution })
 }

@@ -12,8 +12,8 @@ En el mapa del sector de Jezero, activá CTX, MOLA y THEMIS para comparar imáge
 
 ## Fuentes y límites
 
-- MRO CTX controlado Jezero, MGS MOLA sombreado visual y Mars Odyssey THEMIS IR diurno desde [NASA Mars Trek WMTS](https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars); se parsea GetCapabilities, sin asumir esquema XYZ. Las capas se cargan en vivo; una sola tesela CTX original incluida localmente funciona como respaldo estático **solo** dentro de su huella.
+- MRO CTX controlado Jezero, MGS MOLA sombreado visual y Mars Odyssey THEMIS IR diurno desde [NASA Mars Trek WMTS](https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars); se parsea GetCapabilities, sin asumir esquema XYZ. Cada fuente se obtiene una sola vez por sesión del mapa y las capas se pueden alternar. Una sola tesela CTX original incluida localmente funciona como respaldo estático **solo** dentro de su huella. El [producto original USGS](https://www.usgs.gov/data/mars-2020-terrain-relative-navigation-context-camera-orthorectified-image-mosaic) se publicó bajo CC0 1.0; ver matices en `docs/DATA_SOURCES.md`.
 - CRS de representación `urn:ogc:def:crs:EPSG::104905`, coordenadas angulares orientales; el cálculo de km usa Marte y no WGS84 terrestre. La latitud exacta del producto y la alineación visual de fuentes aún requieren validación.
 - No hay DEM numérico validado: MOLA sombreado no da cotas. No se calculan pendientes ni se declara una ruta segura. Sin datos locales de rocas, clima o radiación; THEMIS no proporciona temperatura en tiempo real.
 
-Consultar [fuentes y pruebas](docs/DATA_SOURCES.md), [decisiones](docs/DECISIONS.md) y [validación](docs/VALIDATION.md).
+Consultar [fuentes y pruebas](docs/DATA_SOURCES.md), [alineación y límites](docs/ALIGNMENT.md), [decisiones](docs/DECISIONS.md), [validación](docs/VALIDATION.md) y [despliegue Vercel](docs/DEPLOYMENT.md). Demo pública: **aún no desplegada**.

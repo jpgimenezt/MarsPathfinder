@@ -16,11 +16,12 @@ import CircleStyle from 'ol/style/Circle.js'
 import Text from 'ol/style/Text.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
 import { sources, type LayerId } from '../data/sourceManifest'
-import { loadWmts } from '../features/map/wmtsSources'
+import WMTS from 'ol/source/WMTS.js'
 import { FALLBACK_EXTENT, insideRoi, marsProjection, ROI } from '../features/map/marsProjection'
+import { WmtsLayerManager, type LayerState } from '../features/map/wmtsLayerManager'
 import type { MarsPoint } from '../features/route/marsDistance'
 
-export type LayerState = 'cargando' | 'visible' | 'error' | 'sin cobertura' | 'apagada'
+export type { LayerState } from '../features/map/wmtsLayerManager'
 interface Props {
   enabled: Record<LayerId, boolean>
   opacity: Record<LayerId, number>
@@ -36,9 +37,10 @@ export function MapView({ enabled, opacity, points, nextPoint, onPoint, onLayerS
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
-  const layers = useRef<Record<LayerId, TileLayer>>({
-    ctx: new TileLayer(), mola: new TileLayer(), themis: new TileLayer(),
+  const layers = useRef<Record<LayerId, TileLayer<WMTS>>>({
+    ctx: new TileLayer<WMTS>(), mola: new TileLayer<WMTS>(), themis: new TileLayer<WMTS>(),
   })
+  const manager = useRef<WmtsLayerManager | null>(null)
   const vectors = useRef(new VectorSource())
   const pointHandler = useRef(onPoint)
   const stateHandler = useRef(onLayerState)
@@ -72,46 +74,25 @@ export function MapView({ enabled, opacity, points, nextPoint, onPoint, onLayerS
       view: new View({ projection: marsProjection, center: [77.43, 18.38], zoom: 10, minZoom: 7, maxZoom: 13, extent: ROI }),
       controls: defaultControls({ rotate: false }),
     })
+    manager.current = new WmtsLayerManager(layers.current, reportHandler.current)
     instance.getView().fit(ROI, { padding: [24, 24, 24, 24], maxZoom: 11 })
     instance.on('singleclick', event => {
       if (nextHandler.current >= 3 || !insideRoi(event.coordinate)) return
       pointHandler.current([event.coordinate[0], event.coordinate[1]])
     })
     map.current = instance
-    return () => { instance.setTarget(undefined); instance.dispose(); map.current = null; fallback.current = null }
+    return () => {
+      manager.current?.dispose()
+      manager.current = null
+      instance.setTarget(undefined)
+      instance.dispose()
+      map.current = null
+      fallback.current = null
+    }
   }, [])
 
   useEffect(() => {
-    const controller = new AbortController()
-    for (const source of sources) {
-      const layer = layers.current[source.id]
-      if (!enabled[source.id]) {
-        layer.setVisible(false)
-        reportHandler.current(source.id, 'apagada')
-        continue
-      }
-      layer.setVisible(true)
-      reportHandler.current(source.id, 'cargando')
-      void loadWmts(source, controller.signal).then(wmts => {
-        if (controller.signal.aborted) return
-        let successes = 0
-        let errors = 0
-        const report = () => {
-          if (controller.signal.aborted) return
-          reportHandler.current(source.id, successes > 0 ? 'visible' : errors > 0 ? 'error' : 'cargando')
-        }
-        wmts.on('tileloadend', () => { successes++; report() })
-        wmts.on('tileloaderror', () => { errors++; report() })
-        layer.setSource(wmts)
-      }).catch(error => {
-        if (!controller.signal.aborted) {
-          layer.setSource(null)
-          reportHandler.current(source.id, 'error')
-          console.warn(`Fuente ${source.id}:`, error)
-        }
-      })
-    }
-    return () => controller.abort()
+    for (const source of sources) manager.current?.setEnabled(source.id, enabled[source.id])
   }, [enabled])
 
   useEffect(() => {
