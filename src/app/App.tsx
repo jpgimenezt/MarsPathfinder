@@ -97,14 +97,22 @@ export function App() {
     <div className="app">
       <header className="header">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">⌾</span>
+          <div className="ares-insignia" aria-hidden="true">
+            <svg viewBox="0 0 40 40" width="28" height="28" className="ares-logo-svg">
+              <polygon points="20,2 38,12 38,28 20,38 2,28 2,12" fill="none" stroke="#00f0ff" strokeWidth="2" />
+              <polygon points="20,9 31,15 31,25 20,31 9,25 9,15" fill="rgba(0, 240, 255, 0.15)" stroke="#ff7300" strokeWidth="1.5" />
+              <circle cx="20" cy="20" r="3.5" fill="#ffffff" />
+            </svg>
+          </div>
           <div>
-            <span className="eyebrow">NASA SPACE APPS CHALLENGE 2026 // SISTEMA AEROESPACIAL</span>
-            <h1>Ares<span>Nav</span></h1>
+            <span className="eyebrow">NASA SPACE APPS 2026 // FLIGHT OPERATIONS</span>
+            <h1 className="ares-brand-title">
+              ARES<span>-NAV</span> <span className="ares-brand-sub">TACTICAL SYSTEM</span>
+            </h1>
           </div>
         </div>
 
-        {/* Selector Central de Modos de Exploración ARES */}
+        {/* Selector Central Segmentado FUI */}
         <nav className="header-nav-modes" aria-label="Selector de visualizador ARES">
           <button
             type="button"
@@ -112,7 +120,8 @@ export function App() {
             onClick={() => openGaleTerrain(true)}
             title="Visualizador 3D de terreno de Gale Crater y Mount Sharp con descenso continuo Google Earth"
           >
-            🏔 Terreno 3D Gale
+            <span className="nav-btn-code">01</span>
+            <span className="nav-btn-text">GALE 3D</span>
           </button>
           <button
             type="button"
@@ -120,7 +129,8 @@ export function App() {
             onClick={() => setScreen('globe')}
             title="Globo 3D planetario de Marte (MGS MOLA / Viking)"
           >
-            🌐 Globo 3D
+            <span className="nav-btn-code">02</span>
+            <span className="nav-btn-text">GLOBO ORBITAL</span>
           </button>
           <button
             type="button"
@@ -131,7 +141,8 @@ export function App() {
             }}
             title="Mapa cartográfico 2D de Jezero Crater con capas WMTS"
           >
-            🗺 Mapa 2D Jezero
+            <span className="nav-btn-code">03</span>
+            <span className="nav-btn-text">JEZERO 2D</span>
           </button>
           <button
             type="button"
@@ -139,22 +150,27 @@ export function App() {
             onClick={() => setIsAgentOpen(prev => !prev)}
             title="Consola Táctica Copiloto ARES-NAV (IA con verificación geodésica)"
           >
-            🤖 Copiloto Táctico
+            <span className="nav-mode-pulse" aria-hidden="true" />
+            <span className="nav-btn-code">AI</span>
+            <span className="nav-btn-text">COPILOTO</span>
           </button>
         </nav>
 
         <div className="header-right">
+          <div className="telemetry-block">
+            <span className="telemetry-micro">MET CLOCK</span>
+            <span className="telemetry-clock">SOL 3148 · 14:22 UTC-M</span>
+          </div>
           <span className="header-location">
             <span className="status-dot" />
             {screen === 'terrain3d'
-              ? 'GALE CRATER · MOUNT SHARP'
+              ? 'GALE CRATER // 3D'
               : screen === 'globe'
-              ? 'MARTE · GLOBO 3D'
+              ? 'MARTE GLOBAL // 3D'
               : scope === 'global'
-              ? 'MARTE · VISTA GLOBAL'
-              : 'JEZERO CRATER · MAPA 2D'}
+              ? 'MARTE GLOBAL // 2D'
+              : 'JEZERO CRATER // 2D'}
           </span>
-          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span>
         </div>
       </header>
 
@@ -537,14 +553,22 @@ export function App() {
       )}
 
       <footer className="footer">
-        <span>
-          {screen === 'terrain3d'
-            ? 'Relieve 3D de Gale Crater y Mount Sharp (Aeolis Mons) generado a partir de perfiles hipsométricos MGS MOLA y HRSC. Hitos científicos documentados por MSL Curiosity (NASA/JPL-Caltech/MSSS).'
-            : screen === 'globe'
-            ? 'Globo esférico: relieve MGS MOLA NASA/USGS o mosaico Viking MDIM 2.1 colorizado NASA Ames/USGS. Jezero: 18.41°N, 77.69°E; Gale: 5.37°S, 137.44°E (USGS/IAU).'
-            : 'Fondo de respaldo: tesela CTX real. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS.'}
-        </span>
-        <strong>Prototipo independiente · No apto para uso operacional.</strong>
+        <div className="footer-status-left">
+          <span className="footer-status-badge">● DSN ONLINE</span>
+          <span className="footer-datum">DATUM: AREOIDE 6.1 MBAR · ESFERA RM = 3,389,500 M</span>
+        </div>
+        <div className="footer-status-center">
+          <span>
+            {screen === 'terrain3d'
+              ? 'TERRENO 3D: MGS MOLA + HRSC DTM // HITOS MSL CURIOSITY (NASA/JPL-Caltech)'
+              : screen === 'globe'
+              ? 'GLOBO ESFÉRICO: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)'
+              : 'ORBITAL GIS: MRO CTX + MGS MOLA + MARS ODYSSEY THEMIS (NASA/JPL/ASU/USGS)'}
+          </span>
+        </div>
+        <div className="footer-status-right">
+          <strong>PROTOTIPO INDEPENDIENTE // NO CERTIFICADO PARA VUELO</strong>
+        </div>
       </footer>
 
       <AresAgentChat
