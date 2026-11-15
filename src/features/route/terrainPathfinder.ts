@@ -50,6 +50,8 @@ export interface TerrainRoute {
   expandedNodes: number
   /** Relative comparison score; not physical energy or safety. */
   relativeCost: number
+  /** Conservative local proxy for each rendered segment; not obstacle detection. */
+  segmentSlopeDegrees: number[]
 }
 export type TerrainRouteResult = TerrainRoute | { ok: false; reason: TerrainRouteFailure }
 
@@ -70,6 +72,7 @@ function validGrid(g: TerrainGrid): boolean {
     && g.bounds.length === 4 && g.bounds.every(Number.isFinite)
     && g.bounds[0] < g.bounds[2] && g.bounds[1] < g.bounds[3]
     && Number.isFinite(g.gridStepMeters) && g.gridStepMeters > 0
+    && Number.isFinite(g.nominalSourceResolutionMeters) && g.nominalSourceResolutionMeters > 0
 }
 
 function indexFor(g: TerrainGrid, point: MarsPoint): number {
@@ -163,6 +166,15 @@ export function findTerrainRoute(
   if (!isPassable(grid, source, config.maxSlopeDegrees)
       || !isPassable(grid, target, config.maxSlopeDegrees))
     return { ok: false, reason: 'steep-endpoint' }
+  if (source === target) {
+    const slope = grid.maxSlopeDegrees[source] as number
+    return {
+      ok: true, points: [start, goal], distanceMeters: marsDistance(start, goal),
+      directMeters: marsDistance(start, goal), ascentMeters: 0, descentMeters: 0,
+      maximumSlopeDegrees: slope, expandedNodes: 0, relativeCost: marsDistance(start, goal),
+      segmentSlopeDegrees: [slope],
+    }
+  }
 
   const size = grid.width * grid.height
   const costs = new Float64Array(size).fill(Infinity)
@@ -230,6 +242,7 @@ export function findTerrainRoute(
   let ascentMeters = 0
   let descentMeters = 0
   let maximumSlopeDegrees = 0
+  const segmentSlopeDegrees: number[] = []
   // Elevation metrics are calculated along raster cell centres. Endpoint
   // elevation is nearest-cell estimated, not an independently sampled value.
   for (let i = 1; i < cells.length; i++) {
@@ -240,9 +253,11 @@ export function findTerrainRoute(
     distanceMeters += Math.hypot(horizontal, dz)
     ascentMeters += Math.max(0, dz)
     descentMeters += Math.max(0, -dz)
-    maximumSlopeDegrees = Math.max(maximumSlopeDegrees,
+    const segmentSlope = Math.max(
       Math.atan2(Math.abs(dz), horizontal) * 180 / Math.PI,
       grid.maxSlopeDegrees[prev] as number, grid.maxSlopeDegrees[next] as number)
+    segmentSlopeDegrees.push(segmentSlope)
+    maximumSlopeDegrees = Math.max(maximumSlopeDegrees, segmentSlope)
   }
   // Include sub-cell start/end offsets in the approximate distance.
   distanceMeters += marsDistance(start, sampled[0]) +
@@ -251,6 +266,11 @@ export function findTerrainRoute(
     ok: true, points, distanceMeters, directMeters: marsDistance(start, goal),
     ascentMeters, descentMeters, maximumSlopeDegrees,
     expandedNodes: expanded, relativeCost: costs[target],
+    segmentSlopeDegrees: [
+      grid.maxSlopeDegrees[cells[0]] as number,
+      ...segmentSlopeDegrees,
+      grid.maxSlopeDegrees[cells[cells.length - 1]] as number,
+    ],
   }
 }
 
