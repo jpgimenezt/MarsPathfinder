@@ -58,6 +58,54 @@ export function JarvisAiCore({
         {/* Aura de energía de fondo */}
         <circle cx="50" cy="50" r="32" fill={`url(#${gradientId})`} className="jarvis-pulse-glow" />
 
+        {/* Órbitas 3D elípticas que se proyectan y giran fuera del objeto */}
+        <g className="jarvis-outer-orbit orbit-alpha">
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="74"
+            ry="24"
+            fill="none"
+            stroke="#00f0ff"
+            strokeWidth="1.4"
+            strokeDasharray="16 8 4 8"
+            opacity="0.8"
+          />
+          <circle cx="124" cy="50" r="3.2" fill="#ffffff" filter={`url(#${filterId})`} className="orbit-particle-alpha" />
+          <circle cx="50" cy="26" r="1.6" fill="#00f0ff" />
+        </g>
+
+        <g className="jarvis-outer-orbit orbit-beta">
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="80"
+            ry="22"
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth="1.2"
+            strokeDasharray="22 10"
+            opacity="0.75"
+          />
+          <circle cx="50" cy="72" r="2.8" fill="#38bdf8" filter={`url(#${filterId})`} className="orbit-particle-beta" />
+          <circle cx="130" cy="50" r="1.8" fill="#ffffff" />
+        </g>
+
+        <g className="jarvis-outer-orbit orbit-gamma">
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="68"
+            ry="28"
+            fill="none"
+            stroke="#7dd3fc"
+            strokeWidth="1.1"
+            strokeDasharray="10 8"
+            opacity="0.65"
+          />
+          <circle cx="118" cy="50" r="2.4" fill="#ffffff" className="orbit-particle-gamma" />
+        </g>
+
         {/* Anillo exterior con marcas de cuadrante (FUI / Jarvis ring) */}
         <circle
           cx="50"
@@ -300,7 +348,7 @@ export function AresAgentChat({
         >
           <div className="ares-fab-core-container">
             <span className="ares-fab-sonar-ping" aria-hidden="true" />
-            <JarvisAiCore size={32} className="ares-fab-jarvis" />
+            <JarvisAiCore size={36} className="ares-fab-jarvis" />
           </div>
           <div className="ares-fab-labels">
             <span className="ares-fab-badge">[IA TÁCTICA]</span>
@@ -321,6 +369,9 @@ export function AresAgentChat({
           }}
         >
           <div className="ares-agent-window">
+            {/* Emisión Aladino holográfica desde el icono */}
+            <div className="hud-genie-steam" aria-hidden="true" />
+
             {/* Haz de barrido láser holográfico de inicialización */}
             <div className="hud-laser-boot-beam" aria-hidden="true" />
 

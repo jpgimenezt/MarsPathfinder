@@ -14,6 +14,7 @@
   justify-content: center;
   flex-shrink: 0;
   vertical-align: middle;
+  overflow: visible;
 }
 
 .jarvis-core-svg {
@@ -35,9 +36,66 @@
 .jarvis-ring-inner-arc,
 .jarvis-iris-rays,
 .jarvis-pulse-glow,
-.jarvis-core-pulse {
+.jarvis-core-pulse,
+.jarvis-outer-orbit {
   transform-origin: 50px 50px;
   transform-box: fill-box;
+}
+
+/* Órbitas 3D externas que se proyectan y giran fuera del objeto */
+.orbit-alpha {
+  animation: orbitSpinAlpha 6.5s linear infinite;
+}
+
+.orbit-beta {
+  animation: orbitSpinBeta 8.5s linear infinite;
+}
+
+.orbit-gamma {
+  animation: orbitSpinGamma 5s linear infinite;
+}
+
+@keyframes orbitSpinAlpha {
+  0% { transform: rotate(-28deg); }
+  100% { transform: rotate(332deg); }
+}
+
+@keyframes orbitSpinBeta {
+  0% { transform: rotate(38deg); }
+  100% { transform: rotate(-322deg); }
+}
+
+@keyframes orbitSpinGamma {
+  0% { transform: rotate(-68deg); }
+  100% { transform: rotate(292deg); }
+}
+
+/* Partículas cuánticas orbitales con pulso y resplandor */
+.orbit-particle-alpha {
+  animation: particlePulseAlpha 2s ease-in-out infinite alternate;
+}
+
+.orbit-particle-beta {
+  animation: particlePulseBeta 2.5s ease-in-out infinite alternate;
+}
+
+.orbit-particle-gamma {
+  animation: particlePulseGamma 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes particlePulseAlpha {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 12px #00f0ff); }
+}
+
+@keyframes particlePulseBeta {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; filter: drop-shadow(0 0 8px #38bdf8); }
+}
+
+@keyframes particlePulseGamma {
+  0% { opacity: 0.4; }
+  100% { opacity: 0.95; filter: drop-shadow(0 0 6px #7dd3fc); }
 }
 
 /* Keyframes de rotación cinéticas J.A.R.V.I.S. */
@@ -107,6 +165,21 @@
 }
 
 /* Aceleración en hover y en estado activo / procesamiento */
+.jarvis-core-container:hover .orbit-alpha,
+.jarvis-core-container.is-active .orbit-alpha {
+  animation-duration: 2.6s;
+}
+
+.jarvis-core-container:hover .orbit-beta,
+.jarvis-core-container.is-active .orbit-beta {
+  animation-duration: 3.4s;
+}
+
+.jarvis-core-container:hover .orbit-gamma,
+.jarvis-core-container.is-active .orbit-gamma {
+  animation-duration: 2s;
+}
+
 .jarvis-core-container:hover .jarvis-ring-segmented,
 .jarvis-core-container.is-active .jarvis-ring-segmented {
   animation-duration: 3.2s;
@@ -145,6 +218,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   cursor: pointer;
   pointer-events: auto;
+  overflow: visible;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
@@ -168,6 +242,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 
 .ares-fab-sonar-ping {
@@ -211,7 +286,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Modal Window & Futuristic Opening Holographic Animation
+   Modal Window & Futuristic Genie Opening Animation (Efecto Aladino)
    -------------------------------------------------------------------------- */
 .ares-agent-overlay {
   position: fixed;
@@ -221,10 +296,10 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.08) 0%, rgba(4, 9, 14, 0.88) 75%), rgba(4, 9, 14, 0.85);
+  background: radial-gradient(circle at 92% 92%, rgba(0, 240, 255, 0.16) 0%, rgba(4, 9, 14, 0.88) 55%), rgba(4, 9, 14, 0.84);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  animation: hudOverlayBoot 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: hudOverlayBoot 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes hudOverlayBoot {
@@ -250,42 +325,85 @@
   border: 1px solid rgba(0, 240, 255, 0.45);
   border-radius: 12px;
   box-shadow: 
-    0 0 45px rgba(0, 240, 255, 0.22),
+    0 0 50px rgba(0, 240, 255, 0.25),
     0 25px 70px rgba(0, 0, 0, 0.88),
     inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
   overflow: hidden;
   color: #f1f5f9;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
-  transform-origin: center bottom;
-  animation: hudHologramDeploy 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity, filter;
+  transform-origin: 92% 92%;
+  animation: aladdinGenieDeploy 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter, clip-path;
 }
 
-/* Despliegue holográfico 3D con destello y expansión cibernética */
-@keyframes hudHologramDeploy {
+/* Efecto Aladino: brota y se expande desde el icono en la esquina inferior */
+@keyframes aladdinGenieDeploy {
   0% {
     opacity: 0;
-    transform: perspective(1200px) rotateX(9deg) scale(0.86) translateY(35px);
-    filter: blur(10px) brightness(1.75);
-    box-shadow: 0 0 70px rgba(0, 240, 255, 0.7);
+    transform: scale(0.03) translate(340px, 240px) skew(-16deg, -8deg);
+    filter: blur(16px) brightness(3.5);
+    border-radius: 50%;
+    clip-path: polygon(45% 0%, 55% 0%, 95% 100%, 85% 100%);
+    box-shadow: 0 0 90px rgba(0, 240, 255, 1);
   }
-  45% {
-    opacity: 0.95;
-    transform: perspective(1200px) rotateX(-1.5deg) scale(1.015) translateY(-3px);
-    filter: blur(1px) brightness(1.25);
+  28% {
+    opacity: 0.85;
+    transform: scale(0.35) translate(140px, 90px) skew(-8deg, -4deg);
+    filter: blur(6px) brightness(2.2);
+    border-radius: 36px;
+    clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 70% 100%);
   }
-  75% {
-    transform: perspective(1200px) rotateX(0.5deg) scale(0.998) translateY(1px);
-    filter: blur(0) brightness(1.05);
+  65% {
+    opacity: 0.98;
+    transform: scale(1.025) translate(-6px, -4px) skew(1.2deg, 0.6deg);
+    filter: blur(1px) brightness(1.2);
+    border-radius: 16px;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+  85% {
+    transform: scale(0.995) translate(2px, 1px) skew(-0.3deg, -0.1deg);
+    filter: blur(0px) brightness(1.05);
+    border-radius: 13px;
   }
   100% {
     opacity: 1;
-    transform: perspective(1200px) rotateX(0deg) scale(1) translateY(0);
+    transform: scale(1) translate(0, 0) skew(0deg, 0deg);
     filter: blur(0) brightness(1);
+    border-radius: 12px;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
     box-shadow: 
       0 0 45px rgba(0, 240, 255, 0.22),
       0 25px 70px rgba(0, 0, 0, 0.88),
       inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Vapor holográfico de emisión Aladino */
+.hud-genie-steam {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 260px;
+  height: 320px;
+  background: radial-gradient(circle at 100% 100%, rgba(0, 240, 255, 0.6) 0%, rgba(0, 240, 255, 0.2) 35%, transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+  z-index: 2;
+  animation: genieSteamVanish 0.75s ease-out forwards;
+}
+
+@keyframes genieSteamVanish {
+  0% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
   }
 }
 
@@ -938,6 +1056,13 @@
 @media (prefers-reduced-motion: reduce) {
   .hud-scanline,
   .hud-laser-boot-beam,
+  .hud-genie-steam,
+  .orbit-alpha,
+  .orbit-beta,
+  .orbit-gamma,
+  .orbit-particle-alpha,
+  .orbit-particle-beta,
+  .orbit-particle-gamma,
   .jarvis-ring-outer-ticks,
   .jarvis-orbital-nodes,
   .jarvis-ring-segmented,
