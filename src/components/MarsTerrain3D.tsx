@@ -24,6 +24,7 @@ import {
   Raycaster,
   RingGeometry,
   Scene,
+  SphereGeometry,
   SRGBColorSpace,
   Texture,
   TextureLoader,
@@ -82,10 +83,10 @@ interface EdlFlightTelemetry {
 }
 
 const REGION_BOUNDS = {
-  minLon: 137.20,
-  maxLon: 138.00,
-  minLat: -5.45,
-  maxLat: -4.50,
+  minLon: 136.75,
+  maxLon: 138.15,
+  minLat: -5.75,
+  maxLat: -4.45,
 }
 
 const TERRAIN_WIDTH = 280
@@ -119,6 +120,7 @@ export function MarsTerrain3D({
   const [selectedDiscovery, setSelectedDiscovery] = useState<ScientificDiscovery | null>(null)
   const [selectedColonyModule, setSelectedColonyModule] = useState<HabitatModuleConfig | null>(null)
   const [showLandingBriefing, setShowLandingBriefing] = useState(false)
+  const [showTraceabilityModal, setShowTraceabilityModal] = useState(false)
 
   const [hoveredInfo, setHoveredInfo] = useState<{ lon: number; lat: number; elev: number; slope: number } | null>(null)
   const [isCinematicPlaying, setIsCinematicPlaying] = useState(false)
@@ -170,6 +172,77 @@ export function MarsTerrain3D({
   const walkbackAssessment = useMemo(() => {
     return evaluateWalkbackLimit(totalRouteMeters)
   }, [totalRouteMeters])
+
+  // Desglose exhaustivo de trazabilidad de distancias y métricas geodésicas
+  const routeTelemetry = useMemo(() => {
+    if (!currentStops || routePointsList.length < 2) return null
+
+    const segments: {
+      fromId: StopId
+      toId: StopId
+      fromName: string
+      toName: string
+      horizontalMeters: number
+      distance3DMeters: number
+      startElevMeters: number
+      endElevMeters: number
+      deltaZMeters: number
+      avgSlopeDeg: number
+      estWalkHours: number
+      estRoverHours: number
+    }[] = []
+
+    let total3DMeters = 0
+    let totalGain = 0
+    let totalLoss = 0
+
+    for (let i = 1; i < routePointsList.length; i++) {
+      const p1 = routePointsList[i - 1]
+      const p2 = routePointsList[i]
+
+      const horizM = marsDistance(p1.point, p2.point)
+      const elev1 = getGaleElevation(p1.point[0], p1.point[1])
+      const elev2 = getGaleElevation(p2.point[0], p2.point[1])
+      const dz = elev2 - elev1
+
+      if (dz > 0) totalGain += dz
+      else totalLoss += Math.abs(dz)
+
+      const dist3D = Math.sqrt(horizM * horizM + dz * dz)
+      total3DMeters += dist3D
+
+      const slopeDeg = (Math.atan(Math.abs(dz) / (horizM || 1)) * 180) / Math.PI
+
+      segments.push({
+        fromId: p1.id,
+        toId: p2.id,
+        fromName: p1.name,
+        toName: p2.name,
+        horizontalMeters: horizM,
+        distance3DMeters: dist3D,
+        startElevMeters: elev1,
+        endElevMeters: elev2,
+        deltaZMeters: dz,
+        avgSlopeDeg: Number(slopeDeg.toFixed(1)),
+        estWalkHours: Number((horizM / 1000 / 3.6).toFixed(2)),
+        estRoverHours: Number((horizM / 1000 / 12.0).toFixed(2)),
+      })
+    }
+
+    const topoCorrection = totalRouteMeters > 0
+      ? Number(((total3DMeters - totalRouteMeters) / totalRouteMeters * 100).toFixed(2))
+      : 0
+
+    return {
+      segments,
+      totalHorizontalMeters: totalRouteMeters,
+      total3DMeters,
+      totalGainMeters: totalGain,
+      totalLossMeters: totalLoss,
+      topographicCorrectionPercent: topoCorrection,
+      datumRadiusMeters: 3389500,
+    }
+  }, [currentStops, routePointsList, totalRouteMeters])
 
   // Carga asíncrona de la fotografía satelital real de NASA MRO/HRSC
   useEffect(() => {
@@ -416,46 +489,88 @@ export function MarsTerrain3D({
     landingGroupRef.current = landingGroup
     scene.add(landingGroup)
 
-    // Haz láser vertical de aproximación atmosférica
-    const laserCylinderGeo = new CylinderGeometry(0.8, 3.2, 380, 16, 1, true)
-    laserCylinderGeo.translate(0, 190, 0)
-    const laserCylinderMat = new MeshBasicMaterial({
+    // 1. Aguja de Telemetría Táctica y Enlace Óptico Compacto (Escala local proporcional: 12 m en lugar de columna de 380 m)
+    const uplinkNeedleGroup = new Group()
+    uplinkNeedleGroup.name = 'landing-uplink-needle'
+    landingGroup.add(uplinkNeedleGroup)
+
+    // Haz láser vertical fino de calibración óptica
+    const laserBeamGeo = new CylinderGeometry(0.05, 0.05, 14, 8)
+    laserBeamGeo.translate(0, 7, 0)
+    const laserBeamMat = new MeshBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.32,
-      depthWrite: false,
-      side: DoubleSide,
+      opacity: 0.45,
     })
-    landingGroup.add(new Mesh(laserCylinderGeo, laserCylinderMat))
+    uplinkNeedleGroup.add(new Mesh(laserBeamGeo, laserBeamMat))
 
-    const laserCoreGeo = new CylinderGeometry(0.2, 0.2, 380, 8, 1, true)
-    laserCoreGeo.translate(0, 190, 0)
-    const laserCoreMat = new MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.8,
-      depthWrite: false,
+    // Retícula táctica holográfica en la cúspide (y = 14 m)
+    const apexReticleGroup = new Group()
+    apexReticleGroup.position.set(0, 14, 0)
+    apexReticleGroup.name = 'landing-apex-reticle'
+    uplinkNeedleGroup.add(apexReticleGroup)
+
+    const apexDiamondGeo = new OctahedronGeometry(0.55, 0)
+    apexReticleGroup.add(new Mesh(apexDiamondGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
+
+    const apexRingGeo = new RingGeometry(0.9, 1.05, 4)
+    apexRingGeo.rotateX(-Math.PI / 2)
+    apexRingGeo.rotateZ(Math.PI / 4)
+    apexReticleGroup.add(new Mesh(apexRingGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: DoubleSide })))
+
+    // 2. Anillo de Seguridad Perimetral Táctico en el Suelo (R = 14.5 m)
+    const perimeterRingGeo = new RingGeometry(14.2, 14.6, 48)
+    perimeterRingGeo.rotateX(-Math.PI / 2)
+    const perimeterRing = new Mesh(
+      perimeterRingGeo,
+      new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.75, side: DoubleSide })
+    )
+    perimeterRing.position.y = 0.18
+    landingGroup.add(perimeterRing)
+
+    // 4 Pylones de telemetría perimetral en las 4 esquinas de la zona de seguridad
+    const cornerOffsets = [
+      { x: 11, z: 11 },
+      { x: -11, z: 11 },
+      { x: 11, z: -11 },
+      { x: -11, z: -11 },
+    ]
+    cornerOffsets.forEach((pos, idx) => {
+      const pylonGroup = new Group()
+      pylonGroup.position.set(pos.x, 0, pos.z)
+
+      const pylonGeo = new CylinderGeometry(0.12, 0.16, 2.2, 6)
+      pylonGeo.translate(0, 1.1, 0)
+      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.3 }))
+      pylonMesh.castShadow = true
+      pylonGroup.add(pylonMesh)
+
+      const strobeGeo = new SphereGeometry(0.14, 6, 6)
+      strobeGeo.translate(0, 2.25, 0)
+      const strobeMesh = new Mesh(strobeGeo, idx % 2 === 0 ? new MeshBasicMaterial({ color: 0x00f0ff }) : new MeshBasicMaterial({ color: 0xf59e0b }))
+      pylonGroup.add(strobeMesh)
+
+      landingGroup.add(pylonGroup)
     })
-    landingGroup.add(new Mesh(laserCoreGeo, laserCoreMat))
 
-    // Anillos concéntricos de touchdown
+    // 3. Anillos concéntricos de touchdown
     const landingRings = new Group()
     landingRingsRef.current = landingRings
     landingGroup.add(landingRings)
 
-    const ringInnerGeo = new RingGeometry(1.6, 2.5, 32)
+    const ringInnerGeo = new RingGeometry(2.0, 2.8, 32)
     ringInnerGeo.rotateX(-Math.PI / 2)
-    const ringInner = new Mesh(ringInnerGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.9, side: DoubleSide }))
-    ringInner.position.y = 0.25
+    const ringInner = new Mesh(ringInnerGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide }))
+    ringInner.position.y = 0.22
     landingRings.add(ringInner)
 
-    const ringOuterGeo = new RingGeometry(4.2, 5.0, 32)
+    const ringOuterGeo = new RingGeometry(4.8, 5.5, 32)
     ringOuterGeo.rotateX(-Math.PI / 2)
-    const ringOuter = new Mesh(ringOuterGeo, new MeshBasicMaterial({ color: 0xff9d00, transparent: true, opacity: 0.8, side: DoubleSide }))
-    ringOuter.position.y = 0.22
+    const ringOuter = new Mesh(ringOuterGeo, new MeshBasicMaterial({ color: 0xff9d00, transparent: true, opacity: 0.75, side: DoubleSide }))
+    ringOuter.position.y = 0.2
     landingRings.add(ringOuter)
 
-    // Elipse de seguridad NASA (7.0 x 4.5 km, azimut 78°)
+    // 4. Elipse de seguridad NASA (7.0 x 4.5 km, azimut 78°)
     const ellipseCurve = new EllipseCurve(0, 0, 20.65, 13.28, 0, 2 * Math.PI, false, (78 * Math.PI) / 180)
     const ellipsePoints3D = ellipseCurve.getPoints(64).map(p => new Vector3(p.x, 0.35, p.y))
     const ellipseGeo = new BufferGeometry().setFromPoints(ellipsePoints3D)
@@ -700,15 +815,65 @@ export function MarsTerrain3D({
         opacity: 0.65,
       })
       group.add(new Mesh(haloTubeGeo, haloMat))
+
+      // Balizas de Trazabilidad Kilométrica a lo largo de la ruta (Hitos cada 1.0 km)
+      let accumMeters = 0
+      let nextMilestoneKm = 1
+      for (let s = 1; s < sampled3DPoints.length; s++) {
+        const pA = sampled3DPoints[s - 1]
+        const pB = sampled3DPoints[s]
+        const uA = (pA.x / TERRAIN_WIDTH) + 0.5
+        const vA = (pA.z / TERRAIN_HEIGHT) + 0.5
+        const lonA = REGION_BOUNDS.minLon + uA * (REGION_BOUNDS.maxLon - REGION_BOUNDS.minLon)
+        const latA = REGION_BOUNDS.maxLat - vA * (REGION_BOUNDS.maxLat - REGION_BOUNDS.minLat)
+
+        const uB = (pB.x / TERRAIN_WIDTH) + 0.5
+        const vB = (pB.z / TERRAIN_HEIGHT) + 0.5
+        const lonB = REGION_BOUNDS.minLon + uB * (REGION_BOUNDS.maxLon - REGION_BOUNDS.minLon)
+        const latB = REGION_BOUNDS.maxLat - vB * (REGION_BOUNDS.maxLat - REGION_BOUNDS.minLat)
+
+        accumMeters += marsDistance([lonA, latA], [lonB, latB])
+
+        if (accumMeters >= nextMilestoneKm * 1000) {
+          const mGroup = new Group()
+          mGroup.position.copy(pB)
+          mGroup.name = `route-milestone-${nextMilestoneKm}km`
+
+          // Anillo concéntrico en el suelo
+          const mRingGeo = new RingGeometry(1.2, 1.45, 24)
+          mRingGeo.rotateX(-Math.PI / 2)
+          mRingGeo.translate(0, 0.05, 0)
+          mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide })))
+
+          // Baliza táctica de cota métrica
+          const mPostGeo = new CylinderGeometry(0.12, 0.14, 1.6, 6)
+          mPostGeo.translate(0, 0.8, 0)
+          const mPost = new Mesh(mPostGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 }))
+          mPost.castShadow = true
+          mGroup.add(mPost)
+
+          const mPrismGeo = new OctahedronGeometry(0.32, 0)
+          mPrismGeo.translate(0, 1.8, 0)
+          mGroup.add(new Mesh(mPrismGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
+
+          group.add(mGroup)
+          nextMilestoneKm++
+        }
+      }
     }
 
-    routePointsList.forEach((stop) => {
+    let stopAccumDistance = 0
+    routePointsList.forEach((stop, idx) => {
+      if (idx > 0) {
+        stopAccumDistance += marsDistance(routePointsList[idx - 1].point, stop.point)
+      }
       const { x, z } = geoToTerrainPosition(stop.point[0], stop.point[1])
       const elev = getGaleElevation(stop.point[0], stop.point[1])
       const y = (elev + 4500) * ELEVATION_SCALE
 
       const waypointGroup = new Group()
       waypointGroup.position.set(x, y, z)
+      waypointGroup.name = `waypoint-stop-${stop.id}`
 
       const colorHex = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xef4444
 
@@ -723,7 +888,7 @@ export function MarsTerrain3D({
       const distRingGeo = new RingGeometry(2.5, 2.8, 32)
       distRingGeo.rotateX(-Math.PI / 2)
       distRingGeo.translate(0, 0.08, 0)
-      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.75, side: DoubleSide })))
+      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.8, side: DoubleSide })))
 
       // Pylón táctico de aleación aeroespacial
       const pylonGeo = new CylinderGeometry(0.28, 0.38, 2.8, 8)
@@ -1566,14 +1731,113 @@ export function MarsTerrain3D({
         </article>
       )}
 
+      {/* Panel Flotante de Trazabilidad Geodésica de Distancias */}
+      {showTraceabilityModal && routeTelemetry && (
+        <aside className="ares-traceability-panel" aria-label="Trazabilidad Geodésica de Distancias">
+          <div className="trace-header">
+            <div className="trace-title">
+              <span>[TRAZABILIDAD GEODÉSICA DE DISTANCIAS]</span>
+              <small style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
+                DATUM AREOIDE MOLA // RM = 3,389,500 M
+              </small>
+            </div>
+            <button
+              type="button"
+              className="trace-close-btn"
+              onClick={() => setShowTraceabilityModal(false)}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="trace-summary-grid">
+            <div className="trace-card">
+              <label>DISTANCIA HORIZONTAL</label>
+              <strong>{(routeTelemetry.totalHorizontalMeters / 1000).toFixed(2)} km</strong>
+              <small>Arco esférico Haversine</small>
+            </div>
+            <div className="trace-card">
+              <label>DISTANCIA 3D (CON RELIEVE)</label>
+              <strong style={{ color: '#00f0ff' }}>{(routeTelemetry.total3DMeters / 1000).toFixed(2)} km</strong>
+              <small>+{routeTelemetry.topographicCorrectionPercent}% esfuerzo topográfico</small>
+            </div>
+            <div className="trace-card">
+              <label>DESNIVEL ACUMULADO</label>
+              <strong style={{ color: '#ff9d00' }}>
+                +{Math.round(routeTelemetry.totalGainMeters)} m / -{Math.round(routeTelemetry.totalLossMeters)} m
+              </strong>
+              <small>Perfil hipsométrico MOLA</small>
+            </div>
+            <div className="trace-card">
+              <label>LÍMITE DE RETORNO (WALKBACK)</label>
+              <strong className={`walkback-badge ${walkbackAssessment.status.toLowerCase()}`}>
+                {walkbackAssessment.status}
+              </strong>
+              <small>{walkbackAssessment.distanceKm} km / 8.0 km máx</small>
+            </div>
+          </div>
+
+          <div className="trace-table-wrap">
+            <table className="trace-table">
+              <thead>
+                <tr>
+                  <th>TRAMO</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th>DIST. HORIZ.</th>
+                  <th>DIST. 3D</th>
+                  <th>COTA INI / FIN</th>
+                  <th>DESNIVEL Δz</th>
+                  <th>PEND. MEDIA</th>
+                  <th>TIEMPO MARCHA</th>
+                  <th>TIEMPO ROVER</th>
+                </tr>
+              </thead>
+              <tbody>
+                {routeTelemetry.segments.map((seg, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 800, color: '#00f0ff' }}>{seg.fromId} → {seg.toId}</td>
+                    <td>{seg.fromName.split(' / ')[0]} → {seg.toName.split(' / ')[0]}</td>
+                    <td>{(seg.horizontalMeters / 1000).toFixed(2)} km</td>
+                    <td style={{ fontWeight: 800, color: '#ffffff' }}>{(seg.distance3DMeters / 1000).toFixed(2)} km</td>
+                    <td>{seg.startElevMeters}m / {seg.endElevMeters}m</td>
+                    <td style={{ color: seg.deltaZMeters > 0 ? '#ff9d00' : '#10b981' }}>
+                      {seg.deltaZMeters > 0 ? `+${seg.deltaZMeters}m` : `${seg.deltaZMeters}m`}
+                    </td>
+                    <td>{seg.avgSlopeDeg}°</td>
+                    <td>{seg.estWalkHours} h (3.6 km/h)</td>
+                    <td>{seg.estRoverHours} h (12 km/h)</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="trace-footnote">
+            <strong>Metodología de Validación:</strong> Distancias calculadas sobre la esfera marciana utilizando el radio medio canónico R_M = 3,389,500 m. La distancia tridimensional integra la componente vertical euclidiana sobre la malla de elevación hipsométrica de Gale Crater. No apto para navegación humana en vuelo real; uso exploratorio y educativo.
+          </p>
+        </aside>
+      )}
+
       {/* ZONA 4: HUD INFERIOR TELEMETRÍA & WAYPOINTS */}
       <footer className="ares-hud-bottom" aria-label="Monitoreo de Caminata EVA">
         <div className="hud-bottom-eva">
           <div className="eva-distance-block">
             <span className="eva-distance-label">DISTANCIA DE RUTA EVA (3D)</span>
-            <strong className="eva-distance-val">
-              {totalRouteMeters > 0 ? `${(totalRouteMeters / 1000).toFixed(2)} km` : '0.00 km (Sin trazar)'}
-            </strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <strong className="eva-distance-val">
+                {totalRouteMeters > 0 ? `${(totalRouteMeters / 1000).toFixed(2)} km` : '0.00 km (Sin trazar)'}
+              </strong>
+              {routeTelemetry && (
+                <button
+                  type="button"
+                  className="traceability-pill-btn"
+                  onClick={() => setShowTraceabilityModal(!showTraceabilityModal)}
+                  title="Abrir panel de trazabilidad geodésica de distancias"
+                >
+                  {showTraceabilityModal ? '[CERRAR TRAZABILIDAD]' : '[VER TRAZABILIDAD]'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="hud-walkback-gauge">

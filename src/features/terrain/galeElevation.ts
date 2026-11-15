@@ -47,11 +47,11 @@ export function getGaleElevation(lon: number, lat: number): number {
     moundElevation += strataModulation * (distFromPeakKm < 30 ? 1 : 0)
   }
 
-  // Contribución de la pared del cráter
+  // Contribución de la pared del cráter (transición piso a murallas a partir de 47 km)
   let rimElevation = 0
-  if (distFromCenterKm > 48) {
-    const rimFraction = Math.min(1, Math.max(0, (distFromCenterKm - 48) / (craterRimRadiusKm - 48)))
-    rimElevation = Math.pow(rimFraction, 2.2) * 2600 // De -4480 a aprox -1880 m
+  if (distFromCenterKm > 47) {
+    const rimFraction = Math.min(1, Math.max(0, (distFromCenterKm - 47) / (craterRimRadiusKm - 47)))
+    rimElevation = Math.pow(rimFraction, 2.0) * 2600 // De -4480 a aprox -1880 m
   }
 
   // Micro-relieves específicos de las unidades de Curiosity:
