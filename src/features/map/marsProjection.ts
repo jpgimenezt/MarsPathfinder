@@ -11,8 +11,10 @@ export const marsProjection = new Projection({
 })
 addProjection(marsProjection)
 
-// ROI demostrativo dentro del mosaico CTX controlado; no representa una EVA validada.
-export const ROI: [number, number, number, number] = [77.35, 18.30, 77.51, 18.45]
+// Sector interior sin transparencias en las teselas CTX z11/z12 auditadas.
+// Margen respecto de los bordes transparentes del bbox publicado; NO implica
+// cobertura de obstáculos, seguridad de EVA ni disponibilidad de la red.
+export const ROI: [number, number, number, number] = [77.164, 18.215, 77.695, 18.717]
 // Huella nominal del ortomosaico CTX según GetCapabilities; no implica que
 // todos los píxeles estén cubiertos por imágenes a cada escala.
 export const CTX_EXTENT: [number, number, number, number] = [
