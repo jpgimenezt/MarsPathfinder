@@ -29,6 +29,11 @@ vi.mock('../src/components/MapView', () => ({
     return <div data-testid="mapa" />
   },
 }))
+vi.mock('../src/components/MarsGlobe', () => ({
+  MarsGlobe: ({ onJezero, onFailure }: { onJezero: () => void; onFailure: () => void }) =>
+    <><button type="button" className="mock-jezero" onClick={onJezero}>Explorar Jezero</button>
+      <button type="button" className="mock-fail" onClick={onFailure}>Simular WebGL no disponible</button></>,
+}))
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 let root: Root
@@ -41,11 +46,12 @@ function click(selector: string) {
 function point(id: StopId, value: MarsPoint) {
   act(() => placePoint!(id, value))
 }
-function setup() {
+async function setup() {
   element = document.createElement('div')
   document.body.append(element)
   root = createRoot(element)
-  act(() => root.render(<App />))
+  await act(async () => { root.render(<App />) })
+  click('.mock-jezero')
 }
 afterEach(() => {
   if (root) act(() => root.unmount())
@@ -54,8 +60,20 @@ afterEach(() => {
 })
 
 describe('interacción explícita del recorrido', () => {
-  it('no marca puntos al navegar ni con coordenadas fuera del ROI', () => {
-    setup()
+  it('abre primero el globo y ofrece mapa 2D global si WebGL falla', async () => {
+    element = document.createElement('div')
+    document.body.append(element)
+    root = createRoot(element)
+    await act(async () => { root.render(<App />) })
+    expect(element.querySelector('[data-testid="mapa"]')).toBeNull()
+    click('.mock-fail')
+    expect(mapScope).toBe('global')
+    expect(element.querySelector('[data-testid="mapa"]')).not.toBeNull()
+    click('.scope-toggle')
+    expect(mapScope).toBe('jezero')
+  })
+  it('no marca puntos al navegar ni con coordenadas fuera del ROI', async () => {
+    await setup()
     point('A', [77.40, 18.38])
     expect(mapStops.A).toBeUndefined()
     click('.stop:nth-child(1) button')
@@ -67,8 +85,8 @@ describe('interacción explícita del recorrido', () => {
     point('P', [77.42, 18.39])
     expect(mapStops.P).toBeUndefined()
   })
-  it('marca A→P→B, edita P, deshace y restablece con distancias parciales', () => {
-    setup()
+  it('marca A→P→B, edita P, deshace y restablece con distancias parciales', async () => {
+    await setup()
     expect(element.querySelector<HTMLButtonElement>('.stop:nth-child(2) button')?.disabled).toBe(true)
     click('.stop:nth-child(1) button')
     point('A', [77.40, 18.38])
@@ -92,8 +110,8 @@ describe('interacción explícita del recorrido', () => {
     click('.route-actions button:first-child')
     expect(mapStops.B).toEqual([77.44, 18.40])
   })
-  it('conserva puntos al alternar paneles y fallar una fuente', () => {
-    setup()
+  it('conserva puntos al alternar paneles y fallar una fuente', async () => {
+    await setup()
     click('.stop:nth-child(1) button')
     point('A', [77.40, 18.38])
     click('.tabs button:nth-child(2)')
@@ -106,8 +124,8 @@ describe('interacción explícita del recorrido', () => {
     expect(mapStops.A).toEqual([77.40, 18.38])
     expect(element.querySelector('[data-testid="mapa"]')).not.toBeNull()
   })
-  it('conserva el plan al entrar/salir de Marte global y bloquea su edición', () => {
-    setup()
+  it('conserva el plan al entrar/salir de Marte global y bloquea su edición', async () => {
+    await setup()
     click('.stop:nth-child(1) button')
     point('A', [77.40, 18.38])
     click('.scope-toggle')
@@ -120,5 +138,23 @@ describe('interacción explícita del recorrido', () => {
     expect(mapScope).toBe('jezero')
     expect(mapStops.A).toEqual([77.40, 18.38])
     expect(element.querySelector<HTMLButtonElement>('.stop:nth-child(1) button')?.disabled).toBe(false)
+  })
+  it('regresa al globo y vuelve a Jezero sin perder A/P/B ni distancias', async () => {
+    await setup()
+    for (const [index, id, coordinate] of [
+      [1, 'A', [77.40, 18.38]],
+      [2, 'P', [77.42, 18.39]],
+      [3, 'B', [77.44, 18.40]],
+    ] as const) {
+      click(`.stop:nth-child(${index}) button`)
+      point(id, coordinate)
+    }
+    const total = element.querySelector('.route-total strong')?.textContent
+    click('.globe-return')
+    expect(element.querySelector('.mock-jezero')).not.toBeNull()
+    expect(element.querySelector('[data-testid="mapa"]')).toBeNull()
+    click('.mock-jezero')
+    expect(mapStops).toEqual({ A: [77.40, 18.38], P: [77.42, 18.39], B: [77.44, 18.40] })
+    expect(element.querySelector('.route-total strong')?.textContent).toBe(total)
   })
 })

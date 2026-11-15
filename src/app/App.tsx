@@ -1,11 +1,13 @@
-import { useReducer, useState } from 'react'
+import { lazy, Suspense, useCallback, useReducer, useState } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
+import { GlobeBoundary } from '../components/GlobeBoundary'
 import { sources, type LayerId } from '../data/sourceManifest'
 import { insideRoi } from '../features/map/marsProjection'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 
 type Panel = 'route' | 'layers' | 'science'
+const MarsGlobe = lazy(() => import('../components/MarsGlobe').then(module => ({ default: module.MarsGlobe })))
 const initialEnabled: Record<LayerId, boolean> = { ctx: true, mola: false, themis: false }
 const initialOpacity: Record<LayerId, number> = { ctx: 1, mola: 0.75, themis: 0.75 }
 const stops: Record<StopId, { title: string; sub: string }> = {
@@ -17,6 +19,7 @@ const formatPoint = (point: MarsPoint) => `${point[1].toFixed(5)}°N · ${point[
 const formatKm = (meters: number | null) => meters === null ? 'Sin datos' : `${(meters / 1000).toFixed(2)} km`
 
 export function App() {
+  const [screen, setScreen] = useState<'globe' | 'map'>('globe')
   const [enabled, setEnabled] = useState(initialEnabled)
   const [opacity, setOpacity] = useState(initialOpacity)
   const [states, setStates] = useState<Record<LayerId, LayerState>>({
@@ -30,6 +33,15 @@ export function App() {
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
   const count = STOP_ORDER.filter(id => plan.stops[id]).length
+  const openJezero = useCallback(() => {
+    setScope('jezero')
+    setMode({ type: 'explore' })
+    setScreen('map')
+  }, [])
+  const globeFailed = useCallback(() => {
+    setScope('global')
+    setScreen('map')
+  }, [])
 
   function place(id: StopId, point: MarsPoint) {
     if (scope !== 'jezero' || mode.type === 'explore' || mode.id !== id || !insideRoi(point)) return
@@ -48,11 +60,17 @@ export function App() {
         <div className="brand"><span className="brand-mark" aria-hidden="true">⌾</span>
           <div><span className="eyebrow">ATLAS DE EXPLORACIÓN MARCIANA</span><h1>Ares<span>Route</span></h1></div>
         </div>
-        <div className="header-right"><span className="header-location"><span className="status-dot" /> {scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
+        <div className="header-right"><span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
           <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span></div>
       </header>
 
-      <main>
+      {screen === 'globe' ? <main className="globe-main">
+        <GlobeBoundary onJezero={openJezero}>
+          <Suspense fallback={<div className="globe-fallback" role="status">Preparando exploración 3D… <button type="button" onClick={openJezero}>Explorar Jezero en 2D</button></div>}>
+            <MarsGlobe onJezero={openJezero} onFailure={globeFailed} />
+          </Suspense>
+        </GlobeBoundary>
+      </main> : <main>
         <div className="toolbar">
           <div className="toolbar-title"><span className="eyebrow">{scope === 'global' ? 'CONTEXTO PLANETARIO · MOLA' : 'REGIÓN DE INVESTIGACIÓN'}</span>
             <strong>{scope === 'global' ? 'Marte global' : 'Jezero Crater'}</strong>
@@ -66,6 +84,10 @@ export function App() {
             setScope(current => current === 'jezero' ? 'global' : 'jezero')
             setMode({ type: 'explore' })
           }}>{scope === 'global' ? '↙ Volver a Jezero' : '◌ Marte global'}</button>
+          <button type="button" className="scope-toggle globe-return" onClick={() => {
+            setMode({ type: 'explore' })
+            setScreen('globe')
+          }}>◉ Volver al globo 3D</button>
         </div>
 
         <section className="map-stage" aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
@@ -152,9 +174,10 @@ export function App() {
             <small>{scope === 'global' ? `${count}/3 puntos conservados · solo contexto` :
               `${count}/3 puntos · ${count < 3 ? 'trayecto incompleto' : 'trazado completo'}`}</small></div>
         </section>
-      </main>
+      </main>}
       <footer className="footer">
-        <span>Fondo de respaldo: una tesela CTX real limitada al sector. Fuera de ella: sin datos. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.</span>
+        <span>{screen === 'globe' ? 'Globo esférico con textura de relieve sombreado MGS MOLA, NASA/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el ROI del planificador es un sector distinto.' :
+          'Fondo de respaldo: una tesela CTX real limitada al sector. Fuera de ella: sin datos. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
         <strong>Prototipo independiente · No apto para uso operacional.</strong>
       </footer>
     </div>

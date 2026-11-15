@@ -38,6 +38,12 @@ Guardar: `id, title, provider, mission, instrument, productId, sourceUrl, acquis
 
 No completar campos desconocidos con datos inventados. Mantener `null` o `unknown` y explicar consecuencias en UI.
 
+## Textura local del globo de navegación (14/11/2026)
+
+- **Producto original:** [USGS Astrogeology — Mars MGS MOLA Global Color Shaded Relief 463m](https://astrogeology.usgs.gov/search/map/mars_mgs_mola_global_color_shaded_relief_463m), NASA Goddard/USGS, MGS/MOLA. Medidas recopiladas entre 1999 y 2001, producto visual derivado de altimetría; no es el DEM numérico. USGS consigna **Public domain** / **Use Constraints: None**. El color representa relieve, no composición ni seguridad.
+- **Archivo incorporado:** [muestra JPEG oficial de 1024 px](https://astrogeology.usgs.gov/ckan/dataset/0c30e797-b7d7-4d06-87c2-d3b01abcd797/resource/c384f456-8182-4e40-94de-727b74dab4ec/download/mars_mgs_colorhillshade_mola_1024.jpg), descargada por HTTP 200 (JPEG 1024×512, 135513 bytes), `public/data/mars-mola-global-1024.jpg`. Es una **miniatura global**, no la resolución 463 m/píxel del original de 1 GB: ≈360°/1024 ≈0.352°/píxel, ≈21 km/píxel en el ecuador. No usarla para inspección local.
+- **Geometría y orientación:** el registro USGS declara *Simple Cylindrical*, latitud **planetocéntrica**, longitud **positiva al este** y dominio −180°…180°. Para la esfera, `u=(lon+180)/360`, `v=(90−lat)/180`; los hitos de referencia son Olympus Mons ≈−135°E (lado izquierdo de la imagen) e Isidis Planitia ≈+87°E (derecha). La esfera no toma altura de los colores. Marcador Jezero: [USGS/IAU](https://planetarynames.wr.usgs.gov/Feature/14300), 18.41°N, 77.69°E, **centro del cráter**, fuera del ROI Jezero del planificador.
+
 ## Primeras verificaciones
 
 - [x] Descargar y parsear WMTS GetCapabilities de CTX, MOLA y THEMIS mediante XML; la app usa parser OpenLayers en ejecución.
