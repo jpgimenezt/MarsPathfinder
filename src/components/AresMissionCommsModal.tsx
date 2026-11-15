@@ -19,8 +19,12 @@ import {
   type PresentationMode,
   type InteractionMode,
   type TranscriptEvent,
-  type AudioVisualizerData,
 } from '../features/voice/voiceProvider'
+import {
+  AudioCaptureService,
+  type RealtimeAudioMetrics,
+  type AudioCaptureTelemetry,
+} from '../features/voice/audioCaptureService'
 import { AmazonNovaSonicProvider } from '../features/voice/amazonNovaSonicProvider'
 import {
   ToolExecutionEngine,
@@ -167,6 +171,20 @@ export function AresMissionCommsModal({
     action: string
     description: string
   } | null>(null)
+
+  // Telemetría acústica de Web Audio API en tiempo real (RMS, Peak, VAD y Osciloscopio)
+  const [audioMetrics, setAudioMetrics] = useState<RealtimeAudioMetrics>({
+    rms: 0,
+    peak: 0,
+    db: -60,
+    isVoiceActive: false,
+    timeDomainData: new Uint8Array(128),
+    frequencyData: new Uint8Array(32),
+    source: 'idle',
+    smoothedLevel: 0,
+  })
+  const [telemetry, setTelemetry] = useState<AudioCaptureTelemetry | null>(null)
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false)
 
   const t = COMMS_TRANSLATIONS[uiLanguage]
 
@@ -625,8 +643,8 @@ export function AresMissionCommsModal({
           return [...prev, evt]
         })
       },
-      onAudioLevel: data => {
-        drawWaveform(data)
+      onAudioLevel: () => {
+        // Monitoreado de forma unificada a 60 FPS por AudioCaptureService
       },
       onToolCall: async (tool, input, toolUseId) => {
         if (!toolEngineRef.current) return { error: 'TOOL_ENGINE_NOT_READY' }
@@ -686,10 +704,10 @@ export function AresMissionCommsModal({
   }, [transcripts, presentationMode])
 
   // ==========================================
-  // RENDERER DEL VISUALIZADOR DE AUDIO
+  // RENDERER DEL VISUALIZADOR DE AUDIO (60 FPS)
   // ==========================================
   const drawWaveform = useCallback(
-    (data: AudioVisualizerData) => {
+    (metrics: RealtimeAudioMetrics) => {
       const canvas = canvasRef.current
       if (!canvas) return
       const ctx = canvas.getContext('2d')
@@ -699,28 +717,36 @@ export function AresMissionCommsModal({
       ctx.clearRect(0, 0, width, height)
       const centerY = height / 2
 
-      if (data.source === 'user' || conversationState === 'listening') {
+      const pcm = metrics.timeDomainData
+      const isUser = metrics.source === 'user' || conversationState === 'listening'
+      const isAssistant = metrics.source === 'assistant' || conversationState === 'speaking'
+
+      if (isUser && metrics.isVoiceActive) {
+        // Voz humana activa capturada del micrófono en tiempo real
         ctx.strokeStyle = '#E87A5D'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 2.5
+        ctx.shadowColor = '#FF6B4A'
+        ctx.shadowBlur = 8
         ctx.beginPath()
-        const pcm = data.timeDomainData || new Uint8Array(32)
         const sliceWidth = width / pcm.length
         let x = 0
         for (let i = 0; i < pcm.length; i++) {
           const v = pcm[i] / 128.0
-          const y = centerY + (v - 1.0) * (height * 0.4)
+          const y = centerY + (v - 1.0) * (height * 0.45)
           if (i === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
           x += sliceWidth
         }
         ctx.stroke()
-      } else if (data.source === 'assistant' || conversationState === 'speaking') {
+        ctx.shadowBlur = 0
+      } else if (isAssistant) {
+        // Voz sintetizada de ARES (24kHz Nova Sonic)
         ctx.strokeStyle = '#63D4E5'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 2.2
         ctx.shadowColor = '#63D4E5'
-        ctx.shadowBlur = 8
+        ctx.shadowBlur = 10
         ctx.beginPath()
-        const freq = data.frequencyData || new Uint8Array(32)
+        const freq = metrics.frequencyData
         const sliceWidth = width / freq.length
         let x = 0
         for (let i = 0; i < freq.length; i++) {
@@ -735,25 +761,53 @@ export function AresMissionCommsModal({
       } else if (conversationState === 'processing' || conversationState === 'executing_tool') {
         const now = Date.now() / 200
         ctx.strokeStyle = '#E9B85C'
-        ctx.lineWidth = 1.5
+        ctx.lineWidth = 1.8
         ctx.beginPath()
-        for (let x = 0; x < width; x += 4) {
-          const y = centerY + Math.sin(x * 0.06 + now) * 6
+        for (let x = 0; x < width; x += 3) {
+          const y = centerY + Math.sin(x * 0.08 + now) * 7
           if (x === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         }
         ctx.stroke()
       } else {
-        ctx.strokeStyle = 'rgba(130, 145, 158, 0.3)'
-        ctx.lineWidth = 1
+        // Reposo con respiración ambiental sutil
+        ctx.strokeStyle = 'rgba(99, 212, 229, 0.45)'
+        ctx.lineWidth = 1.2
         ctx.beginPath()
-        ctx.moveTo(0, centerY)
-        ctx.lineTo(width, centerY)
+        const now = Date.now() / 600
+        for (let x = 0; x < width; x += 4) {
+          const ambientWave = Math.sin(x * 0.04 + now) * 1.5
+          const y = centerY + ambientWave
+          if (x === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
         ctx.stroke()
       }
     },
     [conversationState]
   )
+
+  // Suscripción unificada a AudioCaptureService para telemetría acústica en tiempo real (60 FPS)
+  useEffect(() => {
+    const audioService = AudioCaptureService.getInstance()
+    audioService.startCapture().catch(e => {
+      console.warn('[ARES COMMS] Captura de audio esperando interacción:', e)
+    })
+
+    const unsubMetrics = audioService.subscribeMetrics(metrics => {
+      setAudioMetrics(metrics)
+      drawWaveform(metrics)
+    })
+
+    const unsubTelemetry = audioService.subscribeTelemetry(t => {
+      setTelemetry(t)
+    })
+
+    return () => {
+      unsubMetrics()
+      unsubTelemetry()
+    }
+  }, [drawWaveform])
 
   // ==========================================
   // MANEJADORES DE UI
@@ -832,7 +886,19 @@ export function AresMissionCommsModal({
           {/* Header Compacto */}
           <header className="ares-comms-header">
             <div className="ares-comms-header-title-block">
-              <div className="ares-comms-logo-ring" aria-hidden="true">
+              <div
+                className="ares-comms-logo-ring"
+                aria-hidden="true"
+                style={{
+                  transform: `scale(${1 + Math.min(audioMetrics.smoothedLevel * 0.8, 0.35)})`,
+                  boxShadow: (audioMetrics.source === 'user' && audioMetrics.isVoiceActive)
+                    ? '0 0 16px rgba(232, 122, 93, 0.85)'
+                    : (audioMetrics.source === 'assistant' || conversationState === 'speaking')
+                    ? '0 0 16px rgba(99, 212, 229, 0.85)'
+                    : undefined,
+                  transition: 'transform 0.08s ease-out, box-shadow 0.08s ease-out',
+                }}
+              >
                 <JarvisAiCore size={22} withOuterOrbits={false} />
               </div>
               <div>
@@ -844,6 +910,16 @@ export function AresMissionCommsModal({
             </div>
 
             <div className="ares-comms-header-actions">
+              {/* Toggle Diagnóstico de Audio */}
+              <button
+                type="button"
+                className={`ares-demo-badge-btn ${showDiagnostics ? 'demo-active' : ''}`}
+                onClick={() => setShowDiagnostics(prev => !prev)}
+                title="Abrir / Cerrar Diagnóstico Acústico (Web Audio API & RMS)"
+              >
+                📊 DIAG
+              </button>
+
               {/* Selector Demo Internacional */}
               <button
                 type="button"
@@ -877,6 +953,61 @@ export function AresMissionCommsModal({
               </button>
             </div>
           </header>
+
+          {/* Panel Diagnóstico de Audio Acústico (Web Audio API & RMS) */}
+          {showDiagnostics && telemetry && (
+            <div className="ares-comms-diagnostics-card" role="region" aria-label="Diagnóstico de Audio">
+              <div className="ares-diag-header">
+                <span className="ares-diag-title">📡 TELEMETRÍA DE AUDIO EN VIVO // WEB AUDIO API</span>
+                <span className="ares-diag-status">{telemetry.trackState.toUpperCase()}</span>
+              </div>
+              <div className="ares-diag-grid">
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">Dispositivo:</span>
+                  <span className="ares-diag-val" title={telemetry.deviceLabel}>{telemetry.deviceLabel.slice(0, 22)}...</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">Permiso:</span>
+                  <span className="ares-diag-val">{telemetry.permissionState.toUpperCase()}</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">AudioContext:</span>
+                  <span className="ares-diag-val">{telemetry.audioContextState} ({telemetry.sampleRate} Hz)</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">Procesador:</span>
+                  <span className="ares-diag-val">{telemetry.workletActive ? 'AudioWorklet (16kHz)' : telemetry.workletFallback ? 'ScriptProcessor' : 'Idle'}</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">RMS Actual:</span>
+                  <span className="ares-diag-val">{audioMetrics.rms.toFixed(4)} ({audioMetrics.db} dBFS)</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">Pico Máximo:</span>
+                  <span className="ares-diag-val">{audioMetrics.peak.toFixed(4)}</span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">VAD (Voz):</span>
+                  <span className={`ares-diag-val ${audioMetrics.isVoiceActive ? 'vad-active' : 'vad-idle'}`}>
+                    {audioMetrics.isVoiceActive ? '🟢 VOZ DETECTADA' : '⚪ SILENCIO'}
+                  </span>
+                </div>
+                <div className="ares-diag-item">
+                  <span className="ares-diag-label">Enlace Gateway:</span>
+                  <span className="ares-diag-val">{voiceState}</span>
+                </div>
+              </div>
+              <div className="ares-diag-meter-bar">
+                <div
+                  className="ares-diag-meter-fill"
+                  style={{
+                    width: `${Math.min(100, Math.round(audioMetrics.rms * 250))}%`,
+                    backgroundColor: audioMetrics.isVoiceActive ? '#E87A5D' : '#63D4E5',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Barra de Controles de Voz */}
           <div className="ares-comms-controls-bar">
@@ -1189,24 +1320,69 @@ export function AresMissionCommsModal({
             </div>
           )}
 
-          {/* Orbe Holográfico Interactivo */}
-          <div
-            className={`ares-floating-orb orb-${conversationState}`}
-            onClick={handleOrbClick}
-            role="button"
-            tabIndex={0}
-            aria-label={`Ares Copilot Orb (${conversationState}). Haz clic para abrir el panel de misión.`}
-            title="Ares Copilot // Haz clic para abrir el panel o habla diciendo 'Hola, ARES' / 'Hey, ARES'"
-          >
-            {/* Anillos orbitales animados */}
-            <div className="ares-orb-ring ring-outer" aria-hidden="true" />
-            <div className="ares-orb-ring ring-middle" aria-hidden="true" />
+          {/* Orbe Holográfico Interactivo con Reacción Acústica Real */}
+          {(() => {
+            const orbScale = 1.0 + Math.min(audioMetrics.smoothedLevel * 0.9, 0.45)
+            const orbGlow = 14 + Math.min(audioMetrics.smoothedLevel * 60, 48)
+            const isSpeakingUser = audioMetrics.source === 'user' && audioMetrics.isVoiceActive
+            const isSpeakingAssistant = audioMetrics.source === 'assistant' || conversationState === 'speaking'
 
-            {/* Núcleo central animado */}
-            <div className="ares-orb-core-wrap">
-              <JarvisAiCore size={38} withOuterOrbits={false} />
-            </div>
-          </div>
+            const glowColor = isSpeakingAssistant
+              ? 'rgba(99, 212, 229, 0.9)'
+              : isSpeakingUser
+              ? 'rgba(232, 122, 93, 0.92)'
+              : conversationState === 'processing' || conversationState === 'executing_tool'
+              ? 'rgba(233, 184, 92, 0.8)'
+              : 'rgba(99, 212, 229, 0.35)'
+
+            const borderColor = isSpeakingAssistant
+              ? '#63D4E5'
+              : isSpeakingUser
+              ? '#E87A5D'
+              : conversationState === 'processing' || conversationState === 'executing_tool'
+              ? '#E9B85C'
+              : undefined
+
+            return (
+              <div
+                className={`ares-floating-orb orb-${conversationState}`}
+                onClick={handleOrbClick}
+                role="button"
+                tabIndex={0}
+                aria-label={`Ares Copilot Orb (${conversationState}). Haz clic para abrir el panel de misión.`}
+                title="Ares Copilot // Haz clic para abrir el panel o habla diciendo 'Hola, ARES' / 'Hey, ARES'"
+                style={{
+                  transform: `scale(${orbScale})`,
+                  boxShadow: `0 0 ${orbGlow}px ${glowColor}, inset 0 0 ${Math.round(orbGlow / 2)}px ${glowColor}`,
+                  borderColor,
+                  transition: 'transform 0.08s ease-out, box-shadow 0.08s ease-out',
+                }}
+              >
+                {/* Anillos orbitales animados que reaccionan a la amplitud de voz */}
+                <div
+                  className="ares-orb-ring ring-outer"
+                  aria-hidden="true"
+                  style={{
+                    transform: `scale(${1 + audioMetrics.smoothedLevel * 0.35})`,
+                    borderColor: isSpeakingUser ? 'rgba(232, 122, 93, 0.5)' : undefined,
+                  }}
+                />
+                <div
+                  className="ares-orb-ring ring-middle"
+                  aria-hidden="true"
+                  style={{
+                    transform: `scale(${1 + audioMetrics.smoothedLevel * 0.2})`,
+                    borderColor: isSpeakingUser ? 'rgba(232, 122, 93, 0.4)' : undefined,
+                  }}
+                />
+
+                {/* Núcleo central animado */}
+                <div className="ares-orb-core-wrap">
+                  <JarvisAiCore size={38} withOuterOrbits={false} />
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>

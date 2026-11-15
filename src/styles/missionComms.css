@@ -1046,3 +1046,104 @@
   box-shadow: 0 0 8px rgba(99, 212, 229, 0.25);
   transform: translateY(-1px);
 }
+
+/* ========================================================
+   PANEL DE DIAGNÓSTICO ACÚSTICO // ARES AUDIO DIAGNOSTICS
+   ======================================================== */
+.ares-comms-diagnostics-card {
+  margin: 6px 14px 10px;
+  background: rgba(6, 10, 16, 0.94);
+  border: 1px solid rgba(99, 212, 229, 0.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7), 0 4px 14px rgba(0, 0, 0, 0.5);
+  animation: ares-diag-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ares-diag-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ares-diag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(99, 212, 229, 0.2);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.ares-diag-title {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--color-telemetry-cyan);
+}
+
+.ares-diag-status {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34d399;
+}
+
+.ares-diag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+}
+
+.ares-diag-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+  padding-bottom: 2px;
+}
+
+.ares-diag-label {
+  color: var(--color-titanium-grey);
+}
+
+.ares-diag-val {
+  color: var(--color-ice-white);
+  font-weight: 600;
+}
+
+.ares-diag-val.vad-active {
+  color: #E87A5D;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(232, 122, 93, 0.7);
+}
+
+.ares-diag-val.vad-idle {
+  color: var(--color-titanium-grey);
+}
+
+.ares-diag-meter-bar {
+  margin-top: 8px;
+  height: 6px;
+  background: rgba(17, 27, 37, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(99, 212, 229, 0.2);
+}
+
+.ares-diag-meter-fill {
+  height: 100%;
+  transition: width 0.06s linear, background-color 0.15s ease;
+}
+

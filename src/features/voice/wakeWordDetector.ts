@@ -12,6 +12,7 @@
  */
 
 import type { SupportedLanguage } from '../i18n/commsTranslations'
+import { AudioCaptureService } from './audioCaptureService'
 
 export interface WakeWordEvent {
   phrase: string
@@ -380,9 +381,18 @@ export class LocalWakeWordDetector {
   }
 
   public start(): boolean {
-    if (!this.recognition || this.isListening) return false
+    if (this.isListening) return true
     this.isExplicitlyStopped = false
     this.isListening = true
+
+    // Activar la captura unificada de audio para que los visualizadores RMS y VAD estén vivos
+    try {
+      AudioCaptureService.getInstance().startCapture().catch(e => {
+        console.warn('[WAKE WORD] Captura de audio inicial pospuesta:', e)
+      })
+    } catch {}
+
+    if (!this.recognition) return false
     try {
       this.recognition.start()
       return true

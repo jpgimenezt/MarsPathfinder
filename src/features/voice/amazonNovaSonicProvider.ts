@@ -10,48 +10,8 @@ import type {
   VoiceConfig,
   VoiceEventListener,
   TranscriptEvent,
-  AudioVisualizerData,
 } from './voiceProvider'
-
-// Worklet de audio para captura y conversión a PCM 16kHz 16-bit mono
-const PCM_WORKLET_CODE = `
-class PcmCaptureProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.bufferSize = 2048;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bytesWritten = 0;
-  }
-
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (!input || input.length === 0) return true;
-    const channelData = input[0];
-
-    for (let i = 0; i < channelData.length; i++) {
-      this.buffer[this.bytesWritten++] = channelData[i];
-      if (this.bytesWritten >= this.bufferSize) {
-        this.flush();
-      }
-    }
-    return true;
-  }
-
-  flush() {
-    // Convertir Float32 a Int16 Linear PCM
-    const pcm16 = new Int16Array(this.bytesWritten);
-    for (let i = 0; i < this.bytesWritten; i++) {
-      const s = Math.max(-1, Math.min(1, this.buffer[i]));
-      pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-
-    this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bytesWritten = 0;
-  }
-}
-registerProcessor('pcm-capture-processor', PcmCaptureProcessor);
-`
+import { AudioCaptureService } from './audioCaptureService'
 
 export class AmazonNovaSonicProvider implements VoiceProvider {
   public id = 'amazon-nova-2-5-sonic'
@@ -64,13 +24,10 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   private missionContext: Record<string, unknown> = {}
 
   // Web Audio Contexts & Nodos
-  private audioCtx: AudioContext | null = null
-  private mediaStream: MediaStream | null = null
-  private sourceNode: MediaStreamAudioSourceNode | null = null
-  private workletNode: AudioWorkletNode | null = null
-  private analyserUser: AnalyserNode | null = null
+  private audioCapture = AudioCaptureService.getInstance()
+  private pcmUnsubscribe: (() => void) | null = null
+  private metricsUnsubscribe: (() => void) | null = null
   private analyserAssistant: AnalyserNode | null = null
-  private visualizerInterval: any = null
 
   // Cola de reproducción de voz sintetizada de ARES (24kHz)
   private playbackCtx: AudioContext | null = null
@@ -115,7 +72,22 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
         this.analyserAssistant = this.playbackCtx.createAnalyser()
         this.analyserAssistant.fftSize = 64
         this.analyserAssistant.connect(this.playbackCtx.destination)
-        this.startVisualizerPump()
+        this.audioCapture.registerOutputAnalyser(this.analyserAssistant)
+
+        if (!this.metricsUnsubscribe) {
+          this.metricsUnsubscribe = this.audioCapture.subscribeMetrics(metrics => {
+            const visualData = {
+              userLevel: metrics.source === 'user' ? metrics.rms : 0,
+              assistantLevel: metrics.source === 'assistant' ? metrics.rms : 0,
+              frequencyData: metrics.frequencyData,
+              timeDomainData: metrics.timeDomainData,
+              source: metrics.source,
+            }
+            for (const l of this.listeners) {
+              l.onAudioLevel?.(visualData)
+            }
+          })
+        }
       }
       if (this.playbackCtx.state === 'suspended') {
         await this.playbackCtx.resume()
@@ -302,62 +274,24 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   // ==========================================
 
   private async initAudioCapture(): Promise<void> {
-    if (this.workletNode) return // Ya inicializado
+    if (this.pcmUnsubscribe) return
 
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Navegador sin soporte de captura de micrófono (getUserMedia no disponible).')
-      }
+      await this.audioCapture.startCapture()
 
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
-
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
-      this.audioCtx = new AudioCtxClass({ sampleRate: 16000 })
-      if (this.audioCtx.state === 'suspended') {
-        await this.audioCtx.resume()
-      }
-
-      // Cargar AudioWorklet para procesamiento a 16kHz
-      const blob = new Blob([PCM_WORKLET_CODE], { type: 'application/javascript' })
-      const workletUrl = URL.createObjectURL(blob)
-      await this.audioCtx.audioWorklet.addModule(workletUrl)
-      URL.revokeObjectURL(workletUrl)
-
-      this.sourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream)
-      this.workletNode = new AudioWorkletNode(this.audioCtx, 'pcm-capture-processor')
-
-      // Analizador de nivel de voz del usuario
-      this.analyserUser = this.audioCtx.createAnalyser()
-      this.analyserUser.fftSize = 64
-      this.sourceNode.connect(this.analyserUser)
-      this.sourceNode.connect(this.workletNode)
-
-      // Conectar a sumidero mudo (gain=0) para mantener activo el AudioWorklet sin acoplar audio a altavoces
-      const muteSink = this.audioCtx.createGain()
-      muteSink.gain.value = 0
-      this.workletNode.connect(muteSink)
-      muteSink.connect(this.audioCtx.destination)
-
-      this.workletNode.port.onmessage = event => {
+      this.pcmUnsubscribe = this.audioCapture.subscribePcm((pcm16: Int16Array) => {
         if (this.config.isMuted) return
-        const pcmBuffer = event.data as ArrayBuffer
-        const base64 = this.arrayBufferToBase64(pcmBuffer)
+        const base64 = this.arrayBufferToBase64(pcm16.buffer)
 
         this.sendWsMessage({
           type: 'audio_chunk',
           pcmBase64: base64,
         })
-      }
+      })
 
-      this.startVisualizerPump()
+      if (this.analyserAssistant) {
+        this.audioCapture.registerOutputAnalyser(this.analyserAssistant)
+      }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
       this.notifyError({
@@ -369,35 +303,17 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   }
 
   private stopAudioCapture(): void {
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach(track => track.stop())
-      this.mediaStream = null
-    }
-    if (this.sourceNode) {
-      try {
-        this.sourceNode.disconnect()
-      } catch {}
-      this.sourceNode = null
-    }
-    if (this.workletNode) {
-      try {
-        this.workletNode.disconnect()
-      } catch {}
-      this.workletNode = null
+    if (this.pcmUnsubscribe) {
+      this.pcmUnsubscribe()
+      this.pcmUnsubscribe = null
     }
   }
 
   private cleanupAudio(): void {
     this.stopAudioCapture()
-    if (this.visualizerInterval) {
-      clearInterval(this.visualizerInterval)
-      this.visualizerInterval = null
-    }
-    if (this.audioCtx) {
-      try {
-        this.audioCtx.close()
-      } catch {}
-      this.audioCtx = null
+    if (this.metricsUnsubscribe) {
+      this.metricsUnsubscribe()
+      this.metricsUnsubscribe = null
     }
     if (this.playbackCtx) {
       try {
@@ -405,6 +321,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
       } catch {}
       this.playbackCtx = null
     }
+    this.audioCapture.registerOutputAnalyser(null)
     this.activeAudioSources = []
     this.nextPlayTime = 0
   }
@@ -422,7 +339,22 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
         this.analyserAssistant = this.playbackCtx.createAnalyser()
         this.analyserAssistant.fftSize = 64
         this.analyserAssistant.connect(this.playbackCtx.destination)
-        this.startVisualizerPump()
+        this.audioCapture.registerOutputAnalyser(this.analyserAssistant)
+
+        if (!this.metricsUnsubscribe) {
+          this.metricsUnsubscribe = this.audioCapture.subscribeMetrics(metrics => {
+            const visualData = {
+              userLevel: metrics.source === 'user' ? metrics.rms : 0,
+              assistantLevel: metrics.source === 'assistant' ? metrics.rms : 0,
+              frequencyData: metrics.frequencyData,
+              timeDomainData: metrics.timeDomainData,
+              source: metrics.source,
+            }
+            for (const l of this.listeners) {
+              l.onAudioLevel?.(visualData)
+            }
+          })
+        }
       }
 
       if (this.playbackCtx.state === 'suspended') {
@@ -574,52 +506,6 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     }
   }
 
-  private startVisualizerPump(): void {
-    if (this.visualizerInterval) return
-
-    const userBuffer = new Uint8Array(32)
-    const assistantBuffer = new Uint8Array(32)
-
-    this.visualizerInterval = setInterval(() => {
-      let userLevel = 0
-      let assistantLevel = 0
-      let source: 'user' | 'assistant' | 'idle' = 'idle'
-      let activeFreq: Uint8Array | undefined = undefined
-
-      if (this.analyserUser && (this.state === 'LISTENING' || this.state === 'CONNECTING')) {
-        this.analyserUser.getByteFrequencyData(userBuffer)
-        let sum = 0
-        for (let i = 0; i < userBuffer.length; i++) sum += userBuffer[i]
-        userLevel = sum / (userBuffer.length * 255)
-        if (userLevel > 0.05) {
-          source = 'user'
-          activeFreq = userBuffer
-        }
-      }
-
-      if (this.analyserAssistant && this.state === 'SPEAKING') {
-        this.analyserAssistant.getByteFrequencyData(assistantBuffer)
-        let sum = 0
-        for (let i = 0; i < assistantBuffer.length; i++) sum += assistantBuffer[i]
-        assistantLevel = sum / (assistantBuffer.length * 255)
-        if (assistantLevel > 0.02) {
-          source = 'assistant'
-          activeFreq = assistantBuffer
-        }
-      }
-
-      const visualData: AudioVisualizerData = {
-        userLevel,
-        assistantLevel,
-        frequencyData: activeFreq,
-        source,
-      }
-
-      for (const l of this.listeners) {
-        l.onAudioLevel?.(visualData)
-      }
-    }, 50)
-  }
 
   private setState(newState: VoiceState): void {
     if (this.state === newState) return
@@ -647,7 +533,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     }
   }
 
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+  private arrayBufferToBase64(buffer: ArrayBufferLike): string {
     let binary = ''
     const bytes = new Uint8Array(buffer)
     const len = bytes.byteLength
