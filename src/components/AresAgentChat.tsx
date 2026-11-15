@@ -548,19 +548,35 @@ export function AresAgentChat({
                           ))}
                         </div>
 
-                        {/* Desglose de telemetría de herramientas */}
+                        {/* Evidencia técnica y telemetría de la NASA (colapsada por defecto para no ensuciar el chat) */}
                         {msg.toolsCalled && msg.toolsCalled.length > 0 && (
-                          <div className="hud-tool-card">
-                            <div className="tool-card-header">
-                              <span>VERIFICACIÓN GEODÉSICA ({msg.toolsCalled.length})</span>
+                          <details className="hud-tool-details">
+                            <summary className="tool-details-summary">
+                              <span className="summary-badge">[EVIDENCIA TÉCNICA NASA ({msg.toolsCalled.length})]</span>
+                              <span className="summary-toggle-text">Ver parámetros del sensor ▾</span>
+                            </summary>
+                            <div className="tool-details-body">
+                              {msg.toolsCalled.map((tc, tidx) => (
+                                <div key={tidx} className="tool-card-item">
+                                  <div className="tool-card-title">FUNCIÓN EJECUTADA: {tc.tool}</div>
+                                  {typeof tc.output === 'object' && tc.output !== null ? (
+                                    <dl className="tool-dl">
+                                      {Object.entries(tc.output as Record<string, unknown>).map(([key, val]) => (
+                                        <div key={key} className="tool-dl-row">
+                                          <dt className="tool-dt">{key}:</dt>
+                                          <dd className="tool-dd">
+                                            {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                                          </dd>
+                                        </div>
+                                      ))}
+                                    </dl>
+                                  ) : (
+                                    <div className="tool-dd">{String(tc.output)}</div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                            {msg.toolsCalled.map((tc, tidx) => (
-                              <div key={tidx} className="tool-exec-item">
-                                <span className="tool-name">[FUNCIÓN]: {tc.tool}</span>
-                                <pre className="tool-io">{JSON.stringify(tc.output, null, 2)}</pre>
-                              </div>
-                            ))}
-                          </div>
+                          </details>
                         )}
                       </div>
                     </div>
