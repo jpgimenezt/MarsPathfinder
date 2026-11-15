@@ -159,6 +159,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   font-size: .67rem; line-height: 1.3; color: #e5eae4; pointer-events: auto;
 }
 .map-stage--panel .base-status { left: 380px; }
+.map-stage--panel .map-hint { bottom: 60px; }
 .base-status span { margin-left: 8px; }
 .base-status button { margin-left: 8px; padding: 4px 7px; color: #18262a; background: #ffc982; border: 0; border-radius: 5px; }
 .nav-tools {
@@ -337,6 +338,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .nav-tools .nav-home, .nav-tools .nav-preset { flex: 1 1 0; width: auto; min-width: 0; padding: 2px; }
   .map-counter { display: none; }
   .map-hint { left: 50%; bottom: auto; top: 72px; width: max-content; max-width: calc(100% - 24px); font-size: .7rem; }
+  .map-stage--panel .map-hint { bottom: auto; }
   .base-status, .map-stage--panel .base-status { left: 8px; bottom: auto; top: 136px; max-width: calc(100% - 16px); }
   .map-stage--editing .base-status { display: none; }
   .roi-notice { top: 140px; }

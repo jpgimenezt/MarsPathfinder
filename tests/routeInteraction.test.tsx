@@ -15,11 +15,13 @@ let rejectPoint: (() => void) | undefined
 let changeRegion: ((region: Region) => void) | undefined
 let mapRegion: Region
 let reportLayer: ((id: 'ctx' | 'mola' | 'themis', state: LayerState) => void) | undefined
+let reportBase: ((state: 'cargando' | 'visible' | 'parcial' | 'error') => void) | undefined
+let baseRetry = 0
 let mapMode: MapMode
 let mapStops: Stops
 let mapScope: MapScope
 vi.mock('../src/components/MapView', () => ({
-  MapView: ({ onPlace, onMove, onInvalid, onRegionChange, region, onLayerState, mode, stops, scope }: {
+  MapView: ({ onPlace, onMove, onInvalid, onRegionChange, region, onLayerState, onBaseState, baseRetry: retry, mode, stops, scope }: {
     onPlace: typeof placePoint
     onMove: typeof dragPoint
     onInvalid: typeof rejectPoint
@@ -27,6 +29,8 @@ vi.mock('../src/components/MapView', () => ({
     region: Region
     panelOpen: boolean
     onLayerState: typeof reportLayer
+    onBaseState: typeof reportBase
+    baseRetry: number
     mode: MapMode
     stops: Stops
     scope: MapScope
@@ -37,6 +41,8 @@ vi.mock('../src/components/MapView', () => ({
     changeRegion = onRegionChange
     mapRegion = region
     reportLayer = onLayerState
+    reportBase = onBaseState
+    baseRetry = retry
     mapMode = mode
     mapStops = stops
     mapScope = scope
@@ -73,9 +79,30 @@ afterEach(() => {
   placePoint = undefined
   dragPoint = undefined
   rejectPoint = undefined
+  reportBase = undefined
 })
 
 describe('interacción explícita del recorrido', () => {
+  it('distingue fallo y reintento de Viking del estado CTX sin borrar la ruta', async () => {
+    await setup()
+    click('.stop:nth-child(1) button')
+    point('A', [77.40, 18.38])
+    act(() => reportLayer!('ctx', 'visible'))
+    act(() => reportBase!('error'))
+    expect(element.querySelector('.base-status')?.textContent).toContain('miniatura local')
+    expect(element.querySelector('.base-status button')).not.toBeNull()
+    expect(mapStops.A).toEqual([77.40, 18.38])
+    expect(baseRetry).toBe(0)
+    click('.base-status button')
+    expect(baseRetry).toBe(1)
+    act(() => reportBase!('visible'))
+    expect(element.querySelector('.base-status')?.textContent).toContain('WMTS visible')
+    expect(element.querySelector('.base-status button')).toBeNull()
+    click('.tabs button:nth-child(2)')
+    expect(element.querySelector('.layer-card .status')?.textContent).toBe('visible')
+    expect(element.querySelector('.source-details')).not.toBeNull()
+    expect(mapStops.A).toEqual([77.40, 18.38])
+  })
   it('conserva A/P/B cuando la región se reduce y permite corregir sin borrarlos', async () => {
     await setup()
     expect(mapRegion).toEqual([77.27, 18.01, 78.11, 18.81])
