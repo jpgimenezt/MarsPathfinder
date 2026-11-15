@@ -4,12 +4,16 @@ import { CTX_EXTENT, marsProjection, ROI } from './marsProjection'
 export function createJezeroView(): View {
   return new View({
     projection: marsProjection,
-    center: [77.43, 18.38],
+    center: [(ROI[0] + ROI[2]) / 2, (ROI[1] + ROI[3]) / 2],
     zoom: 12,
-    minZoom: 7,
+    minZoom: 9.5,
     maxZoom: 14,
     extent: CTX_EXTENT,
-    showFullExtent: false,
+    // El ROI casi llena el bbox CTX. Restringir el centro al contexto local,
+    // no el rectángulo completo de píxeles del visor: así caben la región y
+    // un margen para marcadores en pantallas anchas y estrechas. Los márgenes
+    // vacíos NO amplían la cobertura ni el sector editable.
+    constrainOnlyCenter: true,
   })
 }
 

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useReducer, useState } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
 import { sources, type LayerId } from '../data/sourceManifest'
-import { insideRoi } from '../features/map/marsProjection'
+import { ROI, insideRoi } from '../features/map/marsProjection'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 
@@ -83,7 +83,8 @@ export function App() {
         <div className="toolbar">
           <div className="toolbar-title"><span className="eyebrow">{scope === 'global' ? 'CONTEXTO PLANETARIO · MOLA' : 'REGIÓN DE INVESTIGACIÓN'}</span>
             <strong>{scope === 'global' ? 'Marte global' : 'Jezero Crater'}</strong>
-            <span>{scope === 'global' ? 'Relieve visual · sin rutas ni altitudes numéricas' : '77.35–77.51°E · 18.30–18.45°N'}</span></div>
+             <span>{scope === 'global' ? 'Relieve visual · sin rutas ni altitudes numéricas' :
+               `${ROI[0]}–${ROI[2]}°E · ${ROI[1]}–${ROI[3]}°N`}</span></div>
           <nav className="tabs" aria-label="Paneles de exploración">
             {panelButton('route', 'Ruta')}
             {panelButton('layers', 'Capas')}
@@ -104,7 +105,7 @@ export function App() {
             onMove={movePoint} onInvalid={() => setRouteNotice(true)}
             onLayerState={(id, state) => setStates(current => current[id] === state ? current : { ...current, [id]: state })} />
           {scope === 'jezero' && routeNotice && <div className="roi-notice" role="alert">
-            Fuera del sector editable: el punto no cambió. Es un límite de cobertura y alcance del prototipo, no una indicación de peligro.
+            Fuera del sector CTX comprobado: el punto no cambió. Es un límite de cobertura cartográfica, no una indicación de peligro.
             <button type="button" onClick={() => setRouteNotice(false)} aria-label="Cerrar aviso">×</button>
           </div>}
 
@@ -116,7 +117,10 @@ export function App() {
               <h2>Tu recorrido <span className="soft">exploratorio</span></h2>
               {scope === 'global' && <div className="notice"><b>OUT_OF_COVERAGE · Planificación desactivada</b><br />
                 El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA regional. Volvé a Jezero para editar la ruta.</div>}
-              <p className="intro">Elegí un punto para colocarlo; para editar A/P/B, arrastrá su marcador o usá «Mover». Fuera del sector delimitado no se admiten rutas.</p>
+              <p className="intro">Elegí un punto para colocarlo; para editar A/P/B, arrastrá su marcador o usá «Mover». El contorno delimita la imagen CTX auditada: no indica seguridad de tránsito.</p>
+              {scope === 'jezero' && (!enabled.ctx || states.ctx !== 'visible') &&
+                <div className="notice"><b>CTX {enabled.ctx ? states.ctx : 'apagada'} · imagen no disponible o no confirmada en este momento</b><br />
+                  El respaldo estático cubre solo el sector anterior; fuera de él la imagen depende del servicio WMTS. La cobertura auditada no acredita que una tesela haya cargado ahora. La ruta es una propuesta, no una evaluación del terreno.</div>}
               <div className="mode-strip">
                 <button type="button" disabled={scope === 'global'} aria-pressed={mode.type === 'explore'} className={mode.type === 'explore' ? 'mode-active' : ''}
                   onClick={() => setMode({ type: 'explore' })}>✥ &nbsp; Explorar mapa</button>
@@ -178,7 +182,7 @@ export function App() {
               <a href="https://science.nasa.gov/mission/mars-2020-perseverance/science-objectives/" target="_blank" rel="noreferrer">Objetivos de Perseverance · NASA ↗</a>
               <h3>Riesgos y evidencia</h3>
               <div className="notice"><b>UNVERIFIED · Perfil y pendientes</b><br />
-                El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en el ROI, pero falta confirmar su referencia vertical exacta y su registro respecto de las capas del mapa. No se publican cotas, desniveles ni pendientes.
+                El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en el recorte anterior; su cobertura efectiva en toda esta región ampliada, referencia vertical exacta y registro respecto de las capas del mapa no están verificados. No se publican cotas, desniveles ni pendientes.
                 {' '}<a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">Ficha DEM USGS ↗</a></div>
               <div className="notice"><b>LOW_RESOLUTION · MOLA</b><br />El relieve visual regional no permite detectar rocas o escalones.</div>
               <div className="notice"><b>UNVERIFIED · Ruta</b><br />Transitabilidad, obstáculos pequeños, clima y radiación locales no evaluados. Las paradas elegidas son propuestas del usuario, no sitios de muestreo verificados.</div>
@@ -192,8 +196,8 @@ export function App() {
         </section>
       </main>}
       <footer className="footer">
-        <span>{screen === 'globe' ? 'Globo esférico: relieve MGS MOLA NASA/USGS o mosaico Viking MDIM 2.1 colorizado NASA Ames/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el ROI del planificador es un sector distinto.' :
-          'Fondo de respaldo: una tesela CTX real limitada al sector. Fuera de ella: sin datos. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
+        <span>{screen === 'globe' ? 'Globo esférico: relieve MGS MOLA NASA/USGS o mosaico Viking MDIM 2.1 colorizado NASA Ames/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el centro del cráter no es un punto de ruta documentado.' :
+          'Respaldo estático: una sola tesela CTX, no toda la región editable. Fuera de ella, la imagen depende de Mars Trek. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
         <strong>Prototipo independiente · No apto para uso operacional.</strong>
       </footer>
     </div>

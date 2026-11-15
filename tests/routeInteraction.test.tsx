@@ -79,7 +79,7 @@ describe('interacción explícita del recorrido', () => {
     act(() => rejectPoint!())
     expect(element.querySelector('[role="alert"]')?.textContent).toContain('no una indicación de peligro')
     expect(mapStops.A).toEqual([77.41, 18.39])
-    act(() => dragPoint!('A', [77.60, 18.39]))
+    act(() => dragPoint!('A', [77.70, 18.39]))
     expect(mapStops.A).toEqual([77.41, 18.39])
     click('.route-actions button:first-child')
     expect(mapStops.A).toEqual([77.40, 18.38])
