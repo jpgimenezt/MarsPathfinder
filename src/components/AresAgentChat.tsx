@@ -266,24 +266,29 @@ export function AresAgentChat({
   const inputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' })
+  const prevMessagesLen = useRef(messages.length)
+
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto' })
   }
 
   // Prevenir saltos de layout durante la animación holográfica de apertura
   useEffect(() => {
     if (isModalOpen) {
+      scrollToBottom(false)
       const timer = setTimeout(() => {
         inputRef.current?.focus({ preventScroll: true })
-      }, 550)
+      }, 500)
       return () => clearTimeout(timer)
     }
   }, [isModalOpen])
 
+  // Scroll suave únicamente cuando llegan nuevos mensajes con el chat ya abierto
   useEffect(() => {
-    if (isModalOpen) {
-      scrollToBottom()
+    if (isModalOpen && messages.length > prevMessagesLen.current) {
+      scrollToBottom(true)
     }
+    prevMessagesLen.current = messages.length
   }, [messages, isModalOpen])
 
   // Cierre accesible con tecla Escape
@@ -387,9 +392,6 @@ export function AresAgentChat({
           }}
         >
           <div className="ares-agent-window">
-            {/* Emisión Aladino holográfica desde el icono */}
-            <div className="hud-genie-steam" aria-hidden="true" />
-
             {/* Haz de barrido láser holográfico de inicialización */}
             <div className="hud-laser-boot-beam" aria-hidden="true" />
 
