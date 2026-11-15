@@ -231,4 +231,11 @@ describe('interacción explícita del recorrido', () => {
     expect(mapStops).toEqual({ A: [77.40, 18.38], P: [77.42, 18.39], B: [77.44, 18.40] })
     expect(element.querySelector('.route-total strong')?.textContent).toBe(total)
   })
+  it('redirige a la pantalla de inicio al presionar el logo / marca Ares Route en la parte superior izquierda', async () => {
+    await setup()
+    expect(element.querySelector('[data-testid="mapa"]')).not.toBeNull()
+    click('.brand')
+    expect(element.querySelector('.mock-jezero')).not.toBeNull()
+    expect(element.querySelector('[data-testid="mapa"]')).toBeNull()
+  })
 })

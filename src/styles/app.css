@@ -21,6 +21,21 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   background: #0d191c; border-bottom: 1px solid #30494a;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
+.brand-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.brand-button:hover { opacity: .9; }
+.brand-button:active { transform: scale(0.99); }
+.brand-button:focus-visible { outline: 2px solid #ffce8f; outline-offset: 4px; }
 .brand-mark {
   width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px;
   color: #1b2727; background: linear-gradient(135deg, #ffd09a, #db8a58); font-size: 2rem;
