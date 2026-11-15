@@ -1,18 +1,16 @@
 import View from 'ol/View.js'
-import { CTX_EXTENT, marsProjection, ROI } from './marsProjection'
+import { marsProjection, ROI } from './marsProjection'
+import { EDIT_LIMITS, JEZERO_CONTEXT } from './planningRegion'
 
 export function createJezeroView(): View {
   return new View({
     projection: marsProjection,
-    center: [(ROI[0] + ROI[2]) / 2, (ROI[1] + ROI[3]) / 2],
-    zoom: 12,
-    minZoom: 9.5,
+    center: [77.69, 18.41],
+    zoom: 10,
+    minZoom: 7.5,
     maxZoom: 14,
-    extent: CTX_EXTENT,
-    // El ROI casi llena el bbox CTX. Restringir el centro al contexto local,
-    // no el rectángulo completo de píxeles del visor: así caben la región y
-    // un margen para marcadores en pantallas anchas y estrechas. Los márgenes
-    // vacíos NO amplían la cobertura ni el sector editable.
+    // Solo restringe el CENTRO a los alrededores de Jezero, no la cobertura.
+    extent: [...EDIT_LIMITS],
     constrainOnlyCenter: true,
   })
 }
@@ -29,8 +27,20 @@ export function createGlobalView(): View {
   })
 }
 
-export function fitJezero(view: View, size: number[]): void {
-  view.fit(ROI, { size, padding: [36, 36, 36, 36], maxZoom: 12.5 })
+export function fitJezero(view: View, size: number[], panelOpen = false): void {
+  const [width, height] = size
+  const padding = width <= 680
+    ? [24, 26, panelOpen ? Math.min(300, height * 0.43) : 28, 26]
+    : [36, 36, 36, panelOpen ? Math.min(390, width * 0.34) : 36]
+  view.fit([...JEZERO_CONTEXT], { size, padding, maxZoom: 11.3 })
+}
+
+export function fitCtx(view: View, size: number[], panelOpen = false): void {
+  const [width, height] = size
+  const padding = width <= 680
+    ? [24, 26, panelOpen ? Math.min(300, height * 0.43) : 28, 26]
+    : [36, 36, 36, panelOpen ? Math.min(390, width * 0.34) : 36]
+  view.fit(ROI, { size, padding, maxZoom: 12.5 })
 }
 
 export function fitGlobal(view: View, size: number[]): void {

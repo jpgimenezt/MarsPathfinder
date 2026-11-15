@@ -15,17 +15,20 @@ import Fill from 'ol/style/Fill.js'
 import CircleStyle from 'ol/style/Circle.js'
 import Text from 'ol/style/Text.js'
 import Modify from 'ol/interaction/Modify.js'
+import Translate from 'ol/interaction/Translate.js'
 import Polygon from 'ol/geom/Polygon.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
 import { sources, type LayerId } from '../data/sourceManifest'
-import { CTX_EXTENT, FALLBACK_EXTENT, ROI, insideRoi, marsProjection } from '../features/map/marsProjection'
+import { FALLBACK_EXTENT, ROI, marsProjection } from '../features/map/marsProjection'
+import { handleCoordinates, inRegion, regionRing, resizeRegion, shiftRegion,
+  validRegion, type Region, type RegionHandle } from '../features/map/planningRegion'
 import { WmtsLayerManager, type LayerState } from '../features/map/wmtsLayerManager'
-import { changeZoom, createGlobalView, createJezeroView, fitGlobal, fitJezero, zoomAvailability } from '../features/map/viewNavigation'
+import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitJezero, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
-export type MapMode = { type: 'explore' } | { type: 'place' | 'move'; id: StopId }
+export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
 export type MapScope = 'jezero' | 'global'
 
 interface Props {
@@ -34,6 +37,9 @@ interface Props {
   opacity: Record<LayerId, number>
   stops: Stops
   mode: MapMode
+  region: Region
+  panelOpen: boolean
+  onRegionChange: (region: Region) => void
   onPlace: (id: StopId, point: MarsPoint) => void
   onMove: (id: StopId, point: MarsPoint) => void
   onInvalid: () => void
@@ -46,7 +52,7 @@ const markers: Record<StopId, { color: string; text: string }> = {
   B: { color: '#ff8f77', text: 'Destino propuesto' },
 }
 
-export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove, onInvalid, onLayerState }: Props) {
+export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState }: Props) {
   const element = useRef<HTMLDivElement>(null)
   const map = useRef<Map | null>(null)
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
@@ -63,10 +69,23 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
   const vectors = useRef(new VectorSource())
   const points = useRef(new VectorSource())
   const pointFeatures = useRef(new globalThis.Map<StopId, Feature<Point>>())
+  const regionFeature = useRef(new Feature({ geometry: new Polygon([regionRing(region)]) }))
+  const regionHandles = useRef(new VectorSource<Feature<Point>>())
+  const handleFeatures = useRef(new globalThis.Map<RegionHandle, Feature<Point>>())
+  const regionLayer = useRef<VectorLayer<VectorSource> | null>(null)
+  const handlesLayer = useRef<VectorLayer<VectorSource<Feature<Point>>> | null>(null)
+  const regionRef = useRef(region)
+  regionRef.current = region
+  const panelRef = useRef(panelOpen)
+  panelRef.current = panelOpen
   const routeLayer = useRef<VectorLayer<VectorSource> | null>(null)
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null)
   const roiLayer = useRef<VectorLayer<VectorSource> | null>(null)
   const modify = useRef<Modify | null>(null)
+  const handleModify = useRef<Modify | null>(null)
+  const regionTranslate = useRef<Translate | null>(null)
+  const regionChangeHandler = useRef(onRegionChange)
+  regionChangeHandler.current = onRegionChange
   const dragOrigin = useRef<MarsPoint | null>(null)
   const skipClick = useRef(false)
   const handler = useRef(onPlace)
@@ -74,6 +93,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
   const invalidHandler = useRef(onInvalid)
   const stateHandler = useRef(onLayerState)
   const modeRef = useRef(mode)
+  const [regionError, setRegionError] = useState(false)
   const [zoom, setZoom] = useState({ in: true, out: true })
   handler.current = onPlace
   moveHandler.current = onMove
@@ -104,20 +124,22 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
     fallback.current = local
     const route = new VectorLayer({ source: vectors.current })
     const markerLayer = new VectorLayer({ source: points.current })
+    const regionVector = new VectorSource({ features: [regionFeature.current] })
+    const regionOutline = new VectorLayer({ source: regionVector,
+      style: new Style({ fill: new Fill({ color: '#ffc78411' }),
+        stroke: new Stroke({ color: '#ffbf77', width: 3, lineDash: [9, 6] }) }) })
+    regionLayer.current = regionOutline
+    const handles = new VectorLayer({ source: regionHandles.current,
+      style: new Style({ image: new CircleStyle({ radius: 11, fill: new Fill({ color: '#f1b776' }),
+        stroke: new Stroke({ color: '#17262a', width: 3 }) }) }) })
+    handlesLayer.current = handles
     routeLayer.current = route
     markerLayerRef.current = markerLayer
     const border = new VectorLayer({
       source: new VectorSource({ features: [new Feature({
-        geometry: new Polygon([[
-          [CTX_EXTENT[0], CTX_EXTENT[1]], [CTX_EXTENT[2], CTX_EXTENT[1]],
-          [CTX_EXTENT[2], CTX_EXTENT[3]], [CTX_EXTENT[0], CTX_EXTENT[3]], [CTX_EXTENT[0], CTX_EXTENT[1]],
-        ], [
-          [ROI[0], ROI[1]], [ROI[0], ROI[3]], [ROI[2], ROI[3]],
-          [ROI[2], ROI[1]], [ROI[0], ROI[1]],
-        ]]),
+        geometry: new Polygon([regionRing(ROI)]),
       })] }),
-      style: new Style({ fill: new Fill({ color: '#081a2670' }),
-        stroke: new Stroke({ color: '#ffcf91', width: 2, lineDash: [8, 5] }) }),
+      style: new Style({ stroke: new Stroke({ color: '#79e9e0', width: 3, lineDash: [3, 5] }) }),
     })
     roiLayer.current = border
     function redrawRoute() {
@@ -139,7 +161,8 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
     localView.current = jezero
     const instance = new Map({
       target: element.current,
-      layers: [local, layers.current.ctx, layers.current.mola, layers.current.themis, border, route, markerLayer],
+      layers: [local, layers.current.ctx, layers.current.mola, layers.current.themis,
+        border, regionOutline, route, markerLayer, handles],
       view: jezero,
       controls: defaultControls({ zoom: false, rotate: false }),
     })
@@ -149,6 +172,64 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
         stroke: new Stroke({ color: '#fff0ba', width: 3 }) }) }) })
     modify.current = drag
     instance.addInteraction(drag)
+    // El editor de región tiene interacciones independientes: solo sus
+    // manejadores modifican esquinas/lados; el interior traslada el rectángulo.
+    let original: Region | null = null
+    let activeHandle: RegionHandle | null = null
+    const refreshRegion = (bounds: Region) => {
+      (regionFeature.current.getGeometry() as Polygon).setCoordinates([regionRing(bounds)])
+      for (const [id, coord] of Object.entries(handleCoordinates(bounds)) as [RegionHandle, number[]][]) {
+        const feature = handleFeatures.current.get(id)
+        if (feature) feature.getGeometry()!.setCoordinates(coord)
+      }
+    }
+    const editHandles = new Modify({ source: regionHandles.current, hitDetection: handles, pixelTolerance: 18,
+      style: new Style({ image: new CircleStyle({ radius: 13, fill: new Fill({ color: '#f1b776' }),
+        stroke: new Stroke({ color: '#fff', width: 3 }) }) }) })
+    handleModify.current = editHandles
+    const moveRegion = new Translate({ layers: [regionOutline], hitTolerance: 0 })
+    regionTranslate.current = moveRegion
+    instance.addInteraction(moveRegion)
+    instance.addInteraction(editHandles) // más reciente: prioridad sobre Translate
+    editHandles.on('modifystart', event => {
+      original = [...regionRef.current] as Region
+      activeHandle = event.features.item(0)?.getId() as RegionHandle | null
+      skipClick.current = true
+    })
+    regionHandles.current.on('changefeature', event => {
+      if (!original || !activeHandle || !event.feature || event.feature.getId() !== activeHandle) return
+      const coord = (event.feature.getGeometry() as Point | undefined)?.getCoordinates()
+      if (!coord) return
+      const candidate = resizeRegion(original, activeHandle, coord)
+      if (validRegion(candidate)) (regionFeature.current.getGeometry() as Polygon).setCoordinates([regionRing(candidate)])
+    })
+    editHandles.on('modifyend', event => {
+      if (!original || !activeHandle) return
+      const coord = (event.features.item(0)?.getGeometry() as Point | undefined)?.getCoordinates()
+      const next = coord ? resizeRegion(original, activeHandle, coord) : original
+      refreshRegion(validRegion(next) ? next : original)
+      if (validRegion(next) && next.some((value, i) => value !== original![i])) regionChangeHandler.current(next)
+      else if (!validRegion(next)) setRegionError(true)
+      original = null
+      activeHandle = null
+    })
+    let moveStart: Region | null = null
+    moveRegion.on('translatestart', () => { moveStart = [...regionRef.current] as Region; skipClick.current = true })
+    moveRegion.on('translating', event => {
+      if (!moveStart) return
+      const next = shiftRegion(moveStart, event.coordinate[0] - event.startCoordinate[0],
+        event.coordinate[1] - event.startCoordinate[1])
+      if (validRegion(next)) refreshRegion(next)
+    })
+    moveRegion.on('translateend', event => {
+      if (!moveStart) return
+      const next = shiftRegion(moveStart, event.coordinate[0] - event.startCoordinate[0],
+        event.coordinate[1] - event.startCoordinate[1])
+      refreshRegion(validRegion(next) ? next : moveStart)
+      if (validRegion(next) && next.some((value, i) => value !== moveStart![i])) regionChangeHandler.current(next)
+      else if (!validRegion(next)) setRegionError(true)
+      moveStart = null
+    })
     drag.on('modifystart', event => {
       const feature = event.features.item(0)
       const coordinate = (feature?.getGeometry() as Point | undefined)?.getCoordinates()
@@ -165,7 +246,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
       window.setTimeout(() => { skipClick.current = false }, 500)
       if (!feature || !coordinate || !origin) return
       if (coordinate[0] === origin[0] && coordinate[1] === origin[1]) return
-      if (scopeRef.current !== 'jezero' || !insideRoi(coordinate) ||
+      if (scopeRef.current !== 'jezero' || !inRegion(coordinate, regionRef.current) ||
           !Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) {
         (feature.getGeometry() as Point).setCoordinates([...origin])
         invalidHandler.current()
@@ -174,7 +255,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
       moveHandler.current(feature.getId() as StopId, [coordinate[0], coordinate[1]])
     })
     instance.updateSize()
-    fitJezero(jezero, instance.getSize() ?? [900, 650])
+    fitJezero(jezero, instance.getSize() ?? [900, 650], panelRef.current)
     const updateZoom = () => setZoom(zoomAvailability(instance.getView()))
     instance.on('moveend', updateZoom)
     const observer = new ResizeObserver(() => {
@@ -186,10 +267,10 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
     instance.on('singleclick', event => {
       const selection = modeRef.current
       if (skipClick.current) { skipClick.current = false; return }
-      if (scopeRef.current !== 'jezero' || selection.type === 'explore') return
+      if (scopeRef.current !== 'jezero' || selection.type === 'explore' || selection.type === 'edit-region') return
       if (instance.hasFeatureAtPixel(event.pixel, { layerFilter: layer => layer === markerLayer })) return
-      if (!insideRoi(event.coordinate)) { invalidHandler.current(); return }
-      handler.current(selection.id, [event.coordinate[0], event.coordinate[1]])
+      if (!inRegion(event.coordinate, regionRef.current)) { invalidHandler.current(); return }
+      if (selection.type === 'place' || selection.type === 'move') handler.current(selection.id, [event.coordinate[0], event.coordinate[1]])
     })
     map.current = instance
     return () => {
@@ -198,7 +279,11 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
       points.current.un('changefeature', redrawRoute)
       manager.current?.dispose()
       instance.removeInteraction(drag)
+      instance.removeInteraction(editHandles)
+      instance.removeInteraction(moveRegion)
       modify.current = null
+      handleModify.current = null
+      regionTranslate.current = null
       manager.current = null
       instance.setTarget(undefined)
       instance.dispose()
@@ -209,6 +294,8 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
       routeLayer.current = null
       markerLayerRef.current = null
       roiLayer.current = null
+      regionLayer.current = null
+      handlesLayer.current = null
     }
   }, [])
 
@@ -228,10 +315,36 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
     routeLayer.current?.setVisible(scope === 'jezero')
     markerLayerRef.current?.setVisible(scope === 'jezero')
     roiLayer.current?.setVisible(scope === 'jezero')
-    modify.current?.setActive(scope === 'jezero')
+    regionLayer.current?.setVisible(scope === 'jezero')
+    handlesLayer.current?.setVisible(scope === 'jezero' && modeRef.current.type === 'edit-region')
+    modify.current?.setActive(scope === 'jezero' && modeRef.current.type !== 'edit-region')
+    handleModify.current?.setActive(scope === 'jezero' && modeRef.current.type === 'edit-region')
+    regionTranslate.current?.setActive(scope === 'jezero' && modeRef.current.type === 'edit-region')
     for (const source of sources) manager.current?.setEnabled(source.id, scope === 'global' ? source.id === 'mola' : enabled[source.id])
     setZoom(zoomAvailability(map.current.getView()))
   }, [enabled, scope])
+
+  useEffect(() => {
+    (regionFeature.current.getGeometry() as Polygon).setCoordinates([regionRing(region)])
+    const positions = handleCoordinates(region)
+    for (const [id, coord] of Object.entries(positions) as [RegionHandle, number[]][]) {
+      let feature = handleFeatures.current.get(id)
+      if (!feature) {
+        feature = new Feature({ geometry: new Point(coord) })
+        feature.setId(id)
+        handleFeatures.current.set(id, feature)
+        regionHandles.current.addFeature(feature)
+      } else feature.getGeometry()!.setCoordinates(coord)
+    }
+  }, [region])
+
+  useEffect(() => {
+    const edit = scope === 'jezero' && mode.type === 'edit-region'
+    handlesLayer.current?.setVisible(edit)
+    modify.current?.setActive(scope === 'jezero' && !edit)
+    handleModify.current?.setActive(edit)
+    regionTranslate.current?.setActive(edit)
+  }, [mode, scope])
 
   useEffect(() => {
     for (const source of sources) layers.current[source.id].setOpacity(opacity[source.id])
@@ -267,23 +380,31 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove,
 
   return (
     <div className="map-shell">
-      <div className={`map ${scope === 'jezero' && mode.type !== 'explore' ? 'map--placing' : ''}`} ref={element}
+      <div className={`map ${scope === 'jezero' && mode.type !== 'explore' && mode.type !== 'edit-region' ? 'map--placing' : ''}`} ref={element}
         role="application" aria-label={scope === 'global' ? 'Vista 2D global de Marte: relieve visual MOLA, sin planificación de rutas.' :
-          'Mapa orbital de Jezero, Marte. Arrastrá los marcadores para editarlos; fuera del sector delimitado no se puede planificar.'} />
+           'Mapa de Jezero: región manual naranja, cobertura CTX comprobada turquesa. La imagen fuera de CTX puede no estar disponible.'} />
       <div className="nav-tools" aria-label="Controles de navegación del mapa">
         <button type="button" aria-label="Acercar mapa" title="Acercar" disabled={!zoom.in}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), 0.75) }}>+</button>
         <button type="button" aria-label="Alejar mapa" title="Alejar" disabled={!zoom.out}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), -0.75) }}>−</button>
         <button type="button" className="nav-home"
-          aria-label={scope === 'global' ? 'Reencuadrar Marte global' : 'Reencuadrar sector Jezero'}
-          title={scope === 'global' ? 'Reencuadrar Marte global' : 'Reencuadrar Jezero'}
-          onClick={() => { if (map.current) (scope === 'global' ? fitGlobal : fitJezero)(map.current.getView(), map.current.getSize() ?? [900, 650]) }}>◎</button>
+          aria-label={scope === 'global' ? 'Reencuadrar Marte global' : 'Ver Jezero completo'}
+          onClick={() => { if (map.current) (scope === 'global' ? fitGlobal : fitJezero)(
+            map.current.getView(), map.current.getSize() ?? [900, 650], panelRef.current) }}>
+          {scope === 'global' ? '◎' : 'Ver Jezero completo'}</button>
+        {scope === 'jezero' && <button type="button" className="nav-preset" onClick={() => {
+          if (map.current) fitCtx(map.current.getView(), map.current.getSize() ?? [900, 650], panelRef.current)
+        }}>Ver sector CTX</button>}
       </div>
       <div className="map-hint" aria-live="polite">
-        {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' : mode.type === 'explore' ? 'Sector punteado: editable · arrastrá marcadores o navegá el mapa' :
-          `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${mode.id} · tocá el sector delimitado. También podés arrastrar marcadores existentes.`}
+        {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' :
+          mode.type === 'edit-region' ? 'Región manual naranja · arrastrá esquinas, bordes o el interior' :
+          mode.type === 'explore' ? 'Región manual naranja · cobertura CTX turquesa · fuera de ella: sin imagen detallada' :
+          `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${'id' in mode ? mode.id : ''} · tocá la región manual. También podés arrastrar marcadores existentes.`}
       </div>
+      {regionError && <div className="region-error" role="alert">Región no modificada: tamaño mínimo o límite del editor en Jezero.
+        <button type="button" onClick={() => setRegionError(false)} aria-label="Cerrar aviso de región">×</button></div>}
     </div>
   )
 }

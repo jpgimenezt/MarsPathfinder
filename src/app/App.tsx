@@ -3,6 +3,7 @@ import { MapView, type LayerState, type MapMode, type MapScope } from '../compon
 import { GlobeBoundary } from '../components/GlobeBoundary'
 import { sources, type LayerId } from '../data/sourceManifest'
 import { ROI, insideRoi } from '../features/map/marsProjection'
+import { JEZERO_CONTEXT, inRegion, segmentCoverage, validRegion, type Region } from '../features/map/planningRegion'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 
@@ -28,12 +29,14 @@ export function App() {
   const [plan, dispatch] = useReducer(routePlanReducer, initialRoutePlan)
   const [selected, setSelected] = useState<LayerId>('ctx')
   const [mode, setMode] = useState<MapMode>({ type: 'explore' })
+  const [region, setRegion] = useState<Region>(JEZERO_CONTEXT)
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
-  const [routeNotice, setRouteNotice] = useState(false)
+  const [routeNotice, setRouteNotice] = useState<string | null>(null)
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
   const count = STOP_ORDER.filter(id => plan.stops[id]).length
+  const outsideStops = STOP_ORDER.filter(id => plan.stops[id] && !inRegion(plan.stops[id]!, region))
   const openJezero = useCallback(() => {
     setScope('jezero')
     setMode({ type: 'explore' })
@@ -45,22 +48,40 @@ export function App() {
   }, [])
 
   function place(id: StopId, point: MarsPoint) {
-    if (scope !== 'jezero' || mode.type === 'explore' || mode.id !== id) return
-    if (!insideRoi(point)) { setRouteNotice(true); return }
-    dispatch({ type: 'set', id, point })
-    setRouteNotice(false)
+    if (scope !== 'jezero' || (mode.type !== 'place' && mode.type !== 'move') || mode.id !== id) return
+    if (!inRegion(point, region)) { setRouteNotice('Fuera de la región elegida: el punto no cambió. Podés ampliar la región o seleccionar otra posición.'); return }
+    dispatch({ type: 'set', id, point, region })
+    setRouteNotice(null)
     setMode({ type: 'explore' })
   }
   function movePoint(id: StopId, point: MarsPoint) {
     if (scope !== 'jezero' || !plan.stops[id]) return
-    if (!insideRoi(point)) { setRouteNotice(true); return }
-    dispatch({ type: 'set', id, point })
-    setRouteNotice(false)
+    if (!inRegion(point, region)) { setRouteNotice('Fuera de la región elegida: el punto no cambió. Podés ampliar la región o moverlo adentro.'); return }
+    dispatch({ type: 'set', id, point, region })
+    setRouteNotice(null)
+  }
+  function changeRegion(next: Region) {
+    if (!validRegion(next)) {
+      setRouteNotice('Región no modificada: respetá el tamaño mínimo y el entorno local de Jezero.')
+      return
+    }
+    setRegion(next)
+    setRouteNotice(null)
+  }
+  function coverageLabel(first: StopId, second: StopId) {
+    const a = plan.stops[first], b = plan.stops[second]
+    if (!a || !b) return null
+    const coverage = segmentCoverage(a, b, ROI)
+    return coverage === 'complete' ? 'CTX verificado en el tramo dibujado' :
+      coverage === 'partial' ? 'CTX parcial; sectores sin imagen detallada' : 'Sin imagen CTX detallada'
   }
 
   function panelButton(id: Panel, label: string) {
     return <button type="button" className={panel === id ? 'tab active' : 'tab'} aria-pressed={panel === id}
-      onClick={() => setPanel(current => current === id ? null : id)}>{label}</button>
+      onClick={() => {
+        if (mode.type === 'edit-region') setMode({ type: 'explore' })
+        setPanel(current => current === id ? null : id)
+      }}>{label}</button>
   }
 
   return (
@@ -84,12 +105,17 @@ export function App() {
           <div className="toolbar-title"><span className="eyebrow">{scope === 'global' ? 'CONTEXTO PLANETARIO · MOLA' : 'REGIÓN DE INVESTIGACIÓN'}</span>
             <strong>{scope === 'global' ? 'Marte global' : 'Jezero Crater'}</strong>
              <span>{scope === 'global' ? 'Relieve visual · sin rutas ni altitudes numéricas' :
-               `${ROI[0]}–${ROI[2]}°E · ${ROI[1]}–${ROI[3]}°N`}</span></div>
+               `Región manual: ${region[0].toFixed(2)}–${region[2].toFixed(2)}°E · ${region[1].toFixed(2)}–${region[3].toFixed(2)}°N`}</span></div>
           <nav className="tabs" aria-label="Paneles de exploración">
             {panelButton('route', 'Ruta')}
             {panelButton('layers', 'Capas')}
             {panelButton('science', 'Ciencia y riesgos')}
           </nav>
+          {mode.type === 'edit-region' && <div className="edit-shortcuts" aria-label="Controles de región">
+            <button type="button" onClick={() => { setMode({ type: 'explore' }); setPanel('route') }}>Terminar edición</button>
+            <button type="button" onClick={() => changeRegion(JEZERO_CONTEXT)}>Restablecer región</button>
+            <button type="button" onClick={() => changeRegion(ROI)}>Usar sector CTX verificado</button>
+          </div>}
           <button type="button" className="scope-toggle" onClick={() => {
             setScope(current => current === 'jezero' ? 'global' : 'jezero')
             setMode({ type: 'explore' })
@@ -100,13 +126,15 @@ export function App() {
           }}>◉ Volver al globo 3D</button>
         </div>
 
-        <section className="map-stage" aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
-          <MapView scope={scope} enabled={enabled} opacity={opacity} stops={plan.stops} mode={mode} onPlace={place}
-            onMove={movePoint} onInvalid={() => setRouteNotice(true)}
+        <section className={`map-stage${mode.type === 'edit-region' ? ' map-stage--editing' : ''}`}
+          aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
+          <MapView scope={scope} enabled={enabled} opacity={opacity} stops={plan.stops} mode={mode} panelOpen={panel !== null}
+            region={region} onRegionChange={changeRegion} onPlace={place}
+            onMove={movePoint} onInvalid={() => setRouteNotice('Fuera de la región elegida: el punto no cambió. Ampliá la región o elegí una posición dentro.')}
             onLayerState={(id, state) => setStates(current => current[id] === state ? current : { ...current, [id]: state })} />
           {scope === 'jezero' && routeNotice && <div className="roi-notice" role="alert">
-            Fuera del sector CTX comprobado: el punto no cambió. Es un límite de cobertura cartográfica, no una indicación de peligro.
-            <button type="button" onClick={() => setRouteNotice(false)} aria-label="Cerrar aviso">×</button>
+            {routeNotice} Ningún límite indica que una zona sea peligrosa o segura.
+            <button type="button" onClick={() => setRouteNotice(null)} aria-label="Cerrar aviso">×</button>
           </div>}
 
           {panel && <aside className="drawer" aria-label={panel === 'route' ? 'Planificador de ruta' : panel === 'layers' ? 'Capas científicas' : 'Ciencia y riesgos'}>
@@ -117,7 +145,20 @@ export function App() {
               <h2>Tu recorrido <span className="soft">exploratorio</span></h2>
               {scope === 'global' && <div className="notice"><b>OUT_OF_COVERAGE · Planificación desactivada</b><br />
                 El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA regional. Volvé a Jezero para editar la ruta.</div>}
-              <p className="intro">Elegí un punto para colocarlo; para editar A/P/B, arrastrá su marcador o usá «Mover». El contorno delimita la imagen CTX auditada: no indica seguridad de tránsito.</p>
+              <p className="intro">Elegí A/P/B o arrastrá sus marcadores. El rectángulo naranja es tu región manual; el contorno turquesa identifica CTX comprobado. Ninguno garantiza transitabilidad.</p>
+              <div className="region-actions">
+                <button type="button" disabled={scope === 'global'} aria-pressed={mode.type === 'edit-region'}
+                  onClick={() => {
+                    if (mode.type === 'edit-region') setMode({ type: 'explore' })
+                    else { setPanel(null); setMode({ type: 'edit-region' }) }
+                  }}>
+                  {mode.type === 'edit-region' ? 'Terminar edición' : 'Editar región'}</button>
+                <button type="button" disabled={scope === 'global'} onClick={() => changeRegion(JEZERO_CONTEXT)}>Restablecer región</button>
+                <button type="button" disabled={scope === 'global'} onClick={() => changeRegion(ROI)}>Usar sector CTX verificado</button>
+              </div>
+              {mode.type === 'edit-region' && <p className="notice">Arrastrá las esquinas, los lados o el interior para ajustar el rectángulo. Durante esta edición no se mueven los puntos ni el mapa dentro del rectángulo.</p>}
+              {outsideStops.length > 0 && <div className="notice" role="status"><b>OUT_OF_COVERAGE · Región manual</b><br />
+                {outsideStops.join(', ')} {outsideStops.length === 1 ? 'quedó' : 'quedaron'} fuera de la región elegida. El plan se conserva: ampliá la región o mové cada punto adentro; las distancias siguen siendo geométricas, no una evaluación de riesgo.</div>}
               {scope === 'jezero' && (!enabled.ctx || states.ctx !== 'visible') &&
                 <div className="notice"><b>CTX {enabled.ctx ? states.ctx : 'apagada'} · imagen no disponible o no confirmada en este momento</b><br />
                   El respaldo estático cubre solo el sector anterior; fuera de él la imagen depende del servicio WMTS. La cobertura auditada no acredita que una tesela haya cargado ahora. La ruta es una propuesta, no una evaluación del terreno.</div>}
@@ -129,17 +170,19 @@ export function App() {
                 {STOP_ORDER.map((id, index) => {
                   const point = plan.stops[id]
                   const previous = index === 0 || !!plan.stops[STOP_ORDER[index - 1]]
-                  const active = mode.type !== 'explore' && mode.id === id
+                  const active = (mode.type === 'place' || mode.type === 'move') && mode.id === id
                   return <li className={active ? 'stop active-stop' : 'stop'} key={id}>
                     <span className={`stop-symbol stop-${id.toLowerCase()}`} aria-hidden="true">{id}</span>
-                    <div className="stop-info"><strong>{stops[id].title}</strong><small>{point ? formatPoint(point) : stops[id].sub}</small></div>
+                    <div className="stop-info"><strong>{stops[id].title}</strong><small>{point ? formatPoint(point) : stops[id].sub}</small>
+                      {point && !inRegion(point, region) && <small>FUERA DE REGIÓN · corregir</small>}
+                      {point && <small>{insideRoi(point) ? 'CTX auditado en este punto' : 'Sin imagen CTX detallada'}</small>}</div>
                     <button type="button" disabled={scope === 'global' || !previous} aria-pressed={active}
                       aria-label={`${point ? 'Mover' : 'Colocar'} ${stops[id].title} ${id}`}
                       onClick={() => setMode(active ? { type: 'explore' } : { type: point ? 'move' : 'place', id })}>
                       {active ? 'Cancelar' : point ? 'Mover' : 'Colocar'}
                     </button>
-                    {index === 1 && <span className="leg-detail">A → P <strong>{formatKm(legs.first)}</strong></span>}
-                    {index === 2 && <span className="leg-detail">P → B <strong>{formatKm(legs.second)}</strong></span>}
+                    {index === 1 && <span className="leg-detail">A → P <strong>{formatKm(legs.first)}</strong>{coverageLabel('A', 'P') && <small>{coverageLabel('A', 'P')}</small>}</span>}
+                    {index === 2 && <span className="leg-detail">P → B <strong>{formatKm(legs.second)}</strong>{coverageLabel('P', 'B') && <small>{coverageLabel('P', 'B')}</small>}</span>}
                   </li>
                 })}
               </ol>
@@ -182,7 +225,7 @@ export function App() {
               <a href="https://science.nasa.gov/mission/mars-2020-perseverance/science-objectives/" target="_blank" rel="noreferrer">Objetivos de Perseverance · NASA ↗</a>
               <h3>Riesgos y evidencia</h3>
               <div className="notice"><b>UNVERIFIED · Perfil y pendientes</b><br />
-                El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en el recorte anterior; su cobertura efectiva en toda esta región ampliada, referencia vertical exacta y registro respecto de las capas del mapa no están verificados. No se publican cotas, desniveles ni pendientes.
+                El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en un recorte anterior; su cobertura en la región manual, referencia vertical y registro con estas capas no están validados. No se publican cotas, desniveles ni pendientes.
                 {' '}<a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">Ficha DEM USGS ↗</a></div>
               <div className="notice"><b>LOW_RESOLUTION · MOLA</b><br />El relieve visual regional no permite detectar rocas o escalones.</div>
               <div className="notice"><b>UNVERIFIED · Ruta</b><br />Transitabilidad, obstáculos pequeños, clima y radiación locales no evaluados. Las paradas elegidas son propuestas del usuario, no sitios de muestreo verificados.</div>
