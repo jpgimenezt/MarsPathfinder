@@ -519,7 +519,7 @@ export function MarsTerrain3D({
         legGeo.rotateZ(Math.PI / 5.2)
         legGeo.translate(0.22, 0.25, 0)
         legGeo.rotateY(legAngle)
-        const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.35, roughness: 0.55 }))
+        const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x4b392f, metalness: 0.35, roughness: 0.55 }))
         legMesh.castShadow = true
         pinGroup.add(legMesh)
       }
@@ -527,20 +527,20 @@ export function MarsTerrain3D({
       // Canister central presurizado de instrumentación analítica (CheMin/SAM)
       const coreGeo = new CylinderGeometry(0.18, 0.22, 0.35, 8)
       coreGeo.translate(0, 0.32, 0)
-      const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.3, roughness: 0.5 }))
+      const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x352820, metalness: 0.3, roughness: 0.5 }))
       coreMesh.castShadow = true
       pinGroup.add(coreMesh)
 
       // Tapa con micro-celdas solares fotovoltaicas
       const capGeo = new CylinderGeometry(0.22, 0.22, 0.04, 8)
       capGeo.translate(0, 0.52, 0)
-      const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.4, roughness: 0.35 }))
+      const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x9c6f4d, metalness: 0.4, roughness: 0.35 }))
       pinGroup.add(capMesh)
 
       // Mástil sensor vertical con cabezal óptico Mastcam / ChemCam
       const mastGeo = new CylinderGeometry(0.025, 0.025, 0.35, 6)
       mastGeo.translate(0, 0.7, 0)
-      const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.35, roughness: 0.55 }))
+      const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x6d5647, metalness: 0.35, roughness: 0.55 }))
       mastMesh.castShadow = true
       pinGroup.add(mastMesh)
 
@@ -558,7 +558,7 @@ export function MarsTerrain3D({
       // Anillo exterior con muescas de adquisición de objetivo
       const outerRingGeo = new RingGeometry(0.28, 0.36, 24)
       outerRingGeo.rotateX(-Math.PI / 2)
-      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85, side: DoubleSide })))
+      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0xe0b489, transparent: true, opacity: 0.85, side: DoubleSide })))
 
       // Rombo de telemetría interior
       const diamondRingGeo = new RingGeometry(0.1, 0.16, 4)
@@ -580,7 +580,7 @@ export function MarsTerrain3D({
     const ellipseCurve = new EllipseCurve(0, 0, 20.65, 13.28, 0, 2 * Math.PI, false, (78 * Math.PI) / 180)
     const ellipsePoints3D = ellipseCurve.getPoints(64).map(p => new Vector3(p.x, 0.08, p.y))
     const ellipseGeo = new BufferGeometry().setFromPoints(ellipsePoints3D)
-    const ellipseMat = new LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.75 })
+    const ellipseMat = new LineBasicMaterial({ color: 0xc99a70, transparent: true, opacity: 0.75 })
     const landingEllipse = new LineLoop(ellipseGeo, ellipseMat)
     landingEllipse.position.set(landingX, landingY, landingZ)
     landingEllipse.name = `landing-ellipse-${PRIMARY_LANDING_SITE.id}`
@@ -666,7 +666,7 @@ export function MarsTerrain3D({
       wpGroup.add(ringMesh)
 
       const baseGeo = new CylinderGeometry(0.08, 0.12, 0.08, 8)
-      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.25, roughness: 0.55 }))
+      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x4b392f, metalness: 0.25, roughness: 0.55 }))
       baseMesh.position.y = 0.04
       wpGroup.add(baseMesh)
 
@@ -1033,9 +1033,9 @@ export function MarsTerrain3D({
       })
       group.add(new Mesh(outerTubeGeo, outerMat))
 
-      // B. Núcleo central luminoso cian brillante (#00f0ff)
+      // B. Núcleo central luminoso cian brillante (#c99a70)
       const innerTubeGeo = new TubeGeometry(primaryCurve, primary3DPoints.length * 2, 0.035, 6, false)
-      const innerMat = new MeshBasicMaterial({ color: 0x00f0ff })
+      const innerMat = new MeshBasicMaterial({ color: 0xc99a70 })
       group.add(new Mesh(innerTubeGeo, innerMat))
 
       // C. Corredor alternativo / travesía secundaria (faint cyan estilo NASA traverse)
@@ -1043,7 +1043,7 @@ export function MarsTerrain3D({
         const secCurve = new CatmullRomCurve3(secondary3DPoints)
         const secTubeGeo = new TubeGeometry(secCurve, secondary3DPoints.length * 2, 0.024, 6, false)
         const secMat = new MeshBasicMaterial({
-          color: 0x38bdf8,
+          color: 0xe0b489,
           transparent: true,
           opacity: 0.45,
         })
@@ -1077,18 +1077,18 @@ export function MarsTerrain3D({
           const mBaseGeo = new RingGeometry(0.38, 0.52, 20)
           mBaseGeo.rotateX(-Math.PI / 2)
           mBaseGeo.translate(0, 0.045, 0)
-          mGroup.add(new Mesh(mBaseGeo, new MeshBasicMaterial({ color: 0x0f172a, side: DoubleSide })))
+          mGroup.add(new Mesh(mBaseGeo, new MeshBasicMaterial({ color: 0x271d18, side: DoubleSide })))
 
           // Anillo cian luminiscente rasante en el suelo (360° indicator)
           const mRingGeo = new RingGeometry(0.24, 0.38, 20)
           mRingGeo.rotateX(-Math.PI / 2)
           mRingGeo.translate(0, 0.05, 0)
-          mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.9, side: DoubleSide })))
+          mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0xc99a70, transparent: true, opacity: 0.9, side: DoubleSide })))
 
           // Punto central de baliza táctica
           const mCenterDot = new OctahedronGeometry(0.10, 0)
           mCenterDot.translate(0, 0.22, 0)
-          mGroup.add(new Mesh(mCenterDot, new MeshBasicMaterial({ color: 0x00f0ff })))
+          mGroup.add(new Mesh(mCenterDot, new MeshBasicMaterial({ color: 0xc99a70 })))
 
           group.add(mGroup)
           nextMilestoneKm++
@@ -1111,7 +1111,7 @@ export function MarsTerrain3D({
 
       // Base táctica compacta en el regolito
       const baseGeo = new CylinderGeometry(0.35, 0.42, 0.12, 12)
-      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 }))
+      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x352820, metalness: 0.85, roughness: 0.35 }))
       baseMesh.castShadow = true
       baseMesh.receiveShadow = true
       baseMesh.position.y = 0.06
@@ -1121,7 +1121,7 @@ export function MarsTerrain3D({
       const borderRingGeo = new RingGeometry(0.85, 1.05, 28)
       borderRingGeo.rotateX(-Math.PI / 2)
       borderRingGeo.translate(0, 0.04, 0)
-      waypointGroup.add(new Mesh(borderRingGeo, new MeshBasicMaterial({ color: 0x0f172a, side: DoubleSide })))
+      waypointGroup.add(new Mesh(borderRingGeo, new MeshBasicMaterial({ color: 0x271d18, side: DoubleSide })))
 
       // Anillo concéntrico rasante de adquisición de objetivo en el suelo (START 360° / TARGET 360°)
       const distRingGeo = new RingGeometry(0.65, 0.85, 28)
@@ -1132,7 +1132,7 @@ export function MarsTerrain3D({
       // Micro-sensor vertical de telemetría
       const pylonGeo = new CylinderGeometry(0.04, 0.05, 0.55, 6)
       pylonGeo.translate(0, 0.35, 0)
-      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 }))
+      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x6d5647, metalness: 0.8, roughness: 0.3 }))
       waypointGroup.add(pylonMesh)
 
       // Emisor óptico de baliza compacto
@@ -1952,8 +1952,8 @@ export function MarsTerrain3D({
                   type="button"
                   className="hud-btn secondary"
                   style={{
-                    borderColor: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(0, 240, 255, 0.4)',
-                    color: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
+                    borderColor: routeViewMode === 'eva' ? '#c99a70' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(201, 154, 112, 0.4)',
+                    color: routeViewMode === 'eva' ? '#c99a70' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
                   }}
                   onClick={() => {
                     setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')
@@ -2112,7 +2112,7 @@ export function MarsTerrain3D({
 
                 <div className="drawer-text-block">
                   <strong>{ui('Technical reference:', 'Referencia técnica:')}</strong>
-                   <p style={{ color: '#94a3b8', fontSize: '0.64rem' }}>{localizedColonyModule(selectedColonyModule, language).technicalReference}</p>
+                   <p style={{ color: '#c6ae99', fontSize: '0.64rem' }}>{localizedColonyModule(selectedColonyModule, language).technicalReference}</p>
                 </div>
 
                 <div className="drawer-actions">
@@ -2358,7 +2358,7 @@ export function MarsTerrain3D({
                 </p>
 
                 <div className="drawer-text-block">
-                   <strong style={{ color: '#00f0ff' }}>{ui('Regional geology context:', 'Contexto geológico regional:')}</strong>
+                   <strong style={{ color: '#c99a70' }}>{ui('Regional geology context:', 'Contexto geológico regional:')}</strong>
                   <p>{queryScientificObservationProfile(selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat, selectedObservationProfile.targetCoordinates.elevationMeters, language).geologySummary}</p>
                 </div>
 
@@ -2390,7 +2390,7 @@ export function MarsTerrain3D({
                           fontSize: '0.66rem',
                         }}
                       >
-                        <span style={{ color: '#00f0ff', fontWeight: 800 }}>{ds.instrument}</span>
+                        <span style={{ color: '#c99a70', fontWeight: 800 }}>{ds.instrument}</span>
                         <div style={{ color: '#cbd5e1' }}>{ds.name}</div>
                       </div>
                     ))}
@@ -2432,7 +2432,7 @@ export function MarsTerrain3D({
           <div className="trace-header">
             <div className="trace-title">
                <span>{ui('[MARTIAN GEOMETRY // PROCEDURAL MODEL]', '[GEOMETRÍA MARCIANA // MODELO PROCEDURAL]')}</span>
-              <small style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
+              <small style={{ color: '#c6ae99', fontSize: '0.62rem' }}>
                   {ui('MARS MEAN RADIUS', 'RADIO MEDIO MARCIANO')} // 3,389,500 M
               </small>
             </div>
@@ -2453,7 +2453,7 @@ export function MarsTerrain3D({
             </div>
             <div className="trace-card">
                <label>{ui('3D DISTANCE (SIMULATED)', 'DISTANCIA 3D (SIMULADA)')}</label>
-              <strong style={{ color: '#00f0ff' }}>{(routeTelemetry.total3DMeters / 1000).toFixed(2)} km</strong>
+              <strong style={{ color: '#c99a70' }}>{(routeTelemetry.total3DMeters / 1000).toFixed(2)} km</strong>
                <small>+{routeTelemetry.topographicCorrectionPercent}% {ui('procedural model correction, not measured effort', 'corrección del modelo procedural, no esfuerzo medido')}</small>
             </div>
             <div className="trace-card">
@@ -2488,7 +2488,7 @@ export function MarsTerrain3D({
               <tbody>
                 {routeTelemetry.segments.map((seg, idx) => (
                   <tr key={idx}>
-                    <td style={{ fontWeight: 800, color: '#00f0ff' }}>{seg.fromId} → {seg.toId}</td>
+                    <td style={{ fontWeight: 800, color: '#c99a70' }}>{seg.fromId} → {seg.toId}</td>
                     <td>{seg.fromName.split(' / ')[0]} → {seg.toName.split(' / ')[0]}</td>
                     <td>{(seg.horizontalMeters / 1000).toFixed(2)} km</td>
                     <td style={{ fontWeight: 800, color: '#ffffff' }}>{(seg.distance3DMeters / 1000).toFixed(2)} km</td>
@@ -2569,8 +2569,8 @@ export function MarsTerrain3D({
             type="button"
             className="waypoint-chip"
             style={{
-              borderColor: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(0, 240, 255, 0.5)',
-              color: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
+              borderColor: routeViewMode === 'eva' ? '#c99a70' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(201, 154, 112, 0.5)',
+              color: routeViewMode === 'eva' ? '#c99a70' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
             }}
             onClick={() => {
               setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')

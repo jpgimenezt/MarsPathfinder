@@ -168,7 +168,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       source: new VectorSource({ features: [new Feature({
         geometry: new Polygon([regionRing(ROI)]),
       })] }),
-      style: new Style({ stroke: new Stroke({ color: '#79e9e0', width: 3, lineDash: [3, 5] }) }),
+      style: new Style({ stroke: new Stroke({ color: '#ddb58d', width: 3, lineDash: [3, 5] }) }),
     })
     roiLayer.current = border
     function redrawRoute() {
@@ -189,7 +189,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
           segment.setStyle([
             new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
             new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
-            new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#f2d0ac', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
           ])
         }
         vectors.current.addFeature(segment)

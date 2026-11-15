@@ -10,7 +10,7 @@
   --color-martian-copper: #D77B50;
   --color-telemetry-cyan: #c99a70;
   --color-ice-white: #f4e8d8;
-  --color-titanium-grey: #82919E;
+  --color-titanium-grey: #baa28d;
   --color-warning-amber: #E9B85C;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -202,12 +202,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: rgba(6, 14, 24, 0.92);
+  background: rgba(34, 24, 20, 0.92);
   border: 1px solid rgba(201, 154, 112, 0.45);
   border-radius: 20px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(201, 154, 112, 0.22);
   backdrop-filter: blur(12px);
-  color: #cde9f6;
+  color: #f7ede0;
   font-family: 'Space Mono', monospace;
   font-size: 0.74rem;
   letter-spacing: 0.03em;

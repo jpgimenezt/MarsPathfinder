@@ -854,9 +854,9 @@ export function AresMissionCommsModal({
         ctx.shadowBlur = 0
       } else if (isAssistant) {
         // Voz sintetizada de ARES (24kHz Nova Sonic)
-        ctx.strokeStyle = '#63D4E5'
+        ctx.strokeStyle = '#c99a70'
         ctx.lineWidth = 2.2
-        ctx.shadowColor = '#63D4E5'
+        ctx.shadowColor = '#c99a70'
         ctx.shadowBlur = 10
         ctx.beginPath()
         const freq = metrics.frequencyData
@@ -884,7 +884,7 @@ export function AresMissionCommsModal({
         ctx.stroke()
       } else {
         // Reposo con respiración ambiental sutil
-        ctx.strokeStyle = 'rgba(99, 212, 229, 0.45)'
+        ctx.strokeStyle = 'rgba(201, 154, 112, 0.45)'
         ctx.lineWidth = 1.2
         ctx.beginPath()
         const now = Date.now() / 600
@@ -1099,7 +1099,7 @@ export function AresMissionCommsModal({
                   boxShadow: (audioMetrics.source === 'user' && audioMetrics.isVoiceActive)
                     ? '0 0 16px rgba(232, 122, 93, 0.85)'
                     : (audioMetrics.source === 'assistant' || conversationState === 'speaking')
-                    ? '0 0 16px rgba(99, 212, 229, 0.85)'
+                    ? '0 0 16px rgba(201, 154, 112, 0.85)'
                     : undefined,
                   transition: 'transform 0.08s ease-out, box-shadow 0.08s ease-out',
                 }}
@@ -1207,7 +1207,7 @@ export function AresMissionCommsModal({
                   className="ares-diag-meter-fill"
                   style={{
                     width: `${Math.min(100, Math.round(audioMetrics.rms * 250))}%`,
-                    backgroundColor: audioMetrics.isVoiceActive ? '#E87A5D' : '#63D4E5',
+                    backgroundColor: audioMetrics.isVoiceActive ? '#E87A5D' : '#c99a70',
                   }}
                 />
               </div>
@@ -1558,15 +1558,15 @@ export function AresMissionCommsModal({
             const isSpeakingAssistant = audioMetrics.source === 'assistant' || conversationState === 'speaking'
 
             const glowColor = isSpeakingAssistant
-              ? 'rgba(99, 212, 229, 0.9)'
+              ? 'rgba(201, 154, 112, 0.9)'
               : isSpeakingUser
               ? 'rgba(232, 122, 93, 0.92)'
               : conversationState === 'processing' || conversationState === 'executing_tool'
               ? 'rgba(233, 184, 92, 0.8)'
-              : 'rgba(99, 212, 229, 0.35)'
+              : 'rgba(201, 154, 112, 0.35)'
 
             const borderColor = isSpeakingAssistant
-              ? '#63D4E5'
+              ? '#c99a70'
               : isSpeakingUser
               ? '#E87A5D'
               : conversationState === 'processing' || conversationState === 'executing_tool'

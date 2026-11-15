@@ -657,8 +657,8 @@ body.is-clean-view .ares-fab-trigger {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #00ffaa;
-  box-shadow: 0 0 8px #00ffaa;
+  background: #78bb92;
+  box-shadow: 0 0 8px #78bb92;
 }
 
 .hud-close-btn {
@@ -921,8 +921,8 @@ body.is-clean-view .ares-fab-trigger {
 /* Tool Telemetry Collapsible Accordion (Sin JSON en bruto) */
 .hud-tool-details {
   margin-top: 10px;
-  background: rgba(6, 14, 20, 0.7);
-  border: 1px solid rgba(0, 255, 170, 0.2);
+  background: rgba(34, 24, 20, 0.7);
+  border: 1px solid rgba(201, 154, 112, 0.2);
   border-radius: 6px;
   font-size: 0.70rem;
   overflow: hidden;
@@ -935,7 +935,7 @@ body.is-clean-view .ares-fab-trigger {
   justify-content: space-between;
   cursor: pointer;
   user-select: none;
-  background: rgba(0, 255, 170, 0.05);
+  background: rgba(201, 154, 112, 0.05);
   transition: background 0.15s ease;
   list-style: none;
 }
@@ -945,11 +945,11 @@ body.is-clean-view .ares-fab-trigger {
 }
 
 .tool-details-summary:hover {
-  background: rgba(0, 255, 170, 0.12);
+  background: rgba(201, 154, 112, 0.12);
 }
 
 .summary-badge {
-  color: #00ffaa;
+  color: #78bb92;
   font-weight: 700;
   letter-spacing: 0.06em;
   font-size: 0.68rem;
@@ -1091,7 +1091,7 @@ body.is-clean-view .ares-fab-trigger {
   border: 0;
   border-radius: 6px;
   padding: 0 18px;
-  color: #020617;
+  color: #1b1410;
   font-weight: 800;
   font-size: 0.74rem;
   font-family: inherit;

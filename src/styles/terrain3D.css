@@ -66,7 +66,7 @@
   inset: -10px;
   border: 2px solid transparent;
   border-top-color: #c99a70;
-  border-bottom-color: #ff9d00;
+  border-bottom-color: #be8554;
   border-radius: 50%;
 }
 
@@ -93,7 +93,7 @@
 }
 
 .edl-right-tape {
-  border-right: 3px solid #ff9d00;
+  border-right: 3px solid #be8554;
   text-align: right;
 }
 
@@ -116,7 +116,7 @@
 .tape-sub {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #ff9d00;
+  color: #be8554;
   letter-spacing: 0.08em;
 }
 
@@ -170,7 +170,7 @@
 .phase-text {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #ff9d00;
+  color: #be8554;
   letter-spacing: 0.08em;
 }
 
@@ -184,13 +184,13 @@
 
 .phase-fill {
   height: 100%;
-  background: linear-gradient(90deg, #c99a70, #ff9d00);
+  background: linear-gradient(90deg, #c99a70, #be8554);
   box-shadow: 0 0 8px #c99a70;
 }
 
 .edl-skip-btn {
   margin-top: 4px;
-  background: #ff9d00;
+  background: #be8554;
   color: #16110e;
   border: none;
   font-weight: 800;
@@ -203,8 +203,8 @@
 }
 
 .edl-skip-btn:hover {
-  background: #ffb74d;
-  box-shadow: 0 0 12px #ff9d00;
+  background: #e2b486;
+  box-shadow: 0 0 12px #be8554;
 }
 
 /* --------------------------------------------------------------------------
@@ -296,7 +296,7 @@
 
 .hud-btn {
   background: rgba(46, 33, 27, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid rgba(180, 152, 126, 0.28);
   color: #f1e5d5;
   font-size: 0.63rem;
   font-weight: 700;
@@ -311,24 +311,24 @@
 }
 
 .hud-btn:hover {
-  background: rgba(30, 41, 59, 0.95);
+  background: rgba(56, 40, 32, 0.95);
   color: #ffffff;
   border-color: rgba(203, 213, 225, 0.5);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .hud-btn.primary {
-  background: #1e3a5f;
+  background: #3e2d24;
   border: 1px solid #d0a078;
-  color: #f0f9ff;
+  color: #f7ede0;
   font-weight: 800;
 }
 
 .hud-btn.primary:hover {
-  background: #2563eb;
-  border-color: #93c5fd;
+  background: #6e4b37;
+  border-color: #f2d0ac;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 8px rgba(201, 154, 112, 0.35);
 }
 
 .hud-btn.highlight {
@@ -554,7 +554,7 @@
 .legend-title {
   font-size: 0.6rem;
   font-weight: 800;
-  color: #ff9d00;
+  color: #be8554;
   letter-spacing: 0.08em;
   margin-bottom: 4px;
 }
@@ -647,7 +647,7 @@
   gap: 2px;
   background: rgba(46, 33, 27, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 3px solid #ff9d00;
+  border-left: 3px solid #be8554;
   padding: 7px 9px;
   border-radius: 4px;
   cursor: pointer;
@@ -662,7 +662,7 @@
 
 .colony-module-pill.active {
   background: rgba(255, 157, 0, 0.2);
-  border-color: #ff9d00;
+  border-color: #be8554;
 }
 
 .mod-pill-name {
@@ -674,7 +674,7 @@
 .mod-pill-cat {
   font-size: 0.58rem;
   font-weight: 800;
-  color: #ff9d00;
+  color: #be8554;
   letter-spacing: 0.06em;
 }
 
@@ -733,7 +733,7 @@
 
 .drawer-badge.conceptual {
   background: rgba(255, 157, 0, 0.15);
-  color: #ff9d00;
+  color: #be8554;
   border-color: rgba(255, 157, 0, 0.35);
 }
 
@@ -751,7 +751,7 @@
 
 .drawer-close-btn:hover {
   color: #ffffff;
-  border-color: #ff9d00;
+  border-color: #be8554;
 }
 
 .drawer-body {
@@ -784,7 +784,7 @@
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid rgba(201, 154, 112, 0.25);
-  background: #020617;
+  background: #1b1410;
   position: relative;
 }
 
@@ -819,7 +819,7 @@
   font-size: 0.56rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #ff9d00;
+  color: #be8554;
   margin-bottom: 2px;
 }
 
@@ -972,7 +972,7 @@
 
 .waypoint-chip {
   background: rgba(46, 33, 27, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(180, 152, 126, 0.25);
   color: #e7d5c2;
   font-size: 0.63rem;
   font-weight: 700;
@@ -986,15 +986,15 @@
 }
 
 .waypoint-chip:hover {
-  background: rgba(30, 41, 59, 0.95);
+  background: rgba(56, 40, 32, 0.95);
   border-color: rgba(201, 154, 112, 0.5);
   color: #ffffff;
 }
 
 .waypoint-chip.active {
-  background: #1e3a5f;
+  background: #3e2d24;
   border-color: #d0a078;
-  color: #f0f9ff;
+  color: #f7ede0;
   font-weight: 800;
 }
 
@@ -1012,7 +1012,7 @@
 
 /* Botón de Trazabilidad de Distancias */
 .traceability-pill-btn {
-  background: rgba(30, 41, 59, 0.85);
+  background: rgba(56, 40, 32, 0.85);
   border: 1px solid rgba(201, 154, 112, 0.4);
   color: #d0a078;
   font-size: 0.58rem;
@@ -1026,7 +1026,7 @@
 }
 
 .traceability-pill-btn:hover {
-  background: #1e3a5f;
+  background: #3e2d24;
   border-color: #d0a078;
   color: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
@@ -1086,7 +1086,7 @@
 }
 
 .trace-close-btn:hover {
-  color: #ff9d00;
+  color: #be8554;
 }
 
 .trace-summary-grid {
@@ -1633,7 +1633,7 @@
   position: relative;
   width: 100%;
   height: 140px;
-  background: #020617;
+  background: #1b1410;
 }
 
 .surface-card-img-wrap img {
@@ -1658,7 +1658,7 @@
 }
 
 .mission-tag.perseverance {
-  background: rgba(14, 165, 233, 0.85);
+  background: rgba(201, 154, 112, 0.85);
   color: #000;
 }
 
@@ -1742,9 +1742,9 @@
 }
 
 .inspect-mission-pill.perseverance {
-  background: rgba(14, 165, 233, 0.2);
-  color: #0ea5e9;
-  border: 1px solid #0ea5e9;
+  background: rgba(201, 154, 112, 0.2);
+  color: #c99a70;
+  border: 1px solid #c99a70;
 }
 
 .inspect-sol-pill {
@@ -1770,8 +1770,8 @@
 }
 
 .inspect-analog-alert {
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.3);
+  background: rgba(201, 154, 112, 0.1);
+  border: 1px solid rgba(201, 154, 112, 0.3);
   border-radius: 4px;
   padding: 8px 10px;
   font-size: 0.64rem;
@@ -2071,7 +2071,7 @@
 }
 
 .welcome-feature-item strong {
-  color: #ff9d00;
+  color: #be8554;
   font-size: 0.7rem;
   letter-spacing: 0.06em;
 }
@@ -2144,7 +2144,7 @@
 .tour-step-subtitle {
   margin: 3px 0 0;
   font-size: 0.74rem;
-  color: #ff9d00;
+  color: #be8554;
   font-weight: 700;
 }
 
@@ -2162,7 +2162,7 @@
 
 .tour-close-btn:hover {
   color: #ffffff;
-  border-color: #ff9d00;
+  border-color: #be8554;
 }
 
 .tour-step-body {
@@ -2210,7 +2210,7 @@
 
 .tour-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #c99a70, #ff9d00);
+  background: linear-gradient(90deg, #c99a70, #be8554);
   transition: width 0.3s ease;
 }
 
@@ -2345,7 +2345,7 @@
 }
 
 .status-val.paused {
-  color: #ff9d00;
+  color: #be8554;
 }
 
 .tour-exit-btn {
@@ -2403,7 +2403,7 @@
 .card-mola-cota {
   font-size: 0.62rem;
   font-weight: 800;
-  color: #ff9d00;
+  color: #be8554;
   font-family: monospace;
 }
 
@@ -2469,7 +2469,7 @@
 .geo-label {
   font-size: 0.55rem;
   font-weight: 800;
-  color: #ff9d00;
+  color: #be8554;
   letter-spacing: 0.06em;
 }
 

@@ -46,9 +46,9 @@ export function JarvisAiCore({
         <defs>
           <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="25%" stopColor="#00f0ff" stopOpacity="0.8" />
-            <stop offset="65%" stopColor="#0284c7" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#00f0ff" stopOpacity="0" />
+            <stop offset="25%" stopColor="#c99a70" stopOpacity="0.8" />
+            <stop offset="65%" stopColor="#9c6949" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#c99a70" stopOpacity="0" />
           </radialGradient>
           <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="2" result="blur" />
@@ -74,13 +74,13 @@ export function JarvisAiCore({
                   rx="64"
                   ry="20"
                   fill="none"
-                  stroke="#00f0ff"
+                  stroke="#c99a70"
                   strokeWidth="1.3"
                   strokeDasharray="14 6 4 6"
                   opacity="0.85"
                 />
                 <circle cx="64" cy="0" r="2.8" fill="#ffffff" filter={`url(#${filterId})`} className="orbit-particle-alpha" />
-                <circle cx="-64" cy="0" r="2" fill="#00f0ff" />
+                <circle cx="-64" cy="0" r="2" fill="#c99a70" />
               </g>
 
               <g className="jarvis-spin-orbit-beta">
@@ -90,12 +90,12 @@ export function JarvisAiCore({
                   rx="70"
                   ry="18"
                   fill="none"
-                  stroke="#38bdf8"
+                  stroke="#d0a078"
                   strokeWidth="1.1"
                   strokeDasharray="20 8"
                   opacity="0.75"
                 />
-                <circle cx="0" cy="18" r="2.5" fill="#38bdf8" filter={`url(#${filterId})`} className="orbit-particle-beta" />
+                <circle cx="0" cy="18" r="2.5" fill="#d0a078" filter={`url(#${filterId})`} className="orbit-particle-beta" />
                 <circle cx="0" cy="-18" r="1.8" fill="#ffffff" />
               </g>
 
@@ -106,7 +106,7 @@ export function JarvisAiCore({
                   rx="58"
                   ry="24"
                   fill="none"
-                  stroke="#7dd3fc"
+                  stroke="#f2d0ac"
                   strokeWidth="1.1"
                   strokeDasharray="8 6"
                   opacity="0.65"
@@ -122,7 +122,7 @@ export function JarvisAiCore({
             cy="0"
             r="44"
             fill="none"
-            stroke="#00f0ff"
+            stroke="#c99a70"
             strokeWidth="1.2"
             strokeDasharray="3 5"
             opacity="0.6"
@@ -131,10 +131,10 @@ export function JarvisAiCore({
 
           {/* 4 Nodos orbitales en cruz */}
           <g className="jarvis-orbital-nodes">
-            <circle cx="0" cy="-44" r="2.2" fill="#00f0ff" />
-            <circle cx="44" cy="0" r="2.2" fill="#00f0ff" />
-            <circle cx="0" cy="44" r="2.2" fill="#00f0ff" />
-            <circle cx="-44" cy="0" r="2.2" fill="#00f0ff" />
+            <circle cx="0" cy="-44" r="2.2" fill="#c99a70" />
+            <circle cx="44" cy="0" r="2.2" fill="#c99a70" />
+            <circle cx="0" cy="44" r="2.2" fill="#c99a70" />
+            <circle cx="-44" cy="0" r="2.2" fill="#c99a70" />
           </g>
 
           {/* Anillo de datos segmentado (rotación horaria) */}
@@ -143,7 +143,7 @@ export function JarvisAiCore({
             cy="0"
             r="36"
             fill="none"
-            stroke="#38bdf8"
+            stroke="#d0a078"
             strokeWidth="2.2"
             strokeDasharray="18 8 5 8"
             strokeLinecap="round"
@@ -156,7 +156,7 @@ export function JarvisAiCore({
             cy="0"
             r="28"
             fill="none"
-            stroke="#00f0ff"
+            stroke="#c99a70"
             strokeWidth="2.6"
             strokeDasharray="24 14"
             strokeLinecap="round"
@@ -170,14 +170,14 @@ export function JarvisAiCore({
             cy="0"
             r="18"
             fill="none"
-            stroke="#7dd3fc"
+            stroke="#f2d0ac"
             strokeWidth="1.6"
             strokeDasharray="8 6"
             className="jarvis-ring-inner-arc"
           />
 
           {/* Rayos radiales de energía del iris */}
-          <g className="jarvis-iris-rays" stroke="#00f0ff" strokeWidth="1.2" opacity="0.8">
+          <g className="jarvis-iris-rays" stroke="#c99a70" strokeWidth="1.2" opacity="0.8">
             <line x1="0" y1="-16" x2="0" y2="-10" />
             <line x1="0" y1="10" x2="0" y2="16" />
             <line x1="-16" y1="0" x2="-10" y2="0" />
@@ -185,9 +185,9 @@ export function JarvisAiCore({
           </g>
 
           {/* Núcleo central del reactor (ARC Reactor Core) */}
-          <circle cx="0" cy="0" r="7.5" fill="#00f0ff" opacity="0.55" className="jarvis-core-pulse" />
+          <circle cx="0" cy="0" r="7.5" fill="#c99a70" opacity="0.55" className="jarvis-core-pulse" />
           <circle cx="0" cy="0" r="4.2" fill="#ffffff" filter={`url(#${filterId})`} className="jarvis-center-dot" />
-          <circle cx="0" cy="0" r="2" fill="#00f0ff" />
+          <circle cx="0" cy="0" r="2" fill="#c99a70" />
         </g>
       </svg>
     </div>

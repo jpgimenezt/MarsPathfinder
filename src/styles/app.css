@@ -18,7 +18,7 @@
   --ares-cyan: var(--ares-copper); /* compatibility token for legacy controls */
   --ares-cyan-glow: rgba(201, 154, 112, 0.45);
   --ares-cyan-subtle: rgba(201, 154, 112, 0.15);
-  --ares-amber: #ff7300;
+  --ares-amber: #b77e54; /* aged copper for UI; hazard amber is separate */
   --ares-amber-glow: rgba(255, 115, 0, 0.45);
   --ares-emerald: #10b981;
   --ares-crimson: #ef4444;
@@ -304,14 +304,30 @@ main {
   white-space: nowrap;
 }
 .language-switch select {
-  color: #fff;
-  background: #102731;
-  border: 1px solid #42b8c3;
-  border-radius: 5px;
-  padding: 6px;
+  color: var(--ares-parchment);
+  color-scheme: dark;
+  background: linear-gradient(135deg, #3c2b23 0%, #241a16 100%);
+  border: 1px solid rgba(201, 154, 112, 0.65);
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(242, 208, 172, 0.1), 0 2px 9px rgba(0, 0, 0, 0.27);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
-.language-switch select:focus-visible { outline: 2px solid #f5b97a; outline-offset: 2px; }
+.language-switch select:hover {
+  border-color: var(--ares-copper-light);
+  background: #473329;
+}
+.language-switch select:focus-visible {
+  outline: 2px solid var(--ares-copper-light);
+  outline-offset: 2px;
+}
+.language-switch select option {
+  color: var(--ares-parchment);
+  background: #241a16;
+}
 
 .telemetry-block {
   display: flex;
@@ -448,11 +464,11 @@ main {
 }
 
 .globe-primary {
-  border: 0;
+  border: 1px solid rgba(242, 208, 172, 0.35);
   border-radius: 8px;
   padding: 12px 18px;
-  background: var(--ares-cyan);
-  color: #16110e;
+  background: linear-gradient(135deg, #e3b990, #b7825c);
+  color: #211712;
   font-weight: 800;
   font-size: 0.82rem;
   letter-spacing: 0.04em;
@@ -461,8 +477,17 @@ main {
 }
 
 .globe-primary:hover {
-  background: #d0a078;
-  box-shadow: 0 0 30px rgba(201, 154, 112, 0.7);
+  background: linear-gradient(135deg, #f2d0ac, #c99a70);
+  box-shadow: 0 0 24px rgba(201, 154, 112, 0.38);
+}
+.globe-primary.gale-cta {
+  background: linear-gradient(135deg, #d5a77b, #a87352 85%);
+  border-color: rgba(242, 208, 172, 0.46);
+  box-shadow: 0 8px 22px rgba(18, 12, 9, 0.4);
+}
+.globe-primary.gale-cta:hover {
+  background: linear-gradient(135deg, #f2d0ac, #bb865e 90%);
+  box-shadow: 0 0 25px rgba(201, 154, 112, 0.35);
 }
 
 .globe-data {
@@ -759,13 +784,13 @@ main {
 }
 
 .edit-shortcuts button:first-child:hover {
-  background: #ff9100;
+  background: #bd8257;
 }
 
 .map-stage {
   flex: 1;
   position: relative;
-  background: #060b10;
+  background: #19130f;
   min-height: 550px;
   height: max(570px, calc(100dvh - 230px));
 }
@@ -907,7 +932,7 @@ main {
   border-radius: 8px;
   font-size: 0.7rem;
   line-height: 1.3;
-  color: #e5eae4;
+  color: #eee0cf;
   pointer-events: auto;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
   font-family: ui-monospace, monospace;
@@ -935,7 +960,7 @@ main {
 }
 
 .base-status button:hover {
-  background: #ff9100;
+  background: #bd8257;
 }
 
 .roi-notice {
@@ -946,7 +971,7 @@ main {
   transform: translateX(-50%);
   max-width: min(480px, calc(100% - 24px));
   background: rgba(14, 23, 34, 0.95);
-  color: #fff2d9;
+  color: #f2d0ac;
   border: 1px solid var(--ares-amber);
   border-radius: 8px;
   padding: 10px 44px 10px 14px;
