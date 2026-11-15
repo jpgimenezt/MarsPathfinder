@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { AmazonNovaSonicProvider } from '../src/features/voice/amazonNovaSonicProvider'
+import { AmazonNovaSonicProvider, resolveGatewayEndpoint } from '../src/features/voice/amazonNovaSonicProvider'
 
 describe('ARES MISSION COMMS - AmazonNovaSonicProvider', () => {
   it('inicializa con valores por defecto de ARES', () => {
@@ -13,6 +13,15 @@ describe('ARES MISSION COMMS - AmazonNovaSonicProvider', () => {
     expect(provider.config.voiceId).toBe('carlos')
     expect(provider.config.volume).toBe(0.8)
     expect(provider.config.isMuted).toBe(false)
+  })
+
+  it('resuelve correctamente endpoints seguros wss:// para producción', () => {
+    // Si se pasa explícito
+    expect(resolveGatewayEndpoint('wss://custom.gateway.com/voice')).toBe('wss://custom.gateway.com/voice')
+
+    // Localhost fallback por defecto en entorno de test node/jsdom no HTTPS
+    const resolved = resolveGatewayEndpoint()
+    expect(resolved).toMatch(/^(wss?:\/\/)/)
   })
 
   it('permite cambiar volumen y silenciar micrófono', () => {

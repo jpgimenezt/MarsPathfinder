@@ -7,6 +7,7 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY voice-gateway/ ./voice-gateway/
+RUN npm run build:gateway
 
 FROM node:22-alpine AS runner
 
@@ -19,8 +20,9 @@ ENV BEDROCK_MODEL_ID=amazon.nova-2-5-sonic
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/voice-gateway ./voice-gateway
+COPY --from=builder /app/dist-gateway ./dist-gateway
 
 EXPOSE 8088
 
-CMD ["node", "--loader", "ts-node/esm", "voice-gateway/server.ts"]
+# Ejecuta el servidor compilado en ESM nativo con Node.js puro sin dependencias de desarrollo
+CMD ["node", "dist-gateway/server.js"]

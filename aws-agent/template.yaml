@@ -10,6 +10,12 @@ Parameters:
     Default: "us.amazon.nova-pro-v1:0"
     Description: "Foundation model ID / Inference profile on Amazon Bedrock"
 
+  AresAuthToken:
+    Type: String
+    Default: "ares-tactical-2026"
+    NoEcho: true
+    Description: "Shared security token for x-ares-origin-token header verification"
+
 Resources:
   # -------------------------------------------------------------
   # S3 Bucket for Knowledge Base documents
@@ -52,9 +58,16 @@ Resources:
                   - bedrock:InvokeModelWithResponseStream
                   - bedrock:GetFoundationModel
                   - bedrock:GetInferenceProfile
+                Resource:
+                  - !Sub "arn:aws:bedrock:*::foundation-model/*"
+                  - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*"
+              - Effect: Allow
+                Action:
                   - s3:GetObject
                   - s3:ListBucket
-                Resource: "*"
+                Resource:
+                  - !GetAtt MarsKnowledgeBaseBucket.Arn
+                  - !Sub "${MarsKnowledgeBaseBucket.Arn}/*"
 
   # -------------------------------------------------------------
   # Lambda Function: Martian Serverless Agent & Tools
@@ -70,19 +83,30 @@ Resources:
         - arm64
       Timeout: 60
       MemorySize: 512
+      ReservedConcurrentExecutions: 10
       Role: !GetAtt MarsToolsLambdaRole.Arn
       Environment:
         Variables:
           BEDROCK_MODEL_ID: !Ref FoundationModel
+          ARES_AUTH_TOKEN: !Ref AresAuthToken
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
           AllowOrigins:
-            - "*"
+            - "https://ares-route.vercel.app"
+            - "https://mars-pathfinder.vercel.app"
+            - "http://localhost:5173"
+            - "http://localhost:3000"
+            - "http://localhost:8088"
           AllowMethods:
-            - "*"
+            - "GET"
+            - "POST"
+            - "OPTIONS"
           AllowHeaders:
-            - "*"
+            - "content-type"
+            - "x-ares-origin-token"
+            - "authorization"
+          MaxAge: 86400
 
   # -------------------------------------------------------------
   # Permission for Amazon Bedrock to invoke Lambda

@@ -57,7 +57,32 @@ const server = http.createServer((req, res) => {
   res.end('ARES Voice Gateway: WebSocket endpoint at /voice')
 })
 
-const wss = new WebSocketServer({ server, path: '/voice' })
+function isOriginAuthorized(origin?: string): boolean {
+  if (!origin) return true // Conexiones locales directas o tests sin encabezado origin
+  if (GATEWAY_CONFIG.allowedOrigins.includes('*')) return true
+  return GATEWAY_CONFIG.allowedOrigins.some(allowed => {
+    if (allowed === origin) return true
+    if (allowed.includes('*')) {
+      const pattern = '^' + allowed.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$'
+      return new RegExp(pattern).test(origin)
+    }
+    return false
+  })
+}
+
+const wss = new WebSocketServer({
+  server,
+  path: '/voice',
+  verifyClient: (info, callback) => {
+    const origin = info.origin || info.req.headers.origin
+    if (isOriginAuthorized(origin)) {
+      callback(true)
+    } else {
+      console.warn(`[ARES VOICE GATEWAY] Conexión WebSocket denegada para origen no autorizado: ${origin}`)
+      callback(false, 403, 'Forbidden: Unauthorized WebSocket Origin')
+    }
+  },
+})
 
 console.log(`[ARES VOICE GATEWAY] Iniciando en puerto ${GATEWAY_CONFIG.port}...`)
 console.log(`[ARES VOICE GATEWAY] Región Bedrock: ${GATEWAY_CONFIG.bedrockRegion} | Modelo: ${GATEWAY_CONFIG.bedrockModelId}`)
@@ -264,14 +289,6 @@ wss.on('connection', (ws: WebSocket, req) => {
           if (session && message.text) {
             send({ type: 'state_change', state: 'PROCESSING' })
             session.sendTextMessage(message.text)
-          }
-          break
-        }
-
-        case 'interrupt': {
-          if (session) {
-            session.endAudioTurn()
-            send({ type: 'state_change', state: 'LISTENING' })
           }
           break
         }

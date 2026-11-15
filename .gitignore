@@ -1,6 +1,9 @@
 node_modules/
 dist/
+dist-gateway/
 *.tsbuildinfo
+.aws-sam/
+aws-agent/.aws-sam/
 .env
 .env.*
 !.env.example

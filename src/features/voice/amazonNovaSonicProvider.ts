@@ -13,6 +13,33 @@ import type {
 } from './voiceProvider'
 import { AudioCaptureService } from './audioCaptureService'
 
+/**
+ * Resuelve el endpoint de WebSocket para el Voice Gateway.
+ * En producción o protocolo HTTPS, garantiza estrictamente wss:// (nunca ws://localhost).
+ */
+export function resolveGatewayEndpoint(explicitUrl?: string): string {
+  if (explicitUrl && explicitUrl.trim().length > 0) return explicitUrl.trim()
+
+  // 1. Variable de entorno Vite (prioridad máxima para producción / dominios personalizados)
+  const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_VOICE_GATEWAY_URL
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
+    return envUrl.trim()
+  }
+
+  // 2. Entorno HTTPS o Producción: estrictamente wss:// (nunca ws:// ni localhost)
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+  const isProd = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.PROD)
+
+  if (isHttps || isProd) {
+    const host = typeof window !== 'undefined' && window.location.host ? window.location.host : 'gateway.aresroute.space'
+    return `wss://${host}/voice`
+  }
+
+  // 3. Fallback únicamente para desarrollo local en HTTP
+  const hostname = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost'
+  return `ws://${hostname}:8088/voice`
+}
+
 export class AmazonNovaSonicProvider implements VoiceProvider {
   public id = 'amazon-nova-2-5-sonic'
   public name = 'Amazon Nova 2.5 Sonic (Speech-to-Speech)'
@@ -42,11 +69,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     this.config = {
       voiceId: initialConfig?.voiceId || 'carlos', // Voz natural en español por defecto
       language: initialConfig?.language || 'es', // Español por defecto
-      endpointUrl:
-        initialConfig?.endpointUrl ||
-        (typeof window !== 'undefined'
-          ? `ws://${window.location.hostname}:8088/voice`
-          : 'ws://localhost:8088/voice'),
+      endpointUrl: resolveGatewayEndpoint(initialConfig?.endpointUrl),
       interactionMode: initialConfig?.interactionMode || 'HANDS_FREE',
       volume: initialConfig?.volume ?? 1.0,
       isMuted: initialConfig?.isMuted ?? false,

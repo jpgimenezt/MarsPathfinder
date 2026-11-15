@@ -379,16 +379,36 @@ def lambda_handler(event, context):
     
     # Manejo de CORS OPTIONS
     http_method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method", "")
+    headers = event.get("headers", {}) or {}
+    header_map = {k.lower(): v for k, v in headers.items()}
+
     if http_method == "OPTIONS":
         return {
             "statusCode": 200,
             "headers": {
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
+                "Access-Control-Allow-Headers": "Content-Type, x-ares-origin-token, Authorization"
             },
             "body": ""
         }
+
+    # Validación de autenticación si ARES_AUTH_TOKEN está configurado en el entorno
+    auth_token = os.environ.get("ARES_AUTH_TOKEN")
+    if auth_token and not ("actionGroup" in event and "apiPath" in event):
+        client_token = (
+            header_map.get("x-ares-origin-token")
+            or header_map.get("authorization", "").replace("Bearer ", "").strip()
+        )
+        if client_token != auth_token:
+            return {
+                "statusCode": 401,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                },
+                "body": json.dumps({"error": "Unauthorized: Missing or invalid x-ares-origin-token"}, ensure_ascii=False)
+            }
 
     # Invocación directa como Action Group (Bedrock Agent)
     if "actionGroup" in event and "apiPath" in event:

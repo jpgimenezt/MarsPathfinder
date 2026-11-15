@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc --noEmit && vite build",
-    "voice:gateway": "tsx voice-gateway/server.ts"
+    "build:gateway": "esbuild voice-gateway/server.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist-gateway/server.js '--external:@aws-sdk/*' --external:ws",
+    "start:gateway": "node dist-gateway/server.js",
+    "voice:gateway": "node dist-gateway/server.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1169.0",
