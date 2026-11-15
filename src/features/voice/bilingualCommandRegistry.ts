@@ -164,8 +164,19 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     tool: 'toggleScientificLayer',
     params: { layerId: 'ctx', enabled: true },
     phrases: {
-      en: ['activate ctx', 'show ctx mosaic', 'enable ctx imagery', 'orbital context'],
-      es: ['activá ctx', 'activa ctx', 'mostrar mosaico ctx', 'activar ctx', 'contexto orbital'],
+      en: ['activate ctx', 'show ctx mosaic', 'enable ctx imagery', 'orbital context', 'ctx layer', 'ctx mosaic'],
+      es: [
+        'activá ctx',
+        'activa ctx',
+        'mostrar mosaico ctx',
+        'activar ctx',
+        'contexto orbital',
+        'la capa mosaico ctx',
+        'capa mosaico ctx',
+        'mosaico ctx',
+        'capa ctx',
+        'mosaico controlado ctx',
+      ],
     },
   },
   {
@@ -219,11 +230,61 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
 ]
 
 /**
+ * Corrige alucinaciones acústicas y distorsiones fonéticas frecuentes
+ * producidas por motores de reconocimiento de voz del navegador (Web Speech API)
+ * ante términos técnicos de NASA y cartografía de Marte.
+ * 
+ * Ejemplo crítico reportado:
+ * "la capa mosaico CTX" -> transcripto erróneamente como "la capa mamá no soy psicópata"
+ */
+export function repairAcousticHallucinations(rawText: string): string {
+  if (!rawText) return ''
+  let text = rawText
+
+  // 1. Corrección específica para "mosaico CTX" y derivados:
+  // "mamá no soy psicópata" / "mama no soy psicopata" -> "mosaico CTX"
+  text = text.replace(/\b(?:la\s+)?capa\s+mam[aá]\s+no\s+soy\s+psic[oó]pata\b/gi, 'la capa mosaico CTX')
+  text = text.replace(/\bmam[aá]\s+no\s+soy\s+psic[oó]pata\b/gi, 'mosaico CTX')
+  text = text.replace(/\bmam[aá]\s+no\s+soy\b/gi, 'mosaico')
+
+  // Fonemas de CTX ("se te equis", "cete equis", "ce te equis", "c t x", "psicópata" tras capa/mosaico/activar)
+  text = text.replace(/(?<=(?:capa|mosaico|activ[aá]|mostr[aá]|ver)\s+)psic[oó]pata\b/gi, 'CTX')
+  text = text.replace(/\b(?:se\s+te\s+equis|ce\s+te\s+equis|cete\s+equis|c\s+t\s+x|setequis|cetequis|cetex|setex|se\s+te\s+x|ct\s+x)\b/gi, 'CTX')
+
+  // 2. Correcciones para THEMIS (térmica):
+  // "inercia térmica tenis", "capa tenis", "témis", "temis", "te mis"
+  text = text.replace(/(?<=(?:capa|inercia\s+t[eé]rmica|activ[aá]|mostr[aá])\s+)(?:tenis|tennis|denis)\b/gi, 'THEMIS')
+  text = text.replace(/\b(?:inercia\s+t[eé]rmica\s+tenis|capa\s+tenis)\b/gi, 'capa THEMIS')
+  text = text.replace(/\b(?:t[eé]mis|temis|te\s+mis)\b/gi, 'THEMIS')
+
+  // 3. Correcciones para MOLA (altimetría/elevación):
+  text = text.replace(/(?<=(?:capa|relieve|elevaci[oó]n|altimetr[ií]a|activ[aá]|mostr[aá])\s+)(?:molar|moda|bola)\b/gi, 'MOLA')
+
+  // 4. Correcciones para Mount Sharp / Aeolis Mons:
+  text = text.replace(/\b(?:mon\s+char|mont\s+char|monte\s+shar|mon\s+sharp|mount\s+sharpe|moun\s+sharp|montes\s+harp)\b/gi, 'Mount Sharp')
+
+  // 5. Correcciones para CRISM:
+  text = text.replace(/(?<=(?:mineral(?:es)?|unidades|capa|espectral)\s+)(?:crisim|cris|prism|prisma)\b/gi, 'CRISM')
+
+  // 6. Correcciones para Jezero:
+  text = text.replace(/\b(?:yesero|yezero|gesero|gezero|je\s+cero|ye\s+zero)\b/gi, 'Jezero')
+
+  // 7. Correcciones para Bradbury:
+  text = text.replace(/\b(?:brad\s+buri|brad\s+bur\s+y|badbury)\b/gi, 'Bradbury')
+
+  // 8. Correcciones para Curiosity / Perseverance:
+  text = text.replace(/(?<=(?:ruta|comparar|vs|versus|trayecto)\s+)(?:curiositi|curiosite|curiosidad)\b/gi, 'Curiosity')
+  text = text.replace(/(?<=(?:misi[oó]n|rover|fotos|delta)\s+)(?:perseverans|perseverancia)\b/gi, 'Perseverance')
+
+  return text
+}
+
+/**
  * Normaliza texto de entrada eliminando acentos, puntuación, contracciones y coloquialismos
  */
 export function normalizeCommandText(raw: string): string {
   if (!raw) return ''
-  let text = raw.toLowerCase().trim()
+  let text = repairAcousticHallucinations(raw).toLowerCase().trim()
 
   // 1. Eliminar acentos y diacríticos (á -> a, é -> e, etc.)
   text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')

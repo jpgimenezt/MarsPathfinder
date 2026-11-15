@@ -4,6 +4,7 @@ import {
   checkLanguageSwitchCommand,
   detectTextLanguage,
   resolveBilingualTool,
+  repairAcousticHallucinations,
 } from '../src/features/voice/bilingualCommandRegistry'
 import { COMMS_TRANSLATIONS } from '../src/features/i18n/commsTranslations'
 
@@ -64,6 +65,30 @@ describe('Bilingual Mission Comms & Language Detection', () => {
     const esGeology = resolveBilingualTool('mostrá las capas geológicas')
     expect(esGeology?.tool).toBe('toggleScientificLayer')
     expect(esGeology?.params).toEqual({ layerId: 'geology', enabled: true })
+  })
+
+  it('repairs acoustic hallucinations and resolves distorted speech to correct tools', () => {
+    // Caso reportado en producción: "la capa mamá no soy psicópata" -> "la capa mosaico CTX"
+    const repairedCtx = repairAcousticHallucinations('la capa mamá no soy psicópata')
+    expect(repairedCtx).toBe('la capa mosaico CTX')
+
+    const resolvedCtx = resolveBilingualTool('la capa mamá no soy psicópata')
+    expect(resolvedCtx?.tool).toBe('toggleScientificLayer')
+    expect(resolvedCtx?.params).toEqual({ layerId: 'ctx', enabled: true })
+
+    // "mosaico se te equis" -> "mosaico CTX"
+    const repairedSeTeEquis = repairAcousticHallucinations('activar mosaico se te equis')
+    expect(repairedSeTeEquis).toBe('activar mosaico CTX')
+    const resolvedSeTeEquis = resolveBilingualTool('activar mosaico se te equis')
+    expect(resolvedSeTeEquis?.tool).toBe('toggleScientificLayer')
+    expect(resolvedSeTeEquis?.params).toEqual({ layerId: 'ctx', enabled: true })
+
+    // THEMIS distorsión "inercia térmica tenis" -> "inercia térmica THEMIS"
+    const repairedThemis = repairAcousticHallucinations('activar inercia térmica tenis')
+    expect(repairedThemis).toBe('activar inercia térmica THEMIS')
+    const resolvedThemis = resolveBilingualTool('activar inercia térmica tenis')
+    expect(resolvedThemis?.tool).toBe('toggleScientificLayer')
+    expect(resolvedThemis?.params).toEqual({ layerId: 'themis', enabled: true })
   })
 
   it('has complete dictionaries for both English and Spanish', () => {

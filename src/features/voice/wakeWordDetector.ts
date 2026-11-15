@@ -13,6 +13,7 @@
 
 import type { SupportedLanguage } from '../i18n/commsTranslations'
 import { AudioCaptureService } from './audioCaptureService'
+import { repairAcousticHallucinations } from './bilingualCommandRegistry'
 
 export interface WakeWordEvent {
   phrase: string
@@ -148,6 +149,15 @@ export class LocalWakeWordDetector {
     )
   }
 
+  public setLanguage(lang: SupportedLanguage): void {
+    this.currentLanguage = lang
+    if (this.recognition) {
+      try {
+        this.recognition.lang = lang === 'en' ? 'en-US' : 'es-US'
+      } catch {}
+    }
+  }
+
   private setupRecognition(): void {
     if (!this.isSupported()) return
 
@@ -158,6 +168,19 @@ export class LocalWakeWordDetector {
       this.recognition.continuous = true
       this.recognition.interimResults = true
       this.recognition.maxAlternatives = 3
+      this.recognition.lang = this.currentLanguage === 'en' ? 'en-US' : 'es-US'
+
+      // Gramática para reconocimiento aeroespacial y cartográfico de Marte
+      const SpeechGrammarList =
+        (window as any).SpeechGrammarList || (window as any).webkitSpeechGrammarList
+      if (SpeechGrammarList) {
+        try {
+          const grammarList = new SpeechGrammarList()
+          const marsGrammar = `#JSGF V1.0; grammar mars; public <mars_cmd> = CTX | MOLA | THEMIS | CRISM | RAD | Gale | Jezero | Mount Sharp | Bradbury | Yellowknife | Vera Rubin | Perseverance | Curiosity | capa | mosaico | relieve | elevación | inercia térmica | satelital | orbita | hábitat | ruta EVA | rover | cráter ;`
+          grammarList.addFromString(marsGrammar, 1)
+          this.recognition.grammars = grammarList
+        } catch {}
+      }
 
       this.recognition.onresult = (event: any) => {
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -195,7 +218,8 @@ export class LocalWakeWordDetector {
   }
 
   private evaluateTranscript(text: string, isFinal: boolean): void {
-    const trimmed = text.trim()
+    const repaired = repairAcousticHallucinations(text)
+    const trimmed = repaired.trim()
     if (!trimmed) return
 
     // 0. Comprobar bloqueo por habla del asistente (Anti-Echo / Self-Mute Guard)

@@ -47,6 +47,7 @@ import {
 import {
   checkLanguageSwitchCommand,
   resolveBilingualTool,
+  repairAcousticHallucinations,
 } from '../features/voice/bilingualCommandRegistry'
 import { resolveMissionKnowledge } from '../features/science/missionKnowledgeResolver'
 import '../styles/missionComms.css'
@@ -275,27 +276,31 @@ export function AresMissionCommsModal({
   // ==========================================
   const executeTacticalCommand = useCallback(
     async (commandText: string) => {
-      console.log(`[ARES CONVERSATIONAL ENGINE] Turno de usuario recibido: "${commandText}"`)
+      // 0. Reparar alucinaciones acústicas y distorsiones fonéticas de términos de NASA/Marte
+      // (ej: "la capa mamá no soy psicópata" -> "la capa mosaico CTX")
+      const cleanedCommand = repairAcousticHallucinations(commandText)
+      console.log(`[ARES CONVERSATIONAL ENGINE] Turno de usuario recibido: "${commandText}" -> normalizado a: "${cleanedCommand}"`)
 
       // 1. Registrar mensaje del usuario en el historial
       const userEvt: TranscriptEvent = {
         id: `user-${Date.now()}`,
         role: 'user',
-        text: commandText,
+        text: cleanedCommand,
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       }
       setTranscripts(prev => [...prev, userEvt])
-      showSubtitle(commandText, 'user', 3500)
+      showSubtitle(cleanedCommand, 'user', 3500)
       setConversationState('processing')
 
       // 2. Verificar comando explícito de cambio de idioma (Sección 3)
-      const requestedLang = checkLanguageSwitchCommand(commandText)
+      const requestedLang = checkLanguageSwitchCommand(cleanedCommand)
       if (requestedLang) {
         setResponseLanguage(requestedLang)
         setUiLanguage(requestedLang)
         setActiveLanguage(requestedLang)
         setLanguageSelection(requestedLang)
+        wakeWordDetectorRef.current?.setLanguage(requestedLang)
 
         const nextVoice = requestedLang === 'en' ? 'matthew' : 'carlos'
         setSelectedVoice(nextVoice)
@@ -325,7 +330,7 @@ export function AresMissionCommsModal({
       }
 
       // 3. Resolución semántica y ejecución de herramientas bilingües (Sección 2 y 5)
-      const resolved = resolveBilingualTool(commandText)
+      const resolved = resolveBilingualTool(cleanedCommand)
       if (resolved && toolEngineRef.current) {
         // Modo minimizado para ver maniobra en el mapa 3D sin obstruir
         setPresentationMode('minimized')
