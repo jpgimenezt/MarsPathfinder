@@ -1,10 +1,15 @@
 /**
- * ARES MISSION COMMS - Real-Time Voice AI Copilot Panel
- * Copiloto inteligente de misión aeroespacial con Amazon Nova 2.5 Sonic.
- * Conversación speech-to-speech bilingüe (EN / ES) en tiempo real,
- * detección de Wake Word local ("Hey, ARES" / "Hola, ARES"),
- * visualizador dinámico de ondas, transcripción sincronizada,
- * modo de demostración internacional y ejecución real de herramientas en el mapa 3D/2D.
+ * ARES MISSION COMMS — ADAPTIVE FLOATING ASSISTANT
+ * Compact UI · Voice Orb · Non-blocking Interaction
+ * 
+ * - Elimina el modal fullscreen que bloqueaba el terreno 3D.
+ * - Tres modos de presentación:
+ *    A. Compact Panel Mode: Panel lateral flotante de ~360px en la esquina.
+ *    B. Floating Orb Mode: Orbe holográfico animado que acompaña la exploración.
+ *    C. Minimized Execution Mode: Al ejecutar acciones sobre el mapa 3D, minimiza
+ *       automáticamente al orbe para observar la maniobra en tiempo real.
+ * - Detección continua de voz (manos libres) sin requerir presionar "Hablar" tras el despertar.
+ * - Síntesis auditiva inmediata con fallback local y soporte neural Amazon Nova 2.5 Sonic.
  */
 
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
@@ -33,12 +38,25 @@ import {
 import {
   LocalWakeWordDetector,
   type WakeWordEvent,
+  speakLocalSpeech,
 } from '../features/voice/wakeWordDetector'
 import {
   checkLanguageSwitchCommand,
   detectTextLanguage,
+  resolveBilingualTool,
 } from '../features/voice/bilingualCommandRegistry'
 import '../styles/missionComms.css'
+
+export type PresentationMode = 'compact' | 'orb' | 'minimized'
+export type ActivityState =
+  | 'standby'
+  | 'listening'
+  | 'processing'
+  | 'speaking'
+  | 'executing'
+  | 'success'
+  | 'error'
+  | 'offline'
 
 interface PendingConfirmationState {
   id: string
@@ -56,9 +74,9 @@ interface AresMissionCommsModalProps {
   currentStops?: Partial<Record<StopId, MarsPoint | null>>
 }
 
-// Iconografía vectorial táctica SVG
+// Iconografía vectorial SVG aeroespacial
 const MicIcon = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
     <line x1="12" y1="19" x2="12" y2="23" />
@@ -67,7 +85,7 @@ const MicIcon = () => (
 )
 
 const MicOffIcon = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="1" y1="1" x2="23" y2="23" />
     <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6" />
     <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
@@ -77,27 +95,42 @@ const MicOffIcon = () => (
 )
 
 const StopSquareIcon = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
     <rect x="4" y="4" width="16" height="16" rx="2" />
   </svg>
 )
 
-const SendIcon = () => (
+const MinimizeIcon = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+)
+
+const ExpandIcon = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="15 3 21 3 21 9" />
+    <polyline points="9 21 3 21 3 15" />
+    <line x1="21" y1="3" x2="14" y2="10" />
+    <line x1="3" y1="21" x2="10" y2="14" />
+  </svg>
+)
+
+const SendIcon = () => (
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="22" y1="2" x2="11" y2="13" />
     <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 )
 
 const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 )
 
 const VolumeIcon = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
     <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
     <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
@@ -112,17 +145,34 @@ export function AresMissionCommsModal({
   contextInput,
   currentStops,
 }: AresMissionCommsModalProps) {
+  // Modos de presentación y actividad adaptativa
+  const [presentationMode, setPresentationMode] = useState<PresentationMode>(isOpen ? 'compact' : 'orb')
+  const [activityState, setActivityState] = useState<ActivityState>('standby')
+
   const [languageSelection, setLanguageSelection] = useState<LanguageSelection>('en')
   const [activeLanguage, setActiveLanguage] = useState<SupportedLanguage>('en')
   const [isWakeWordActive, setIsWakeWordActive] = useState<boolean>(true)
   const [voiceState, setVoiceState] = useState<VoiceState>('VOICE_OFFLINE')
-  const [interactionMode, setInteractionMode] = useState<InteractionMode>('PUSH_TO_TALK')
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>('HANDS_FREE')
   const [selectedVoice, setSelectedVoice] = useState<'carlos' | 'lupe' | 'matthew' | 'tiffany'>('matthew')
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(1.0)
   const [isListeningNow, setIsListeningNow] = useState(false)
   const [inputMessage, setInputMessage] = useState('')
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmationState | null>(null)
+
+  // Subtítulo / caption flotante para el orbe
+  const [floatingSubtitle, setFloatingSubtitle] = useState<{
+    text: string
+    role: 'user' | 'assistant'
+    timestamp: number
+  } | null>(null)
+
+  // Información de la acción en curso (para minimized execution mode)
+  const [currentExecutionInfo, setCurrentExecutionInfo] = useState<{
+    action: string
+    description: string
+  } | null>(null)
 
   const t = COMMS_TRANSLATIONS[activeLanguage]
 
@@ -142,14 +192,241 @@ export function AresMissionCommsModal({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const transcriptsEndRef = useRef<HTMLDivElement | null>(null)
   const textInputRef = useRef<HTMLInputElement | null>(null)
+  const subtitleTimeoutRef = useRef<any>(null)
   const inputId = useId()
+
+  // Sincronizar isOpen de props con el modo de presentación
+  useEffect(() => {
+    if (isOpen && presentationMode === 'orb') {
+      setPresentationMode('compact')
+    }
+  }, [isOpen])
+
+  // Desvanecer subtítulo flotante tras periodo de silencio
+  const showSubtitle = useCallback((text: string, role: 'user' | 'assistant' = 'assistant', durationMs = 5000) => {
+    if (!text || !text.trim()) return
+    setFloatingSubtitle({ text, role, timestamp: Date.now() })
+    if (subtitleTimeoutRef.current) clearTimeout(subtitleTimeoutRef.current)
+    subtitleTimeoutRef.current = setTimeout(() => {
+      setFloatingSubtitle(null)
+    }, durationMs)
+  }, [])
 
   // Inicializar motor de herramientas con los handlers reales de la aplicación
   useEffect(() => {
     toolEngineRef.current = new ToolExecutionEngine(appHandlers)
   }, [appHandlers])
 
-  // Inicializar proveedor de voz Nova Sonic
+  // ==========================================
+  // EJECUCIÓN DIRECTA DE COMANDOS TÁCTICOS
+  // ==========================================
+  const executeTacticalCommand = useCallback(
+    async (commandText: string, lang: SupportedLanguage = activeLanguage) => {
+      console.log(`[TACTICAL COMMAND EXECUTION] "${commandText}" (lang: ${lang})`)
+
+      // 1. Mostrar de inmediato la orden del usuario
+      const userEvt: TranscriptEvent = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        text: commandText,
+        isFinal: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+      setTranscripts(prev => [...prev, userEvt])
+      showSubtitle(commandText, 'user', 3500)
+
+      // 2. Si el selector de idioma está en 'auto', inferir idioma del texto ingresado
+      if (languageSelection === 'auto') {
+        const detected = detectTextLanguage(commandText)
+        if (detected !== activeLanguage) {
+          setActiveLanguage(detected)
+          const nextVoice = detected === 'en' ? 'matthew' : 'carlos'
+          setSelectedVoice(nextVoice)
+          providerRef.current?.updateConfig({ language: detected, voiceId: nextVoice })
+        }
+      }
+
+      // 3. Verificar si es un comando de cambio de idioma
+      const switchLang = checkLanguageSwitchCommand(commandText)
+      if (switchLang) {
+        setActiveLanguage(switchLang)
+        setLanguageSelection(switchLang)
+        const nextVoice = switchLang === 'en' ? 'matthew' : 'carlos'
+        setSelectedVoice(nextVoice)
+        providerRef.current?.updateConfig({ language: switchLang, voiceId: nextVoice })
+
+        const switchMsg =
+          switchLang === 'en'
+            ? 'Language switched to English. Ready for international exploration commands.'
+            : 'Idioma cambiado a español. Copiloto listo para órdenes de exploración.'
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `ai-sw-${Date.now()}`,
+            role: 'assistant',
+            text: `[SYSTEM]: ${switchMsg}`,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+        showSubtitle(switchMsg, 'assistant', 4500)
+        speakLocalSpeech(switchMsg, switchLang)
+        return
+      }
+
+      // 3. Resolver herramienta táctica bilingüe
+      const resolved = resolveBilingualTool(commandText)
+      if (resolved && toolEngineRef.current) {
+        // Pasar a modo ejecución minimizada para no obstruir el mapa
+        setPresentationMode('minimized')
+        setActivityState('executing')
+        setCurrentExecutionInfo({
+          action: resolved.tool,
+          description: `Ejecutando ${resolved.tool}...`,
+        })
+
+        const req: ToolExecutionRequest = {
+          tool: resolved.tool,
+          input: resolved.params || {},
+        }
+        const res = await toolEngineRef.current.executeTool(req)
+
+        const actionText = res.success
+          ? res.actionPerformed || `Comando '${resolved.tool}' completado con éxito.`
+          : `No se pudo ejecutar '${resolved.tool}': ${res.output.error || 'Aviso táctico'}`
+
+        setCurrentExecutionInfo({
+          action: resolved.tool,
+          description: actionText,
+        })
+        setActivityState(res.success ? 'success' : 'error')
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `tool-${Date.now()}`,
+            role: 'assistant',
+            text: `[ACCIÓN TÁCTICA]: ${actionText}`,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+
+        showSubtitle(actionText, 'assistant', 5000)
+
+        // Respuesta hablada inmediata
+        speakLocalSpeech(actionText, lang, {
+          onStart: () => setActivityState('speaking'),
+          onEnd: () => {
+            setActivityState('standby')
+            // Permanecer en modo orbe tras finalizar la acción
+            setPresentationMode('orb')
+            setCurrentExecutionInfo(null)
+          },
+        })
+
+        return
+      }
+
+      // 4. Si no es herramienta directa y Nova Sonic está conectado, enviar por streaming
+      if (providerRef.current && voiceState === 'LISTENING') {
+        setActivityState('processing')
+        try {
+          await providerRef.current.sendTextMessage(commandText)
+          return
+        } catch {}
+      }
+
+      // 5. Fallback a agente serverless / explicación contextual
+      setActivityState('processing')
+      showSubtitle(lang === 'en' ? 'Processing tactical query...' : 'Procesando consulta táctica...', 'assistant', 3000)
+
+      try {
+        const historyPayload = transcripts
+          .filter(t => t.id !== 'init-msg')
+          .map(t => ({ role: t.role, content: t.text }))
+        const res = await queryMarsAgent(commandText, historyPayload)
+        const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            role: 'assistant',
+            text: cleanReply,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+
+        showSubtitle(cleanReply.slice(0, 160) + (cleanReply.length > 160 ? '...' : ''), 'assistant', 6000)
+        speakLocalSpeech(cleanReply, lang, {
+          onStart: () => setActivityState('speaking'),
+          onEnd: () => setActivityState('standby'),
+        })
+      } catch {
+        setActivityState('error')
+      }
+    },
+    [activeLanguage, transcripts, voiceState, showSubtitle]
+  )
+
+  // ==========================================
+  // CONFIGURAR DETECTOR DE WAKE WORD & VOZ CONTINUA
+  // ==========================================
+  useEffect(() => {
+    if (!wakeWordDetectorRef.current) {
+      wakeWordDetectorRef.current = new LocalWakeWordDetector()
+    }
+    const detector = wakeWordDetectorRef.current
+
+    // Suscripción al evento de Wake Word ("Hey ARES" / "Hola ARES")
+    const unsubscribeWake = detector.subscribe((event: WakeWordEvent) => {
+      console.log(`[WAKE TRIGGERED] "${event.phrase}" Trailing: "${event.trailingCommand || ''}"`)
+
+      // Establecer idioma detectado
+      const detectedLang = event.detectedLanguage
+      setActiveLanguage(detectedLang)
+      const newVoice = detectedLang === 'en' ? 'matthew' : 'carlos'
+      setSelectedVoice(newVoice)
+      providerRef.current?.updateConfig({ language: detectedLang, voiceId: newVoice })
+
+      // Visual: Mostrar Orbe inmediatamente en estado LISTENING (no abre modal grande)
+      setPresentationMode('orb')
+      setActivityState('listening')
+      showSubtitle(
+        detectedLang === 'en' ? '● ARES Listening... Speak your command.' : '● ARES a la escucha... Di tu orden.',
+        'assistant',
+        4000
+      )
+
+      // Si el usuario dijo la orden completa ("Hey ARES, start mission simulation")
+      if (event.trailingCommand && event.trailingCommand.trim().length > 1) {
+        executeTacticalCommand(event.trailingCommand.trim(), detectedLang)
+      }
+    })
+
+    // Suscripción a comandos de voz continuos posteriores al despertar
+    const unsubscribeCommand = detector.subscribeCommand((command: string, lang: SupportedLanguage) => {
+      console.log(`[CONTINUOUS VOICE COMMAND HEARD] "${command}"`)
+      executeTacticalCommand(command, lang)
+    })
+
+    if (isWakeWordActive) {
+      detector.start()
+    } else {
+      detector.stop()
+    }
+
+    return () => {
+      unsubscribeWake()
+      unsubscribeCommand()
+      detector.stop()
+    }
+  }, [isWakeWordActive, executeTacticalCommand, showSubtitle])
+
+  // Inicializar proveedor de voz Nova Sonic (en segundo plano)
   useEffect(() => {
     const provider = new AmazonNovaSonicProvider({
       voiceId: selectedVoice,
@@ -164,42 +441,25 @@ export function AresMissionCommsModal({
     const unsubscribe = provider.subscribe({
       onStateChange: state => {
         setVoiceState(state)
-        if (state !== 'LISTENING') {
+        if (state === 'LISTENING') {
+          setActivityState('standby')
           setIsListeningNow(false)
+        } else if (state === 'SPEAKING') {
+          setActivityState('speaking')
+        } else if (state === 'PROCESSING') {
+          setActivityState('processing')
+        } else if (state === 'ERROR') {
+          setActivityState('error')
         }
       },
       onTranscript: evt => {
-        // En modo auto, inferir idioma a partir de lo que habla el usuario
-        if (languageSelection === 'auto' && evt.role === 'user' && evt.text && evt.text.length > 3) {
-          const detected = detectTextLanguage(evt.text)
-          if (detected !== activeLanguage) {
-            setActiveLanguage(detected)
-            const nextVoice = detected === 'en' ? 'matthew' : 'carlos'
-            setSelectedVoice(nextVoice)
-            provider.updateConfig({ language: detected, voiceId: nextVoice })
-          }
-        }
+        if (!evt.text || !evt.text.trim()) return
+
+        // Actualizar subtítulo flotante en tiempo real
+        showSubtitle(evt.text, evt.role === 'user' ? 'user' : 'assistant')
 
         setTranscripts(prev => {
-          // Si el texto está vacío (delimitador de fin de turno), no crear una burbuja vacía
-          if (!evt.text || !evt.text.trim()) {
-            if (prev.length === 0) return prev
-            const last = prev[prev.length - 1]
-            if (last && last.role === evt.role && !last.isFinal) {
-              const updated = [...prev]
-              updated[updated.length - 1] = { ...last, isFinal: true }
-              return updated
-            }
-            return prev
-          }
-
-          // Si es un mensaje del astronauta y el último mensaje ya tiene exactamente este mismo texto, ignorar duplicado
           const last = prev[prev.length - 1]
-          if (last && last.role === 'user' && evt.role === 'user' && last.text.trim() === evt.text.trim()) {
-            return prev
-          }
-
-          // Si el último mensaje es del mismo emisor y no es final, actualizarlo progresivamente
           if (last && last.role === evt.role && !last.isFinal) {
             const updated = [...prev]
             updated[updated.length - 1] = {
@@ -209,7 +469,6 @@ export function AresMissionCommsModal({
             }
             return updated
           }
-
           return [...prev, evt]
         })
       },
@@ -219,23 +478,21 @@ export function AresMissionCommsModal({
       onToolCall: async (tool, input, toolUseId) => {
         if (!toolEngineRef.current) return { error: 'TOOL_ENGINE_NOT_READY' }
 
+        // Minimizar al orbe automáticamente durante la ejecución
+        setPresentationMode('minimized')
+        setActivityState('executing')
+        setCurrentExecutionInfo({ action: tool, description: `Ejecutando ${tool}...` })
+
         const req: ToolExecutionRequest = { tool, input, toolUseId }
         const res = await toolEngineRef.current.executeTool(req)
 
-        if (res.requiresConfirmation && res.pendingConfirmationId) {
-          setPendingConfirm({
-            id: res.pendingConfirmationId,
-            tool,
-            message: res.confirmationMessage || `¿Confirmar ejecución de ${tool}?`,
-            securityLevel: res.securityLevel,
-          })
-          return { status: 'WAITING_FOR_USER_CONFIRMATION', message: res.confirmationMessage }
-        }
-
-        // Mostrar notificación de herramienta ejecutada de forma limpia y legible
         const summaryText = res.success
-          ? `[ACCIÓN TÁCTICA]: ${res.actionPerformed || `Comando '${tool}' ejecutado correctamente.`}`
-          : `[AVISO TÁCTICO]: No se pudo ejecutar '${tool}': ${res.output.error || 'Operación no completada'}`
+          ? `[ACCIÓN TÁCTICA]: ${res.actionPerformed || `Comando '${tool}' completado.`}`
+          : `[AVISO TÁCTICO]: No se pudo ejecutar '${tool}': ${res.output.error || 'Operación abortada'}`
+
+        setCurrentExecutionInfo({ action: tool, description: summaryText })
+        setActivityState(res.success ? 'success' : 'error')
+        showSubtitle(summaryText, 'assistant', 5000)
 
         setTranscripts(prev => [
           ...prev,
@@ -251,7 +508,7 @@ export function AresMissionCommsModal({
         return res.output
       },
       onError: err => {
-        console.warn('[MISSION COMMS UI] Error reportado por proveedor:', err.message)
+        console.warn('[MISSION COMMS PROVIDER] Nota:', err.message)
       },
     })
 
@@ -259,7 +516,7 @@ export function AresMissionCommsModal({
       unsubscribe()
       provider.disconnect()
     }
-  }, [])
+  }, [selectedVoice, activeLanguage, interactionMode, volume, isMuted, showSubtitle])
 
   // Sincronizar contexto compacto del mapa con ARES
   useEffect(() => {
@@ -269,160 +526,86 @@ export function AresMissionCommsModal({
     }
   }, [contextInput])
 
-  // Configurar Wake Word Detector local
+  // Scroll automático en transcripciones
   useEffect(() => {
-    if (!wakeWordDetectorRef.current) {
-      wakeWordDetectorRef.current = new LocalWakeWordDetector()
-    }
-    const detector = wakeWordDetectorRef.current
-
-    const unsubscribe = detector.subscribe((event: WakeWordEvent) => {
-      console.log(`[WAKE WORD TRIGGERED] Phrase: "${event.phrase}", Lang: ${event.detectedLanguage}`)
-
-      // 1. Abrir la interfaz si estaba cerrada
-      onOpen()
-
-      // 2. Establecer el idioma inferido
-      const detectedLang = event.detectedLanguage
-      setActiveLanguage(detectedLang)
-      const newVoice = detectedLang === 'en' ? 'matthew' : 'carlos'
-      setSelectedVoice(newVoice)
-
-      if (providerRef.current) {
-        providerRef.current.updateConfig({ language: detectedLang, voiceId: newVoice })
-      }
-
-      // 3. Registrar aviso táctico en el log
-      setTranscripts(prev => [
-        ...prev,
-        {
-          id: `wake-${Date.now()}`,
-          role: 'assistant',
-          text: `[WAKE WORD // "${event.phrase}"]: ${COMMS_TRANSLATIONS[detectedLang].telemetry.wakeWordActive}`,
-          isFinal: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        },
-      ])
-
-      // 4. Conectar y comenzar a escuchar automáticamente
-      handleStartSpeaking()
-    })
-
-    if (isWakeWordActive) {
-      detector.start()
-    } else {
-      detector.stop()
-    }
-
-    return () => {
-      unsubscribe()
-      detector.stop()
-    }
-  }, [isWakeWordActive, onOpen])
-
-  // Scroll automático hacia el último mensaje
-  useEffect(() => {
-    if (isOpen) {
+    if (presentationMode === 'compact') {
       transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [transcripts, isOpen])
-
-  // Cierre accesible con tecla Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [transcripts, presentationMode])
 
   // ==========================================
-  // RENDERER DEL VISUALIZADOR DINÁMICO DE AUDIO
+  // RENDERER DEL VISUALIZADOR DE AUDIO
   // ==========================================
-  const drawWaveform = useCallback((data: AudioVisualizerData) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+  const drawWaveform = useCallback(
+    (data: AudioVisualizerData) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    const { width, height } = canvas
-    ctx.clearRect(0, 0, width, height)
+      const { width, height } = canvas
+      ctx.clearRect(0, 0, width, height)
+      const centerY = height / 2
 
-    const centerY = height / 2
-
-    if (data.source === 'user') {
-      // Onda de voz del astronauta (Mars Terracotta: #E87A5D)
-      ctx.strokeStyle = '#E87A5D'
-      ctx.lineWidth = 2.5
-      ctx.shadowColor = '#E87A5D'
-      ctx.shadowBlur = 8
-      ctx.beginPath()
-
-      const pcm = data.timeDomainData || new Uint8Array(64)
-      const sliceWidth = width / pcm.length
-      let x = 0
-
-      for (let i = 0; i < pcm.length; i++) {
-        const v = pcm[i] / 128.0
-        const y = centerY + (v - 1.0) * (height * 0.45)
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-        x += sliceWidth
+      if (data.source === 'user' || isListeningNow) {
+        ctx.strokeStyle = '#E87A5D'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        const pcm = data.timeDomainData || new Uint8Array(32)
+        const sliceWidth = width / pcm.length
+        let x = 0
+        for (let i = 0; i < pcm.length; i++) {
+          const v = pcm[i] / 128.0
+          const y = centerY + (v - 1.0) * (height * 0.4)
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+          x += sliceWidth
+        }
+        ctx.stroke()
+      } else if (data.source === 'assistant' || activityState === 'speaking') {
+        ctx.strokeStyle = '#63D4E5'
+        ctx.lineWidth = 2
+        ctx.shadowColor = '#63D4E5'
+        ctx.shadowBlur = 8
+        ctx.beginPath()
+        const freq = data.frequencyData || new Uint8Array(32)
+        const sliceWidth = width / freq.length
+        let x = 0
+        for (let i = 0; i < freq.length; i++) {
+          const v = freq[i] / 128.0
+          const y = centerY + (v - 1.0) * (height * 0.45)
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+          x += sliceWidth
+        }
+        ctx.stroke()
+        ctx.shadowBlur = 0
+      } else if (activityState === 'processing' || activityState === 'executing') {
+        const now = Date.now() / 200
+        ctx.strokeStyle = '#E9B85C'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        for (let x = 0; x < width; x += 4) {
+          const y = centerY + Math.sin(x * 0.06 + now) * 6
+          if (x === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+      } else {
+        ctx.strokeStyle = 'rgba(130, 145, 158, 0.3)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(0, centerY)
+        ctx.lineTo(width, centerY)
+        ctx.stroke()
       }
-      ctx.stroke()
-      ctx.shadowBlur = 0
-    } else if (data.source === 'assistant') {
-      // Onda de voz de ARES (Telemetry Cyan: #63D4E5)
-      ctx.strokeStyle = '#63D4E5'
-      ctx.lineWidth = 2.5
-      ctx.shadowColor = '#63D4E5'
-      ctx.shadowBlur = 10
-      ctx.beginPath()
-
-      const freq = data.frequencyData || new Uint8Array(32)
-      const sliceWidth = width / freq.length
-      let x = 0
-
-      for (let i = 0; i < freq.length; i++) {
-        const v = freq[i] / 128.0
-        const y = centerY + (v - 1.0) * (height * 0.45)
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-        x += sliceWidth
-      }
-      ctx.stroke()
-      ctx.shadowBlur = 0
-    } else if (voiceState === 'PROCESSING' || voiceState === 'TOOL_EXECUTION') {
-      // Escaneo de procesamiento (Warning Amber: #E9B85C)
-      const now = Date.now() / 250
-      ctx.strokeStyle = '#E9B85C'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      for (let x = 0; x < width; x += 4) {
-        const y = centerY + Math.sin(x * 0.05 + now) * 8
-        if (x === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      }
-      ctx.stroke()
-    } else {
-      // Línea de base en reposo
-      ctx.strokeStyle = 'rgba(130, 145, 158, 0.3)'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.moveTo(0, centerY)
-      ctx.lineTo(width, centerY)
-      ctx.stroke()
-    }
-  }, [voiceState])
+    },
+    [isListeningNow, activityState]
+  )
 
   // ==========================================
-  // MANEJADORES DE CONTROLES DE VOZ E IDIOMA
+  // MANEJADORES DE UI
   // ==========================================
-  const holdTimerRef = useRef<number | null>(null)
-  const isHoldingRef = useRef(false)
-
   const handleToggleDemoMode = () => {
     const nextLang: SupportedLanguage = activeLanguage === 'en' ? 'es' : 'en'
     const nextVoice = nextLang === 'en' ? 'matthew' : 'carlos'
@@ -431,221 +614,46 @@ export function AresMissionCommsModal({
     setSelectedVoice(nextVoice)
     providerRef.current?.updateConfig({ language: nextLang, voiceId: nextVoice })
 
+    const msg =
+      nextLang === 'en'
+        ? '🌐 [ARES INTERNATIONAL DEMO]: System switched to English. International scientific telemetry active.'
+        : '🇦🇷 [MODO ESPAÑOL]: Sistema configurado en español. Copiloto táctico listo.'
+
     setTranscripts(prev => [
       ...prev,
       {
-        id: `demo-sw-${Date.now()}`,
+        id: `demo-${Date.now()}`,
         role: 'assistant',
-        text: nextLang === 'en'
-          ? '🌐 [ARES INTERNATIONAL DEMO]: System switched to English. Full international telemetry & terminology active.'
-          : '🇦🇷 [MODO ESPAÑOL]: Sistema configurado en español. Copiloto táctico listo para instrucciones de navegación.',
+        text: msg,
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       },
     ])
+    showSubtitle(msg, 'assistant', 4500)
+    speakLocalSpeech(msg, nextLang)
   }
 
-  const handleLanguageSelectionChange = (selection: LanguageSelection) => {
-    setLanguageSelection(selection)
-    if (selection === 'en' || selection === 'es') {
-      setActiveLanguage(selection)
-      const nextVoice = selection === 'en' ? 'matthew' : 'carlos'
-      setSelectedVoice(nextVoice)
-      providerRef.current?.updateConfig({ language: selection, voiceId: nextVoice })
-    }
-  }
-
-  const handleToggleConnect = async () => {
-    if (!providerRef.current) return
-
-    if (voiceState === 'VOICE_OFFLINE' || voiceState === 'ERROR') {
-      try {
-        await providerRef.current.connect()
-        // Si estaba en modo manos libres, comenzar a escuchar de inmediato
-        if (interactionMode === 'HANDS_FREE') {
-          setIsListeningNow(true)
-          await providerRef.current.startListening()
-        }
-      } catch {
-        // Error ya notificado en el provider
-      }
+  const handleOrbClick = () => {
+    if (presentationMode === 'compact') {
+      setPresentationMode('orb')
     } else {
-      setIsListeningNow(false)
-      await providerRef.current.disconnect()
-    }
-  }
-
-  const handleStartSpeaking = async () => {
-    if (!providerRef.current) return
-    if (voiceState === 'VOICE_OFFLINE' || voiceState === 'ERROR') {
-      await providerRef.current.connect()
-    }
-    setIsListeningNow(true)
-    await providerRef.current.startListening()
-  }
-
-  const handleStopSpeaking = async () => {
-    if (!providerRef.current) return
-    setIsListeningNow(false)
-    await providerRef.current.stopListening()
-  }
-
-  const handlePointerDown = () => {
-    isHoldingRef.current = false
-    holdTimerRef.current = window.setTimeout(() => {
-      isHoldingRef.current = true
-      if (!isListeningNow) {
-        handleStartSpeaking()
-      }
-    }, 280)
-  }
-
-  const handlePointerUp = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current)
-      holdTimerRef.current = null
-    }
-
-    if (isHoldingRef.current) {
-      // Hold prolongado (Push-to-Talk)
-      isHoldingRef.current = false
-      handleStopSpeaking()
-    } else {
-      // Click simple: toggle
-      if (isListeningNow) {
-        handleStopSpeaking()
-      } else {
-        handleStartSpeaking()
-      }
+      setPresentationMode('compact')
+      onOpen()
     }
   }
 
   const handleInterrupt = () => {
-    if (providerRef.current) {
-      providerRef.current.interrupt()
+    providerRef.current?.interrupt()
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
     }
-  }
-
-  const handleToggleMute = () => {
-    const next = !isMuted
-    setIsMuted(next)
-    providerRef.current?.mute(next)
-  }
-
-  const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol)
-    providerRef.current?.setVolume(newVol)
-  }
-
-  const handleVoiceChange = (voice: 'carlos' | 'lupe' | 'matthew' | 'tiffany') => {
-    setSelectedVoice(voice)
-    providerRef.current?.updateConfig({ voiceId: voice })
-  }
-
-  const handleModeToggle = (mode: InteractionMode) => {
-    setInteractionMode(mode)
-    providerRef.current?.updateConfig({ interactionMode: mode })
-    if (mode === 'HANDS_FREE' && voiceState === 'LISTENING') {
-      providerRef.current?.startListening()
-    }
-  }
-
-  const handleSendMessage = async () => {
-    const text = inputMessage.trim()
-    if (!text) return
-    setInputMessage('')
-
-    // Verificar si el usuario ordenó verbal o textualmente cambiar de idioma
-    const requestedLang = checkLanguageSwitchCommand(text)
-    if (requestedLang) {
-      setActiveLanguage(requestedLang)
-      setLanguageSelection(requestedLang)
-      const nextVoice = requestedLang === 'en' ? 'matthew' : 'carlos'
-      setSelectedVoice(nextVoice)
-      providerRef.current?.updateConfig({ language: requestedLang, voiceId: nextVoice })
-
-      setTranscripts(prev => [
-        ...prev,
-        {
-          id: `usr-sw-${Date.now()}`,
-          role: 'user',
-          text,
-          isFinal: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        },
-        {
-          id: `ai-sw-${Date.now()}`,
-          role: 'assistant',
-          text: requestedLang === 'en'
-            ? '[SYSTEM]: Language switched to English. ARES is ready for international mission instructions.'
-            : '[SISTEMA]: Idioma cambiado a español. ARES listo para instrucciones operativas de misión.',
-          isFinal: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        },
-      ])
-      return
-    }
-
-    // En modo auto, inferir idioma a partir del texto ingresado
-    if (languageSelection === 'auto') {
-      const detected = detectTextLanguage(text)
-      if (detected !== activeLanguage) {
-        setActiveLanguage(detected)
-        const nextVoice = detected === 'en' ? 'matthew' : 'carlos'
-        setSelectedVoice(nextVoice)
-        providerRef.current?.updateConfig({ language: detected, voiceId: nextVoice })
-      }
-    }
-
-    // Registrar mensaje del usuario en la conversación
-    const userEvt: TranscriptEvent = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      text,
-      isFinal: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    }
-    setTranscripts(prev => [...prev, userEvt])
-
-    // Si el provider de voz está conectado a Nova Sonic
-    if (providerRef.current && (voiceState === 'LISTENING' || voiceState === 'SPEAKING' || voiceState === 'PROCESSING')) {
-      try {
-        await providerRef.current.sendTextMessage(text)
-      } catch (err: unknown) {
-        console.warn('[MISSION COMMS] Error enviando por voice provider:', err)
-      }
-    } else {
-      // Fallback al agente Bedrock serverless en AWS (Function URL)
-      setVoiceState('PROCESSING')
-      try {
-        const historyPayload = transcripts
-          .filter(t => t.id !== 'init-msg')
-          .map(t => ({ role: t.role, content: t.text }))
-        const res = await queryMarsAgent(text, historyPayload)
-        const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
-
-        setTranscripts(prev => [
-          ...prev,
-          {
-            id: `ai-${Date.now()}`,
-            role: 'assistant',
-            text: cleanReply,
-            isFinal: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          },
-        ])
-        setVoiceState('LISTENING')
-      } catch {
-        setVoiceState('ERROR')
-      }
-    }
+    setActivityState('standby')
   }
 
   const handleResolveConfirmation = async (proceed: boolean) => {
     if (!pendingConfirm || !toolEngineRef.current) return
     const confId = pendingConfirm.id
     setPendingConfirm(null)
-
     const result = await toolEngineRef.current.confirmPendingAction(confId, proceed)
 
     setTranscripts(prev => [
@@ -654,7 +662,7 @@ export function AresMissionCommsModal({
         id: `conf-res-${Date.now()}`,
         role: 'assistant',
         text: proceed
-          ? `[CONFIRMADO POR ASTRONAUTA]: ${result.actionPerformed || 'Operación completada.'}`
+          ? `[CONFIRMADO]: ${result.actionPerformed || 'Operación completada.'}`
           : '[ACCION ABORTADA POR ASTRONAUTA]',
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -663,235 +671,199 @@ export function AresMissionCommsModal({
   }
 
   return (
-    <>
-      {/* Botón Flotante HUD (FAB) en pantalla - FUSIONADO: ARES COPILOT */}
-      {!isOpen && (
-        <button
-          type="button"
-          className="ares-comms-fab-trigger"
-          onClick={onOpen}
-          aria-label="Abrir Ares Copilot (Asistente de voz y navegación en tiempo real)"
-          title="Ares Copilot // Asistente inteligente con Amazon Nova 2.5 Sonic"
-        >
-          <div className="ares-comms-fab-core">
-            <span className="ares-comms-fab-pulse" aria-hidden="true" />
-            <JarvisAiCore size={32} withOuterOrbits={true} />
-          </div>
-          <div className="ares-comms-fab-labels">
-            <span className="ares-comms-fab-badge">[IA MISSION COPILOT]</span>
-            <span className="ares-comms-fab-text">ARES COPILOT</span>
-          </div>
-        </button>
-      )}
+    <div className="ares-comms-overlay" role="region" aria-label="Ares Copilot Voice Assistant">
+      {/* ========================================================
+          MODO A: PANEL COMPACTO FLOTANTE (COMPACT PANEL MODE)
+          ======================================================== */}
+      {presentationMode === 'compact' && (
+        <div className="ares-comms-panel" role="dialog" aria-modal="false" aria-labelledby="comms-title">
+          {/* Retícula FUI de esquinas */}
+          <div className="ares-comms-corner top-left" aria-hidden="true" />
+          <div className="ares-comms-corner top-right" aria-hidden="true" />
+          <div className="ares-comms-corner bottom-left" aria-hidden="true" />
+          <div className="ares-comms-corner bottom-right" aria-hidden="true" />
 
-      {/* Ventana Modal ARES COPILOT */}
-      {isOpen && (
-        <div
-          className="ares-comms-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="comms-title"
-          onClick={e => {
-            if (e.target === e.currentTarget) onClose()
-          }}
-        >
-          <div className="ares-comms-panel">
-            {/* Retícula FUI de esquinas */}
-            <div className="ares-comms-corner top-left" aria-hidden="true" />
-            <div className="ares-comms-corner top-right" aria-hidden="true" />
-            <div className="ares-comms-corner bottom-left" aria-hidden="true" />
-            <div className="ares-comms-corner bottom-right" aria-hidden="true" />
-
-            {/* Header del Panel */}
-            <header className="ares-comms-header">
-              <div className="ares-comms-header-title-block">
-                <div className="ares-comms-logo-ring" aria-hidden="true">
-                  <JarvisAiCore size={26} withOuterOrbits={false} />
-                </div>
-                <div>
-                  <div className="ares-comms-eyebrow">{t.headerSubtitle}</div>
-                  <h2 id="comms-title" className="ares-comms-title">
-                    ARES <span>COPILOT</span>
-                  </h2>
-                </div>
+          {/* Header Compacto */}
+          <header className="ares-comms-header">
+            <div className="ares-comms-header-title-block">
+              <div className="ares-comms-logo-ring" aria-hidden="true">
+                <JarvisAiCore size={22} withOuterOrbits={false} />
               </div>
-
-              <div className="ares-comms-header-actions">
-                {/* Botón de Demostración Internacional (Toggle EN/ES directo) */}
-                <button
-                  type="button"
-                  className="ares-demo-badge-btn"
-                  onClick={handleToggleDemoMode}
-                  title={activeLanguage === 'en' ? 'Click to switch to Spanish' : 'Click para cambiar a Modo Internacional en Inglés'}
-                >
-                  {activeLanguage === 'en' ? '🌐 ARES INTERNATIONAL DEMO' : '🇦🇷 MODO ESPAÑOL'}
-                </button>
-
-                {/* Badge de Estado Real del Sistema */}
-                <div className={`ares-status-badge ${voiceState}`} role="status">
-                  <span className="ares-status-dot" aria-hidden="true" />
-                  <span>{t.states[voiceState] || voiceState.replace('_', ' ')}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="ares-comms-close-btn"
-                  onClick={onClose}
-                  aria-label="Cerrar ARES Mission Comms"
-                  title="Cerrar (Esc)"
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-            </header>
-
-            {/* Barra de Controles de Voz */}
-            <div className="ares-comms-controls-bar">
-              <div className="ares-comms-btn-group">
-                {/* Botón Enlace / Desconexión */}
-                <button
-                  type="button"
-                  className={`ares-comms-action-btn ${voiceState !== 'VOICE_OFFLINE' ? 'primary' : ''}`}
-                  onClick={handleToggleConnect}
-                  title="Conectar o desconectar enlace WebSocket con Nova Sonic"
-                >
-                  {voiceState === 'VOICE_OFFLINE' ? t.controls.connect : t.controls.disconnect}
-                </button>
-
-                {/* Botón Hablar (Click para alternar o mantener presionado PTT) */}
-                <button
-                  type="button"
-                  className={`ares-comms-action-btn primary ${isListeningNow ? 'active-listening' : ''}`}
-                  onPointerDown={handlePointerDown}
-                  onPointerUp={handlePointerUp}
-                  title="Haz clic para alternar micrófono o mantén presionado para hablar (Push-to-Talk)"
-                >
-                  <MicIcon />
-                  <span>{isListeningNow ? t.controls.transmitting : t.controls.talk}</span>
-                </button>
-
-                {/* Botón Detener / Interrupción */}
-                <button
-                  type="button"
-                  className="ares-comms-action-btn stop"
-                  onClick={handleInterrupt}
-                  title="Detiene la respuesta hablada de ARES o el procesamiento actual"
-                >
-                  <StopSquareIcon />
-                  <span>{t.controls.stop}</span>
-                </button>
-
-                {/* Silenciar micrófono */}
-                <button
-                  type="button"
-                  className={`ares-comms-action-btn toggle ${isMuted ? 'active' : ''}`}
-                  onClick={handleToggleMute}
-                  title={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
-                >
-                  {isMuted ? <MicOffIcon /> : <MicIcon />}
-                  <span>{isMuted ? t.controls.micMuted : t.controls.micActive}</span>
-                </button>
-
-                {/* Modo Manos Libres */}
-                <button
-                  type="button"
-                  className={`ares-comms-action-btn toggle ${interactionMode === 'HANDS_FREE' ? 'active' : ''}`}
-                  onClick={() => handleModeToggle(interactionMode === 'HANDS_FREE' ? 'PUSH_TO_TALK' : 'HANDS_FREE')}
-                  title="Activa el modo manos libres con detección automática de turnos"
-                >
-                  <span>{t.controls.handsFree}</span>
-                </button>
-
-                {/* Wake Word ("Hey ARES" / "Hola ARES") */}
-                <button
-                  type="button"
-                  className={`ares-comms-action-btn toggle ${isWakeWordActive ? 'active wake-active' : ''}`}
-                  onClick={() => setIsWakeWordActive(prev => !prev)}
-                  title={isWakeWordActive ? 'Desactivar escucha pasiva de Wake Word ("Hey ARES" / "Hola ARES")' : 'Activar escucha pasiva de Wake Word'}
-                >
-                  <span>{isWakeWordActive ? '👂 WAKE: ON' : '👂 WAKE: OFF'}</span>
-                </button>
-              </div>
-
-              <div className="ares-comms-btn-group">
-                {/* Selector de Idioma */}
-                <div className="ares-comms-setting-item">
-                  <label htmlFor="lang-select">{t.controls.langLabel}</label>
-                  <select
-                    id="lang-select"
-                    className="ares-comms-select"
-                    value={languageSelection}
-                    onChange={e => handleLanguageSelectionChange(e.target.value as LanguageSelection)}
-                  >
-                    <option value="en">English (US)</option>
-                    <option value="es">Español</option>
-                    <option value="auto">{t.controls.autoLang}</option>
-                  </select>
-                </div>
-
-                {/* Selector de Voz */}
-                <div className="ares-comms-setting-item">
-                  <label htmlFor="voice-select">{t.controls.voiceLabel}</label>
-                  <select
-                    id="voice-select"
-                    className="ares-comms-select"
-                    value={selectedVoice}
-                    onChange={e => handleVoiceChange(e.target.value as 'carlos' | 'lupe' | 'matthew' | 'tiffany')}
-                  >
-                    <option value="matthew">Matthew (EN - Male)</option>
-                    <option value="tiffany">Tiffany (EN - Female)</option>
-                    <option value="carlos">Carlos (ES - Masculino)</option>
-                    <option value="lupe">Lupe (ES - Femenino)</option>
-                  </select>
-                </div>
-
-                {/* Control de Volumen */}
-                <div className="ares-comms-setting-item">
-                  <VolumeIcon />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={volume}
-                    onChange={e => handleVolumeChange(parseFloat(e.target.value))}
-                    className="ares-comms-volume-slider"
-                    title={`Volumen: ${Math.round(volume * 100)}%`}
-                  />
-                </div>
+              <div>
+                <div className="ares-comms-eyebrow">NASA 2026 // COPILOT</div>
+                <h3 id="comms-title" className="ares-comms-title" style={{ fontSize: '0.95rem' }}>
+                  ARES <span>COPILOT</span>
+                </h3>
               </div>
             </div>
 
-            {/* Visualizador Dinámico de Ondas de Audio */}
-            <div className="ares-comms-visualizer-container">
-              <div className="ares-comms-visualizer-header">
-                <span>{t.telemetry.liveBanner}</span>
-                <span>
-                  {voiceState === 'SPEAKING'
-                    ? t.telemetry.aresSpeaking
-                    : isListeningNow
-                    ? t.telemetry.micTransmitting
-                    : interactionMode === 'HANDS_FREE' && voiceState === 'LISTENING'
-                    ? t.telemetry.handsFreeActive
-                    : voiceState === 'PROCESSING'
-                    ? t.telemetry.processing
-                    : voiceState === 'LISTENING'
-                    ? t.telemetry.micStandby
-                    : t.telemetry.channelOffline}
-                </span>
-              </div>
-              <canvas ref={canvasRef} width={920} height={52} className="ares-comms-waveform-canvas" />
+            <div className="ares-comms-header-actions">
+              {/* Selector Demo Internacional */}
+              <button
+                type="button"
+                className="ares-demo-badge-btn"
+                onClick={handleToggleDemoMode}
+                title={activeLanguage === 'en' ? 'Switch to Spanish' : 'Cambiar a Inglés'}
+              >
+                {activeLanguage === 'en' ? '🌐 EN' : '🇦🇷 ES'}
+              </button>
+
+              {/* Botón Minimizar al Orbe */}
+              <button
+                type="button"
+                className="ares-comms-close-btn"
+                onClick={() => setPresentationMode('orb')}
+                aria-label="Minimizar a Orbe Flotante"
+                title="Minimizar a Orbe (convive con mapa 3D)"
+              >
+                <MinimizeIcon />
+              </button>
+
+              {/* Botón Cerrar */}
+              <button
+                type="button"
+                className="ares-comms-close-btn"
+                onClick={() => {
+                  setPresentationMode('orb')
+                  onClose()
+                }}
+                aria-label="Cerrar panel"
+                title="Cerrar"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          </header>
+
+          {/* Barra de Controles de Voz */}
+          <div className="ares-comms-controls-bar">
+            <div className="ares-comms-btn-group">
+              <button
+                type="button"
+                className={`ares-comms-action-btn primary ${activityState === 'listening' ? 'active-listening' : ''}`}
+                onClick={() => {
+                  if (activityState === 'listening') {
+                    setActivityState('standby')
+                  } else {
+                    setActivityState('listening')
+                    wakeWordDetectorRef.current?.setCommandMode(true, 12000)
+                    showSubtitle(
+                      activeLanguage === 'en' ? '● Listening for command...' : '● A la escucha... Di tu orden.',
+                      'assistant',
+                      3500
+                    )
+                  }
+                }}
+                title="Hablar (Activa escucha manos libres)"
+              >
+                <MicIcon />
+                <span>{activityState === 'listening' ? 'ESCUDRIÑANDO...' : '🎤 HABLAR'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="ares-comms-action-btn stop"
+                onClick={handleInterrupt}
+                title="Detener respuesta de voz"
+              >
+                <StopSquareIcon />
+              </button>
+
+              {/* Silenciar micrófono */}
+              <button
+                type="button"
+                className={`ares-comms-action-btn toggle ${isMuted ? 'active' : ''}`}
+                onClick={() => {
+                  const next = !isMuted
+                  setIsMuted(next)
+                  providerRef.current?.mute(next)
+                }}
+                title={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
+              >
+                {isMuted ? <MicOffIcon /> : <MicIcon />}
+              </button>
+
+              {/* Modo Manos Libres */}
+              <button
+                type="button"
+                className={`ares-comms-action-btn toggle ${interactionMode === 'HANDS_FREE' ? 'active' : ''}`}
+                onClick={() => {
+                  const nextMode: InteractionMode = interactionMode === 'HANDS_FREE' ? 'PUSH_TO_TALK' : 'HANDS_FREE'
+                  setInteractionMode(nextMode)
+                  providerRef.current?.updateConfig({ interactionMode: nextMode })
+                }}
+                title="Modo Manos Libres continuo"
+              >
+                <span>{interactionMode === 'HANDS_FREE' ? 'MANOS LIBRES' : 'PTT'}</span>
+              </button>
+
+              {/* Wake Word Toggle */}
+              <button
+                type="button"
+                className={`ares-comms-action-btn toggle ${isWakeWordActive ? 'active wake-active' : ''}`}
+                onClick={() => setIsWakeWordActive(prev => !prev)}
+                title={isWakeWordActive ? 'Wake Word Activo ("Hey ARES" / "Hola ARES")' : 'Wake Word Desactivado'}
+              >
+                <span>{isWakeWordActive ? '👂 WAKE: ON' : '👂 WAKE: OFF'}</span>
+              </button>
             </div>
 
-            {/* Cuerpo de Transcripción */}
-            <div className="ares-comms-body" role="log" aria-live="polite">
-              {transcripts
-                .filter(tr => tr.text && tr.text.trim().length > 0)
-                .map(tr => (
+            <div className="ares-comms-btn-group">
+              {/* Selector de Idioma */}
+              <div className="ares-comms-setting-item">
+                <select
+                  className="ares-comms-select"
+                  value={languageSelection}
+                  onChange={e => {
+                    const next = e.target.value as LanguageSelection
+                    setLanguageSelection(next)
+                    if (next === 'en' || next === 'es') {
+                      setActiveLanguage(next)
+                      const nextVoice = next === 'en' ? 'matthew' : 'carlos'
+                      setSelectedVoice(nextVoice)
+                      providerRef.current?.updateConfig({ language: next, voiceId: nextVoice })
+                    }
+                  }}
+                  title="Selector de idioma"
+                >
+                  <option value="en">EN</option>
+                  <option value="es">ES</option>
+                  <option value="auto">AUTO</option>
+                </select>
+              </div>
+
+              <div className="ares-comms-setting-item">
+                <VolumeIcon />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={volume}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value)
+                    setVolume(v)
+                    providerRef.current?.setVolume(v)
+                  }}
+                  className="ares-comms-volume-slider"
+                  title={`Volumen: ${Math.round(volume * 100)}%`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Visualizador de Onda */}
+          <div className="ares-comms-visualizer-container" style={{ padding: '4px 12px' }}>
+            <canvas ref={canvasRef} width={340} height={32} className="ares-comms-waveform-canvas" />
+          </div>
+
+          {/* Historial de Conversación */}
+          <div className="ares-comms-body" role="log" aria-live="polite">
+            {transcripts
+              .filter(tr => tr.text && tr.text.trim().length > 0)
+              .map(tr => (
                 <div key={tr.id} className={`ares-comms-msg-row ${tr.role}`}>
-                  <div className="ares-comms-avatar">
-                    {tr.role === 'user' ? 'A' : 'AI'}
-                  </div>
+                  <div className="ares-comms-avatar">{tr.role === 'user' ? 'A' : 'AI'}</div>
                   <div className="ares-comms-bubble">
                     <div className="ares-comms-msg-meta">
                       <span className="ares-comms-msg-sender">
@@ -901,7 +873,7 @@ export function AresMissionCommsModal({
                     </div>
                     <div>
                       {tr.text.split('\n').map((line, idx) => (
-                        <p key={idx} style={{ margin: '3px 0' }}>
+                        <p key={idx} style={{ margin: '2px 0' }}>
                           {line}
                         </p>
                       ))}
@@ -910,98 +882,153 @@ export function AresMissionCommsModal({
                 </div>
               ))}
 
-              {/* Tarjeta de Confirmación de Seguridad (Niveles 3 y 4) */}
-              {pendingConfirm && (
-                <div className="ares-comms-confirmation-card" role="alert">
-                  <div className="ares-confirmation-header">
-                    <span>{t.confirmPromptTitle} // LVL {pendingConfirm.securityLevel}</span>
-                  </div>
-                  <div className="ares-confirmation-prompt">
-                    {pendingConfirm.message}
-                  </div>
-                  <div className="ares-confirmation-actions">
-                    <button
-                      type="button"
-                      className="ares-confirm-btn"
-                      onClick={() => handleResolveConfirmation(true)}
-                    >
-                      {t.confirmButton}
-                    </button>
-                    <button
-                      type="button"
-                      className="ares-abort-btn"
-                      onClick={() => handleResolveConfirmation(false)}
-                    >
-                      {t.abortButton}
-                    </button>
-                  </div>
+            {/* Confirmación táctica */}
+            {pendingConfirm && (
+              <div className="ares-comms-confirmation-card" role="alert">
+                <div className="ares-confirmation-header">
+                  <span>⚠️ [CONFIRMACIÓN TÁCTICA // NIVEL {pendingConfirm.securityLevel}]</span>
                 </div>
-              )}
-
-              <div ref={transcriptsEndRef} />
-            </div>
-
-            {/* Barra de Comandos Sugeridos (Bilingüe) */}
-            <div className="ares-comms-suggestions-bar">
-              {t.suggestedCommands.map(cmd => (
-                <button
-                  key={cmd.text}
-                  type="button"
-                  className="ares-suggestion-chip"
-                  onClick={() => {
-                    setInputMessage(cmd.text)
-                    textInputRef.current?.focus()
-                  }}
-                  title={cmd.text}
-                >
-                  {cmd.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Barra de Entrada Híbrida (Texto + Voz) */}
-            <form
-              className="ares-comms-input-bar"
-              onSubmit={e => {
-                e.preventDefault()
-                handleSendMessage()
-              }}
-            >
-              <div className="ares-comms-input-wrapper">
-                <span className="ares-comms-prefix">❯</span>
-                <input
-                  ref={textInputRef}
-                  id={inputId}
-                  type="text"
-                  className="ares-comms-input"
-                  placeholder={t.inputPlaceholder}
-                  value={inputMessage}
-                  onChange={e => setInputMessage(e.target.value)}
-                />
+                <div className="ares-confirmation-prompt">{pendingConfirm.message}</div>
+                <div className="ares-confirmation-actions">
+                  <button type="button" className="ares-confirm-btn" onClick={() => handleResolveConfirmation(true)}>
+                    {t.confirmButton}
+                  </button>
+                  <button type="button" className="ares-abort-btn" onClick={() => handleResolveConfirmation(false)}>
+                    {t.abortButton}
+                  </button>
+                </div>
               </div>
-              <button
-                type="submit"
-                className="ares-comms-send-btn"
-                disabled={!inputMessage.trim()}
-                title="Transmitir orden a ARES"
-              >
-                <SendIcon />
-                <span>{t.controls.send}</span>
-              </button>
-            </form>
+            )}
+            <div ref={transcriptsEndRef} />
+          </div>
 
-            {/* Footer de Misión y Telemetría */}
-            <footer className="ares-comms-footer">
-              <span>{t.footerSystem}</span>
-              <span>
-                {currentStops?.A ? `A: [${currentStops.A[1].toFixed(2)}°N, ${currentStops.A[0].toFixed(2)}°E]` : 'A: --'} |{' '}
-                {currentStops?.P ? `P: [${currentStops.P[1].toFixed(2)}°N, ${currentStops.P[0].toFixed(2)}°E]` : 'P: --'} |{' '}
-                {currentStops?.B ? `B: [${currentStops.B[1].toFixed(2)}°N, ${currentStops.B[0].toFixed(2)}°E]` : 'B: --'}
+          {/* Chips de Sugerencias */}
+          <div className="ares-comms-suggestions-bar">
+            {t.suggestedCommands.slice(0, 5).map(cmd => (
+              <button
+                key={cmd.text}
+                type="button"
+                className="ares-suggestion-chip"
+                onClick={() => executeTacticalCommand(cmd.text)}
+                title={cmd.text}
+              >
+                {cmd.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Entrada de Texto */}
+          <form
+            className="ares-comms-input-bar"
+            onSubmit={e => {
+              e.preventDefault()
+              if (inputMessage.trim()) {
+                const msg = inputMessage.trim()
+                setInputMessage('')
+                executeTacticalCommand(msg)
+              }
+            }}
+          >
+            <div className="ares-comms-input-wrapper">
+              <span className="ares-comms-prefix">❯</span>
+              <input
+                ref={textInputRef}
+                id={inputId}
+                type="text"
+                className="ares-comms-input"
+                placeholder={t.inputPlaceholder}
+                value={inputMessage}
+                onChange={e => setInputMessage(e.target.value)}
+              />
+            </div>
+            <button
+              type="submit"
+              className="ares-comms-send-btn"
+              disabled={!inputMessage.trim()}
+              title="Transmitir orden a ARES"
+            >
+              <SendIcon />
+            </button>
+          </form>
+
+          {/* Footer Compacto */}
+          <footer className="ares-comms-footer" style={{ padding: '6px 14px', fontSize: '0.62rem' }}>
+            <span>
+              {currentStops?.A ? `A: [${currentStops.A[1].toFixed(2)}°N, ${currentStops.A[0].toFixed(2)}°E]` : 'ARES COPILOT'}
+            </span>
+            <span className={`ares-status-badge ${activityState}`} style={{ padding: '2px 6px', fontSize: '0.6rem' }}>
+              {activityState.toUpperCase()}
+            </span>
+          </footer>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODOS B & C: FLOATING ORB MODE & MINIMIZED EXECUTION
+          ======================================================== */}
+      {presentationMode !== 'compact' && (
+        <div className="ares-floating-orb-wrapper">
+          {/* Subtítulo Holográfico / Caption flotante */}
+          {floatingSubtitle && (
+            <div className="ares-orb-subtitle-pill" role="status">
+              <span className={`ares-orb-subtitle-sender ${floatingSubtitle.role}`}>
+                {floatingSubtitle.role === 'user' ? '🧑‍🚀 [ASTRONAUTA]' : '🛰️ [ARES // COPILOTO]'}
               </span>
-            </footer>
+              <span>{floatingSubtitle.text}</span>
+            </div>
+          )}
+
+          {/* Tarjeta de Ejecución Minimizada */}
+          {presentationMode === 'minimized' && currentExecutionInfo && (
+            <div className="ares-orb-exec-card" role="alert">
+              <div className="ares-orb-exec-text">
+                <span className="ares-pulse-ring" aria-hidden="true" />
+                <span>⚙️ {currentExecutionInfo.description}</span>
+              </div>
+              <div className="ares-orb-exec-actions">
+                <button
+                  type="button"
+                  className="ares-orb-mini-btn"
+                  onClick={() => setPresentationMode('compact')}
+                  title="Expandir panel de misión"
+                >
+                  <ExpandIcon />
+                </button>
+                <button
+                  type="button"
+                  className="ares-orb-mini-btn"
+                  onClick={() => {
+                    handleInterrupt()
+                    setPresentationMode('orb')
+                  }}
+                  title="Detener acción"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Orbe Holográfico Interactivo */}
+          <div
+            className={`ares-floating-orb orb-${activityState}`}
+            onClick={handleOrbClick}
+            role="button"
+            tabIndex={0}
+            aria-label={`Ares Copilot Orb (${activityState}). Haz clic para abrir el panel de misión.`}
+            title="Ares Copilot // Haz clic para abrir el panel o habla diciendo 'Hey, ARES'"
+          >
+            {/* Anillos orbitales animados */}
+            <div className="ares-orb-ring ring-outer" aria-hidden="true" />
+            <div className="ares-orb-ring ring-middle" aria-hidden="true" />
+
+            {/* Núcleo central animado */}
+            <div className="ares-orb-core-wrap">
+              <JarvisAiCore size={38} withOuterOrbits={false} />
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

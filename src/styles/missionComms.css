@@ -100,41 +100,240 @@
 /* =========================================================
    OVERLAY MODAL DE MISSION COMMS
    ========================================================= */
+/* =========================================================
+   ADAPTIVE NON-BLOCKING CONTAINER
+   Convive con el mapa 3D sin backdrop ni bloqueos de interacción
+   ========================================================= */
 .ares-comms-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(9, 14, 20, 0.82);
-  backdrop-filter: blur(10px);
+  inset: 0;
+  pointer-events: none;
   z-index: 10000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: comms-fade-in 0.25s ease-out;
-  padding: 16px;
-}
-
-@keyframes comms-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 24px;
 }
 
 .ares-comms-panel {
   position: relative;
-  width: 100%;
-  max-width: 980px;
-  height: 90vh;
-  max-height: 840px;
-  background: var(--color-space-black);
+  pointer-events: auto;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 100px);
+  background: rgba(9, 14, 20, 0.94);
+  backdrop-filter: blur(16px);
   border: 1.5px solid rgba(99, 212, 229, 0.4);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 40px rgba(99, 212, 229, 0.15);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(99, 212, 229, 0.2);
   overflow: hidden;
   font-family: var(--font-mono);
+  animation: comms-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes comms-slide-up {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* =========================================================
+   FLOATING ORB MODE & HOLOGRAPHIC PRESENCE
+   ========================================================= */
+.ares-floating-orb-wrapper {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.ares-floating-orb {
+  position: relative;
+  pointer-events: auto;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(9, 14, 20, 0.95) 0%, rgba(17, 27, 37, 0.88) 75%);
+  border: 2px solid var(--color-telemetry-cyan);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 24px rgba(99, 212, 229, 0.35);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+}
+
+.ares-floating-orb:hover {
+  transform: scale(1.06);
+  border-color: #a5f3fc;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 212, 229, 0.55);
+}
+
+.ares-floating-orb.orb-standby {
+  border-color: rgba(99, 212, 229, 0.6);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(99, 212, 229, 0.25);
+}
+
+.ares-floating-orb.orb-listening {
+  border-color: #38bdf8;
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.65), 0 0 15px rgba(99, 212, 229, 0.8);
+  animation: orb-pulse-listening 1.8s infinite;
+}
+
+.ares-floating-orb.orb-processing {
+  border-color: var(--color-warning-amber);
+  box-shadow: 0 0 28px rgba(233, 184, 92, 0.6);
+  animation: orb-pulse-listening 1.2s infinite;
+}
+
+.ares-floating-orb.orb-speaking {
+  border-color: var(--color-telemetry-cyan);
+  box-shadow: 0 0 35px rgba(99, 212, 229, 0.75), 0 0 18px rgba(255, 255, 255, 0.5);
+  animation: orb-pulse-speaking 0.9s infinite alternate;
+}
+
+.ares-floating-orb.orb-executing {
+  border-color: var(--color-martian-copper);
+  box-shadow: 0 0 30px rgba(215, 123, 80, 0.65);
+}
+
+.ares-floating-orb.orb-success {
+  border-color: #34d399;
+  box-shadow: 0 0 32px rgba(52, 211, 153, 0.75);
+}
+
+.ares-floating-orb.orb-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.65);
+}
+
+.ares-floating-orb.orb-offline {
+  border-color: rgba(130, 145, 158, 0.4);
+  opacity: 0.85;
+}
+
+@keyframes orb-pulse-listening {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 32px rgba(56, 189, 248, 0.8); }
+  100% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+}
+
+@keyframes orb-pulse-speaking {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.07); }
+}
+
+.ares-orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ares-orb-ring.ring-outer {
+  width: 104px;
+  height: 104px;
+  border: 1px dashed rgba(99, 212, 229, 0.35);
+  animation: comms-orbit-cw 12s linear infinite;
+}
+
+.ares-orb-ring.ring-middle {
+  width: 90px;
+  height: 90px;
+  border: 1px solid rgba(99, 212, 229, 0.2);
+  animation: comms-orbit-ccw 8s linear infinite;
+}
+
+.ares-orb-core-wrap {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Subtítulo holográfico flotante */
+.ares-orb-subtitle-pill {
+  pointer-events: auto;
+  max-width: 320px;
+  padding: 8px 14px;
+  background: rgba(9, 14, 20, 0.93);
+  border: 1px solid var(--color-telemetry-cyan);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 15px rgba(99, 212, 229, 0.25);
+  backdrop-filter: blur(12px);
+  color: var(--color-ice-white);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  animation: comms-slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+}
+
+.ares-orb-subtitle-sender {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-telemetry-cyan);
+}
+
+.ares-orb-subtitle-sender.user {
+  color: var(--color-martian-copper);
+}
+
+/* Tarjeta de estado de ejecución en modo minimizado */
+.ares-orb-exec-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(17, 27, 37, 0.95), rgba(9, 14, 20, 0.95));
+  border: 1px solid var(--color-martian-copper);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(215, 123, 80, 0.35);
+  backdrop-filter: blur(12px);
+  color: var(--color-ice-white);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  animation: comms-slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ares-orb-exec-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-martian-copper);
+}
+
+.ares-orb-exec-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ares-orb-mini-btn {
+  background: rgba(99, 212, 229, 0.15);
+  border: 1px solid rgba(99, 212, 229, 0.35);
+  border-radius: 4px;
+  color: var(--color-telemetry-cyan);
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease;
+}
+
+.ares-orb-mini-btn:hover {
+  background: rgba(99, 212, 229, 0.3);
+  border-color: var(--color-telemetry-cyan);
 }
 
 /* Retícula de esquinas FUI */

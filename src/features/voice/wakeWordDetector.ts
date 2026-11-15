@@ -1,8 +1,14 @@
 /**
- * ARES MISSION COMMS - Local Wake Word Detector
- * Detecta localmente las frases de activación sin transmitir audio a AWS:
+ * ARES MISSION COMMS - Local Wake Word & Continuous Voice Command Detector
+ * Detecta localmente frases de activación y captura comandos de voz continuos
+ * sin transmitir audio pasivo a AWS:
  * - English: "Hey, ARES"
  * - Spanish: "Hola, ARES"
+ * 
+ * Permite interacción completamente manos libres (hands-free):
+ * - Detecta el comando en la misma frase ("Hey ARES, focus on Mount Sharp")
+ * - O mantiene la escucha abierta tras el despertar para capturar instrucciones posteriores
+ *   sin requerir presionar ningún botón.
  */
 
 import type { SupportedLanguage } from '../i18n/commsTranslations'
@@ -11,15 +17,21 @@ export interface WakeWordEvent {
   phrase: string
   detectedLanguage: SupportedLanguage
   timestamp: number
+  trailingCommand?: string
 }
 
 export type WakeWordListener = (event: WakeWordEvent) => void
+export type CommandListener = (command: string, language: SupportedLanguage) => void
 
 export class LocalWakeWordDetector {
   private recognition: any = null
   private isListening = false
+  private isCommandListening = false
+  private currentLanguage: SupportedLanguage = 'en'
   private listeners: WakeWordListener[] = []
+  private commandListeners: CommandListener[] = []
   private restartTimeout: any = null
+  private commandTimeout: any = null
   private isExplicitlyStopped = false
 
   constructor() {
@@ -48,30 +60,31 @@ export class LocalWakeWordDetector {
       this.recognition.onresult = (event: any) => {
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           const result = event.results[i]
+          const isFinal = result.isFinal
           for (let j = 0; j < result.length; ++j) {
             const transcript = (result[j].transcript || '').toLowerCase().trim()
-            this.evaluateTranscript(transcript)
+            if (transcript) {
+              this.evaluateTranscript(transcript, isFinal)
+            }
           }
         }
       }
 
       this.recognition.onerror = (err: any) => {
-        // Errores de 'no-speech' o 'network' son habituales en escucha continua pasiva
         if (err.error !== 'no-speech' && err.error !== 'aborted') {
-          console.debug('[WAKE WORD] Evento pasivo:', err.error)
+          console.debug('[WAKE WORD / SPEECH] Evento pasivo:', err.error)
         }
       }
 
       this.recognition.onend = () => {
         if (this.isListening && !this.isExplicitlyStopped) {
-          // Reanudar escucha en bucle pasivo
           this.restartTimeout = setTimeout(() => {
             try {
               if (this.isListening && !this.isExplicitlyStopped) {
                 this.recognition?.start()
               }
             } catch {}
-          }, 300)
+          }, 250)
         }
       }
     } catch (e) {
@@ -79,51 +92,86 @@ export class LocalWakeWordDetector {
     }
   }
 
-  private evaluateTranscript(text: string): void {
-    // Patrones de activación en inglés ("Hey ARES")
-    const englishPatterns = [
-      /\bhey\s+ares\b/i,
-      /\bhey\s+iris\b/i, // Variación fonética común
-      /\bhey\s+air\s*is\b/i,
-      /\bay\s+ares\b/i,
-    ]
+  private evaluateTranscript(text: string, isFinal: boolean): void {
+    // 1. Verificar si contiene la frase de activación (en inglés o español)
+    const englishMatch = text.match(/\b(hey\s+ares|hey\s+iris|hey\s+air\s*is|ay\s+ares)\b/i)
+    const spanishMatch = text.match(/\b(hola\s+ares|hola\s+áres|hola\s+copiloto|oye\s+ares)\b/i)
 
-    // Patrones de activación en español ("Hola ARES")
-    const spanishPatterns = [
-      /\bhola\s+ares\b/i,
-      /\bhola\s+áres\b/i,
-      /\bhola\s+copiloto\b/i,
-      /\boye\s+ares\b/i,
-    ]
-
-    for (const pat of englishPatterns) {
-      if (pat.test(text)) {
-        this.triggerWake('Hey, ARES', 'en')
-        return
+    if (englishMatch) {
+      const wakePhrase = englishMatch[0]
+      const trailing = text.slice((englishMatch.index || 0) + wakePhrase.length).replace(/^[,.\s]+/, '').trim()
+      this.currentLanguage = 'en'
+      this.triggerWake('Hey, ARES', 'en', trailing || undefined)
+      if (trailing && isFinal) {
+        this.emitCommand(trailing, 'en')
       }
+      return
     }
 
-    for (const pat of spanishPatterns) {
-      if (pat.test(text)) {
-        this.triggerWake('Hola, ARES', 'es')
-        return
+    if (spanishMatch) {
+      const wakePhrase = spanishMatch[0]
+      const trailing = text.slice((spanishMatch.index || 0) + wakePhrase.length).replace(/^[,.\s]+/, '').trim()
+      this.currentLanguage = 'es'
+      this.triggerWake('Hola, ARES', 'es', trailing || undefined)
+      if (trailing && isFinal) {
+        this.emitCommand(trailing, 'es')
       }
+      return
+    }
+
+    // 2. Si estamos en modo de escucha de comando activo tras el despertar
+    if (this.isCommandListening && isFinal && text.length > 2) {
+      this.emitCommand(text, this.currentLanguage)
     }
   }
 
-  private triggerWake(phrase: string, detectedLanguage: SupportedLanguage): void {
-    console.log(`[WAKE WORD DETECTED] ${phrase} (Idioma inferido: ${detectedLanguage})`)
+  private triggerWake(phrase: string, detectedLanguage: SupportedLanguage, trailingCommand?: string): void {
+    console.log(`[WAKE WORD DETECTED] ${phrase} (Lang: ${detectedLanguage}) Trailing: "${trailingCommand || ''}"`)
     this.playAcknowledgeChime()
+    this.setCommandMode(true)
 
     const event: WakeWordEvent = {
       phrase,
       detectedLanguage,
       timestamp: Date.now(),
+      trailingCommand,
     }
 
     for (const listener of this.listeners) {
       listener(event)
     }
+  }
+
+  private emitCommand(command: string, language: SupportedLanguage): void {
+    console.log(`[VOICE COMMAND CAPTURED] "${command}" (Lang: ${language})`)
+    for (const listener of this.commandListeners) {
+      listener(command, language)
+    }
+
+    // Reiniciar temporizador de modo comando (10 segundos de atención continua)
+    this.scheduleCommandTimeout(10000)
+  }
+
+  /**
+   * Activa o desactiva la escucha activa de comandos tras el despertar
+   */
+  public setCommandMode(active: boolean, timeoutMs: number = 10000): void {
+    this.isCommandListening = active
+    if (this.commandTimeout) {
+      clearTimeout(this.commandTimeout)
+      this.commandTimeout = null
+    }
+
+    if (active) {
+      this.scheduleCommandTimeout(timeoutMs)
+    }
+  }
+
+  private scheduleCommandTimeout(ms: number): void {
+    if (this.commandTimeout) clearTimeout(this.commandTimeout)
+    this.commandTimeout = setTimeout(() => {
+      this.isCommandListening = false
+    }, ms)
   }
 
   /**
@@ -183,7 +231,9 @@ export class LocalWakeWordDetector {
   public stop(): void {
     this.isExplicitlyStopped = true
     this.isListening = false
+    this.isCommandListening = false
     if (this.restartTimeout) clearTimeout(this.restartTimeout)
+    if (this.commandTimeout) clearTimeout(this.commandTimeout)
     try {
       this.recognition?.stop()
     } catch {}
@@ -194,5 +244,70 @@ export class LocalWakeWordDetector {
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener)
     }
+  }
+
+  public subscribeCommand(listener: CommandListener): () => void {
+    this.commandListeners.push(listener)
+    return () => {
+      this.commandListeners = this.commandListeners.filter(l => l !== listener)
+    }
+  }
+}
+
+/**
+ * Síntesis de voz local de alta fidelidad mediante Web Speech API nativa.
+ * Garantiza respuesta auditiva inmediata con 0ms de latencia y sin bloqueos de red.
+ */
+export function speakLocalSpeech(
+  text: string,
+  language: SupportedLanguage,
+  callbacks?: {
+    onStart?: () => void
+    onEnd?: () => void
+    onError?: () => void
+  }
+): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    callbacks?.onEnd?.()
+    return
+  }
+
+  try {
+    window.speechSynthesis.cancel()
+
+    // Limpiar etiquetas de formato o metadatos antes de hablar
+    const cleanText = text
+      .replace(/\[.*?\]/g, '')
+      .replace(/<.*?>/g, '')
+      .replace(/\(.*?°[NE].*?\)/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .trim()
+
+    if (!cleanText) {
+      callbacks?.onEnd?.()
+      return
+    }
+
+    const utterance = new SpeechSynthesisUtterance(cleanText)
+    utterance.lang = language === 'en' ? 'en-US' : 'es-ES'
+    utterance.rate = 1.05
+    utterance.pitch = 0.98
+
+    // Intentar seleccionar una voz natural disponible
+    const voices = window.speechSynthesis.getVoices?.() || []
+    const targetLangPrefix = language === 'en' ? 'en' : 'es'
+    const matchedVoice = voices.find(v => v.lang.toLowerCase().startsWith(targetLangPrefix))
+    if (matchedVoice) {
+      utterance.voice = matchedVoice
+    }
+
+    utterance.onstart = () => callbacks?.onStart?.()
+    utterance.onend = () => callbacks?.onEnd?.()
+    utterance.onerror = () => callbacks?.onError?.()
+
+    window.speechSynthesis.speak(utterance)
+  } catch (err) {
+    console.warn('[LOCAL SPEECH] Error sintetizando voz:', err)
+    callbacks?.onEnd?.()
   }
 }
