@@ -235,7 +235,7 @@ export class LocalWakeWordDetector {
     // Evita que los altavoces de la computadora auto-activen el wake word
     if (this.isAssistantSpeaking) {
       // Pero permitir explícitamente órdenes deliberadas de interrupción (Barge-In)
-      const interruptMatch = trimmed.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
+      const interruptMatch = trimmed.match(/\b(detener|detente|alto|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pausa|pausar|parar\s+ahora|parar\s+audio)\b/i)
       if (interruptMatch) {
         console.log(`[VOICE INTERRUPT DETECTED] Interrupción confirmada durante habla: "${trimmed}"`)
         this.emitInterrupt()
@@ -244,7 +244,8 @@ export class LocalWakeWordDetector {
     }
 
     // 0b. Detección normal de comando vocal de interrupción (Barge-In)
-    const interruptMatch = trimmed.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
+    // Nota: Excluimos la preposición común "para" para evitar interrupciones falsas al hablar ("para Jezero", "ruta para la base")
+    const interruptMatch = trimmed.match(/\b(detener|detente|alto|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pausa|pausar|parar\s+ahora|parar\s+audio)\b/i)
     if (interruptMatch) {
       console.log(`[VOICE INTERRUPT DETECTED] Interrupción por comando vocal: "${trimmed}"`)
       this.emitInterrupt()
@@ -579,9 +580,28 @@ export function speakLocalSpeech(
       utterance.voice = eligible[0].voice
     }
 
+    // Solución al bug nativo de Chromium: en frases de más de 14s, SpeechSynthesis se congela si no se refresca
+    let keepAliveTimer: any = null
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      keepAliveTimer = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause()
+          window.speechSynthesis.resume()
+        } else {
+          clearInterval(keepAliveTimer)
+        }
+      }, 7000)
+    }
+
     utterance.onstart = () => callbacks?.onStart?.()
-    utterance.onend = () => callbacks?.onEnd?.()
-    utterance.onerror = () => callbacks?.onError?.()
+    utterance.onend = () => {
+      if (keepAliveTimer) clearInterval(keepAliveTimer)
+      callbacks?.onEnd?.()
+    }
+    utterance.onerror = () => {
+      if (keepAliveTimer) clearInterval(keepAliveTimer)
+      callbacks?.onError?.()
+    }
 
     window.speechSynthesis.speak(utterance)
   } catch (err) {

@@ -80,7 +80,7 @@ export class BedrockNovaSonicSession {
               event: {
                 sessionStart: {
                   inferenceConfiguration: {
-                    maxTokens: 1024,
+                    maxTokens: 2500,
                     topP: 0.9,
                     temperature: 0.3,
                   },

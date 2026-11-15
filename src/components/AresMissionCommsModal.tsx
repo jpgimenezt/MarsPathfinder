@@ -497,7 +497,7 @@ export function AresMissionCommsModal({
         } catch {}
       }
 
-      // 6. Fallback a agente serverless con timeout estricto de 10s (sin bloqueos de 2 minutos)
+      // 6. Fallback a agente serverless con timeout táctico de 30s para razonamiento multimisión
       showSubtitle(responseLanguage === 'en' ? 'Consulting orbital satellite telemetry...' : 'Consultando telemetría de satélite en órbita...', 'assistant', 3000)
 
       try {
@@ -506,7 +506,7 @@ export function AresMissionCommsModal({
           .slice(-6)
           .map(t => ({ role: t.role, content: t.text }))
 
-        const res = await queryMarsAgent(commandText, historyPayload, 10000)
+        const res = await queryMarsAgent(commandText, historyPayload, 30000)
         const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
 
         setTranscripts(prev => [

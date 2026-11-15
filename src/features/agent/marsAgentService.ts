@@ -33,7 +33,7 @@ export interface ChatMessage {
 export async function queryMarsAgent(
   message: string,
   history: Array<{ role: string; content: string }> = [],
-  timeoutMs = 10000
+  timeoutMs = 30000
 ): Promise<AgentResponse> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
