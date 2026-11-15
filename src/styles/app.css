@@ -769,6 +769,100 @@ main {
   margin: 12px 0 12px 12px;
 }
 
+.terrain-planner {
+  border-top: 1px solid var(--ares-border);
+  margin-top: 18px;
+  padding-top: 12px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.terrain-planner h3 {
+  margin: 14px 0 8px;
+  color: var(--ares-amber);
+}
+.terrain-planner p {
+  font-size: 0.76rem;
+  color: var(--ares-text-muted);
+}
+.terrain-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.terrain-options button {
+  flex: 1 1 45%;
+  padding: 8px 6px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ares-border);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.terrain-options button:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: var(--ares-cyan);
+}
+.terrain-options button[aria-pressed=true] {
+  color: #04090e;
+  background: var(--ares-amber);
+  border-color: var(--ares-amber);
+  font-weight: 800;
+}
+.terrain-options button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.terrain-comparison {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--ares-border);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px 0;
+  background: rgba(6, 12, 18, 0.6);
+  overflow-wrap: anywhere;
+}
+.terrain-comparison strong {
+  color: #ffffff;
+}
+.terrain-comparison small {
+  color: var(--ares-text-muted);
+  line-height: 1.45;
+}
+.terrain-comparison span {
+  font-size: 0.75rem;
+  color: var(--ares-cyan);
+}
+.terrain-planner label, .terrain-legend span {
+  display: block;
+  margin: 7px 0;
+  color: var(--ares-text-muted);
+}
+.terrain-planner input {
+  width: 68px;
+  max-width: 100%;
+  margin-left: 6px;
+  padding: 4px 6px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--ares-border);
+  border-radius: 4px;
+}
+.terrain-legend {
+  border-top: 1px solid var(--ares-border);
+  margin: 14px 0;
+  padding: 10px 0;
+}
+.terrain-legend b {
+  color: var(--ares-amber);
+  display: block;
+  margin-bottom: 6px;
+}
+
+
 .map-stage--panel .base-status {
   left: 400px;
 }
