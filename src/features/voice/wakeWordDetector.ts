@@ -23,6 +23,7 @@ export interface WakeWordEvent {
 export type WakeWordListener = (event: WakeWordEvent) => void
 export type CommandListener = (command: string, language: SupportedLanguage) => void
 export type DisconnectListener = () => void
+export type InterruptListener = () => void
 
 export class LocalWakeWordDetector {
   private recognition: any = null
@@ -32,6 +33,7 @@ export class LocalWakeWordDetector {
   private listeners: WakeWordListener[] = []
   private commandListeners: CommandListener[] = []
   private disconnectListeners: DisconnectListener[] = []
+  private interruptListeners: InterruptListener[] = []
   private restartTimeout: any = null
   private isExplicitlyStopped = false
 
@@ -94,9 +96,19 @@ export class LocalWakeWordDetector {
   }
 
   private evaluateTranscript(text: string, isFinal: boolean): void {
-    // 1. Verificar si contiene la frase de activación (en inglés o español)
-    const englishMatch = text.match(/\b(hey\s+ares|hey\s+iris|hey\s+air\s*is|ay\s+ares)\b/i)
-    const spanishMatch = text.match(/\b(hola\s+ares|hola\s+áres|hola\s+copiloto|oye\s+ares)\b/i)
+    // 0. Detección inmediata de comando vocal de interrupción (Barge-In)
+    const interruptMatch = text.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
+    if (interruptMatch) {
+      console.log(`[VOICE INTERRUPT DETECTED] Interrupción por comando vocal: "${text}"`)
+      this.emitInterrupt()
+      return
+    }
+
+    // 1. Frases de activación con tolerancia fonética de SpeechRecognition
+    // Se contemplan transcripciones fonéticas habituales del navegador (ARES suele transcribirse como alex, iris, ariel, eric)
+    const englishMatch = text.match(/\b(hey\s+(?:ares|áres|alex|alice|iris|aris|eric|alres|copilot|copiloto)|hello\s+(?:ares|copilot)|ok\s+ares|ay\s+ares)\b/i)
+    const spanishMatch = text.match(/\b(hola\s+(?:ares|áres|alex|alice|iris|aris|alres|copiloto|copilot)|oye\s+(?:ares|áres|copiloto)|buenos\s+dias\s+ares|ares\s+copiloto|copiloto\s+ares)\b/i)
+    const standaloneMatch = text.match(/^(?:ares|áres|copiloto)\b/i)
 
     if (englishMatch) {
       const wakePhrase = englishMatch[0]
@@ -109,9 +121,9 @@ export class LocalWakeWordDetector {
       return
     }
 
-    if (spanishMatch) {
-      const wakePhrase = spanishMatch[0]
-      const trailing = text.slice((spanishMatch.index || 0) + wakePhrase.length).replace(/^[,.\s]+/, '').trim()
+    if (spanishMatch || standaloneMatch) {
+      const matched = spanishMatch ? spanishMatch[0] : standaloneMatch![0]
+      const trailing = text.slice((spanishMatch ? spanishMatch.index || 0 : 0) + matched.length).replace(/^[,.\s]+/, '').trim()
       this.currentLanguage = 'es'
       this.triggerWake('Hola, ARES', 'es', trailing || undefined)
       if (trailing && isFinal) {
@@ -150,6 +162,12 @@ export class LocalWakeWordDetector {
     }
   }
 
+  private emitInterrupt(): void {
+    for (const listener of this.interruptListeners) {
+      listener()
+    }
+  }
+
   private emitCommand(command: string, language: SupportedLanguage): void {
     console.log(`[VOICE COMMAND CAPTURED] "${command}" (Lang: ${language})`)
     for (const listener of this.commandListeners) {
@@ -162,6 +180,13 @@ export class LocalWakeWordDetector {
     this.setCommandMode(false)
     for (const listener of this.disconnectListeners) {
       listener()
+    }
+  }
+
+  public subscribeInterrupt(listener: InterruptListener): () => void {
+    this.interruptListeners.push(listener)
+    return () => {
+      this.interruptListeners = this.interruptListeners.filter(l => l !== listener)
     }
   }
 

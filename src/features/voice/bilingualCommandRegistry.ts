@@ -26,10 +26,58 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
   },
   {
     tool: 'focusGeographicTarget',
+    params: { targetName: 'Bradbury Landing' },
+    phrases: {
+      en: ['focus bradbury landing', 'look at lz-1', 'center on base alpha', 'lz-1 base', 'bradbury landing'],
+      es: ['enfoca bradbury landing', 'enfocar base lz 1', 'ir a bradbury', 'centrar en la base', 'base lz-1', 'sitio de aterrizaje bradbury'],
+    },
+  },
+  {
+    tool: 'focusGeographicTarget',
     params: { targetName: 'Delta de Jezero' },
     phrases: {
       en: ['focus on jezero delta', 'look at jezero', 'jezero delta', 'go to jezero'],
       es: ['enfocá el delta de jezero', 'ir a jezero', 'delta de jezero', 'mirar jezero'],
+    },
+  },
+  {
+    tool: 'focusGeographicTarget',
+    params: { targetName: 'Cresta Vera Rubin' },
+    phrases: {
+      en: ['focus vera rubin ridge', 'look at vera rubin', 'hematite ridge', 'vera rubin'],
+      es: ['enfoca cresta vera rubin', 'ver cresta de hematita', 'cresta vera rubin', 'cresta de hematita'],
+    },
+  },
+  {
+    tool: 'switchScreenView',
+    params: { screen: 'terrain3d' },
+    phrases: {
+      en: ['switch to gale 3d', 'show 3d terrain', 'view gale crater', 'gale 3d view', '3d terrain'],
+      es: ['cambiar a gale 3d', 'ver terreno 3d', 'ir a gale 3d', 'terreno 3d', 'vista 3d de gale', 'volver al terreno 3d'],
+    },
+  },
+  {
+    tool: 'switchScreenView',
+    params: { screen: 'globe' },
+    phrases: {
+      en: ['switch to globe', 'orbital globe view', 'view mars globe', 'planet globe', '3d globe'],
+      es: ['cambiar a globo orbital', 'globo orbital', 'ver globo', 'planeta marte 3d', 'globo 3d', 'vista global'],
+    },
+  },
+  {
+    tool: 'switchScreenView',
+    params: { screen: 'map' },
+    phrases: {
+      en: ['switch to jezero 2d', 'jezero map', '2d map view', 'jezero crater 2d'],
+      es: ['cambiar a jezero 2d', 'mapa 2d', 'ir a jezero', 'mapa de jezero', 'vista 2d'],
+    },
+  },
+  {
+    tool: 'toggleScientificLayer',
+    params: { layerId: 'optical', enabled: true },
+    phrases: {
+      en: ['show real satellite photo', 'orbital satellite photo', 'optical layer', 'satellite imagery', 'show optical photography', 'real satellite photo'],
+      es: ['mostrar fotografia satelital real', 'fotografia satelital real', 'activar fotografia orbital', 'capa optica', 'foto satelital', 'fotografia orbital', 'mostrar foto real', 'activar foto satelital', 'foto orbital satelital'],
     },
   },
   {
@@ -38,6 +86,30 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     phrases: {
       en: ['show geological layers', 'show geology', 'activate geology layer', 'geology on', 'geological map'],
       es: ['mostrá las capas geológicas', 'mostrar capas geológicas', 'activar geología', 'capas geológicas', 'mapa geológico'],
+    },
+  },
+  {
+    tool: 'toggleScientificLayer',
+    params: { layerId: 'spectral', enabled: true },
+    phrases: {
+      en: ['mineral units', 'spectral composition', 'crism spectral layer', 'minerals', 'show mineralogical units'],
+      es: ['unidades mineralogicas', 'composicion espectral', 'capa espectral', 'minerales crism', 'mostrar minerales', 'mostrar unidades mineralogicas'],
+    },
+  },
+  {
+    tool: 'toggleScientificLayer',
+    params: { layerId: 'slope', enabled: true },
+    phrases: {
+      en: ['slope analysis', 'slope map', 'slope safety', 'hazard map', 'steep terrain'],
+      es: ['analisis de pendientes', 'mapa de pendientes', 'seguridad de pendientes', 'pendientes y riesgo', 'mostrar pendientes'],
+    },
+  },
+  {
+    tool: 'toggleScientificLayer',
+    params: { layerId: 'radiation', enabled: true },
+    phrases: {
+      en: ['radiation dosimetry', 'radiation map', 'surface radiation', 'rad sensor'],
+      es: ['dosimetria de radiacion', 'mapa de radiacion', 'radiacion en superficie', 'mostrar radiacion'],
     },
   },
   {
@@ -279,9 +351,54 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'focusGeographicTarget', params: { targetName: 'Delta de Jezero' } }
   }
 
+  // Fotografía satelital real / óptica
+  if (norm.includes('satelit') || norm.includes('orbital') || norm.includes('foto real') || norm.includes('optic')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'optical', enabled: true } }
+  }
+
   // Capas geológicas
   if (norm.includes('geolog')) {
     return { tool: 'toggleScientificLayer', params: { layerId: 'geology', enabled: true } }
+  }
+
+  // Minerales / Espectral / CRISM
+  if (norm.includes('mineral') || norm.includes('espectral') || norm.includes('crism')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'spectral', enabled: true } }
+  }
+
+  // Pendientes / Riesgo
+  if (norm.includes('pendient') || norm.includes('slope')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'slope', enabled: true } }
+  }
+
+  // Radiación
+  if (norm.includes('radiac') || norm.includes('dosimetr')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'radiation', enabled: true } }
+  }
+
+  // Bradbury Landing / Base LZ-1
+  if (norm.includes('bradbury') || norm.includes('lz-1') || norm.includes('lz 1') || norm.includes('base alfa')) {
+    return { tool: 'focusGeographicTarget', params: { targetName: 'Bradbury Landing' } }
+  }
+
+  // Vera Rubin Ridge / Hematita
+  if (norm.includes('vera rubin') || norm.includes('hematit')) {
+    return { tool: 'focusGeographicTarget', params: { targetName: 'Cresta Vera Rubin' } }
+  }
+
+  // Cambiar a Globo Orbital
+  if (norm.includes('globo') || norm.includes('globe') || norm.includes('planeta 3d')) {
+    return { tool: 'switchScreenView', params: { screen: 'globe' } }
+  }
+
+  // Cambiar a Terreno Gale 3D
+  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver'))) {
+    return { tool: 'switchScreenView', params: { screen: 'terrain3d' } }
+  }
+
+  // Cambiar a Jezero 2D
+  if ((norm.includes('jezero') || norm.includes('mapa')) && (norm.includes('2d') || norm.includes('mapa'))) {
+    return { tool: 'switchScreenView', params: { screen: 'map' } }
   }
 
   // Capa térmica / THEMIS

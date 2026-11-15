@@ -219,7 +219,10 @@ export function AresMissionCommsModal({
       window.speechSynthesis.cancel()
     }
     setConversationState('interrupted')
-    setConversationState('listening')
+    setTimeout(() => {
+      setConversationState('listening')
+      wakeWordDetectorRef.current?.setCommandMode(true)
+    }, 150)
   }, [])
 
   // Cierre ordenado de comunicaciones
@@ -418,7 +421,37 @@ export function AresMissionCommsModal({
       // Si el usuario dijo el comando en la misma frase ("Hey ARES, enfoca Mount Sharp")
       if (event.trailingCommand && event.trailingCommand.trim().length > 1) {
         executeTacticalCommand(event.trailingCommand.trim())
+      } else {
+        // Respuesta vocal inmediata de ARES al detectar el saludo de activación
+        const ackText = responseLanguage === 'en'
+          ? 'ARES online. Standing by for navigation, mapping, or science analysis.'
+          : 'ARES en línea. A la escucha para órdenes de navegación, cartografía o análisis científico.'
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `ai-wake-${Date.now()}`,
+            role: 'assistant',
+            text: ackText,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+        showSubtitle(ackText, 'assistant', 4500)
+        speakLocalSpeech(ackText, responseLanguage, {
+          onStart: () => setConversationState('speaking'),
+          onEnd: () => {
+            setConversationState('listening')
+            wakeWordDetectorRef.current?.setCommandMode(true)
+          },
+        })
       }
+    })
+
+    // Interrupción por comando vocal ("detener", "para", "stop", "silencio")
+    const unsubscribeInterrupt = detector.subscribeInterrupt(() => {
+      console.log('[ARES COMMS] Interrupción vocal recibida (Barge-In)')
+      handleInterrupt()
     })
 
     // Escucha continua de comandos (no se corta tras 10 segundos, Sección 6)
@@ -440,6 +473,7 @@ export function AresMissionCommsModal({
 
     return () => {
       unsubscribeWake()
+      unsubscribeInterrupt()
       unsubscribeCommand()
       unsubscribeDisconnect()
       detector.stop()

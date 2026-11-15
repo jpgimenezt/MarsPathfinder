@@ -50,6 +50,7 @@ export interface ToolExecutionResult {
 export interface AppActionHandlers {
   focusCamera?: (params: { lat: number; lon: number; height?: number; duration?: number }) => void
   toggleLayer?: (layerId: string, enabled: boolean) => void
+  switchScreen?: (screen: 'terrain3d' | 'globe' | 'map') => void
   setWaypoint?: (id: StopId, point: MarsPoint, name?: string) => void
   previewRoute?: (mode: 'FOOT' | 'ROVER') => void
   openComparisonModal?: (open: boolean) => void
@@ -79,6 +80,10 @@ export const FocusGeographicTargetSchema = z.object({
 export const ToggleScientificLayerSchema = z.object({
   layerId: z.string().describe("Identificador de capa (ej: 'ctx', 'mola', 'themis', 'gale_dem', 'geology')"),
   enabled: z.boolean().describe('Estado deseado de la capa (true para encender, false para apagar)'),
+})
+
+export const SwitchScreenViewSchema = z.object({
+  screen: z.enum(['terrain3d', 'globe', 'map']).describe('Pantalla o modo de visualización a activar'),
 })
 
 export const ExplainSelectedRegionSchema = z.object({
@@ -174,6 +179,13 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     description: "Activa o desactiva capas científicas orbitales de NASA (ej: 'ctx', 'mola', 'themis', 'gale_dem').",
     securityLevel: 2,
     schema: ToggleScientificLayerSchema,
+    requiresConfirmation: false,
+  },
+  switchScreenView: {
+    name: 'switchScreenView',
+    description: 'Cambia la pantalla activa del sistema (Gale 3D, Globo Orbital Marciano o Mapa 2D de Jezero).',
+    securityLevel: 2,
+    schema: SwitchScreenViewSchema,
     requiresConfirmation: false,
   },
   explainSelectedRegion: {
@@ -525,6 +537,16 @@ export class ToolExecutionEngine {
           status: 'LAYER_TOGGLED',
           layerId,
           enabled,
+        }
+      }
+
+      case 'switchScreenView': {
+        const { screen } = input
+        this.handlers.switchScreen?.(screen)
+        return {
+          status: 'SCREEN_SWITCHED',
+          screen,
+          message: `Vista cambiada a ${screen === 'terrain3d' ? 'Gale Crater 3D' : screen === 'globe' ? 'Globo Orbital Marciano' : 'Mapa 2D de Jezero Crater'}.`,
         }
       }
 

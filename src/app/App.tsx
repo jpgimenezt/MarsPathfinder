@@ -117,18 +117,30 @@ export function App() {
         setFocusTarget({ lat, lon, height })
       },
       toggleLayer: (layerId, enabledVal) => {
-        if (layerId === 'ctx' || layerId === 'mola' || layerId === 'themis') {
-          setEnabled(prev => ({ ...prev, [layerId as LayerId]: enabledVal }))
+        const idLower = layerId.toLowerCase()
+        if (idLower === 'ctx' || idLower === 'mola' || idLower === 'themis') {
+          setEnabled(prev => ({ ...prev, [idLower as LayerId]: enabledVal }))
         }
-        if (layerId === 'geology') {
-          setActiveLayer3DOverride(enabledVal ? 'geology' : 'optical')
-        } else if (layerId === 'themis') {
+        if (idLower === 'optical' || idLower === 'satellite' || idLower === 'real') {
+          setActiveLayer3DOverride('optical')
+        } else if (idLower === 'themis' || idLower === 'thermal' || idLower === 'inercia') {
           setActiveLayer3DOverride(enabledVal ? 'thermal' : 'optical')
-        } else if (layerId === 'mola') {
+        } else if (idLower === 'mola' || idLower === 'dem' || idLower === 'elevation') {
           setActiveLayer3DOverride(enabledVal ? 'dem' : 'optical')
-        } else if (layerId === 'ctx') {
-          setActiveLayer3DOverride('ctx_mosaic')
+        } else if (idLower === 'ctx' || idLower === 'ctx_mosaic') {
+          setActiveLayer3DOverride(enabledVal ? 'ctx_mosaic' : 'optical')
+        } else if (idLower === 'geology') {
+          setActiveLayer3DOverride(enabledVal ? 'geology' : 'optical')
+        } else if (idLower === 'spectral' || idLower === 'crism') {
+          setActiveLayer3DOverride(enabledVal ? 'spectral' : 'optical')
+        } else if (idLower === 'slope') {
+          setActiveLayer3DOverride(enabledVal ? 'slope' : 'optical')
+        } else if (idLower === 'radiation') {
+          setActiveLayer3DOverride(enabledVal ? 'radiation' : 'optical')
         }
+      },
+      switchScreen: (screenMode: 'terrain3d' | 'globe' | 'map') => {
+        setScreen(screenMode)
       },
       setWaypoint: (id, point) => {
         dispatch({ type: 'set', id, point })
