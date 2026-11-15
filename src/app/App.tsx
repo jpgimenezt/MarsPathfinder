@@ -6,6 +6,8 @@ import { ROI, insideRoi } from '../features/map/marsProjection'
 import { JEZERO_CONTEXT, inRegion, segmentCoverage, validRegion, type Region } from '../features/map/planningRegion'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
+import { estimateDurationHours, ROUTING_PROFILES, type AlternativeId } from '../features/route/terrainAlternatives'
+import { useTerrainRoutes } from '../features/route/useTerrainRoutes'
 
 type Panel = 'route' | 'layers' | 'science'
 const MarsGlobe = lazy(() => import('../components/MarsGlobe').then(module => ({ default: module.MarsGlobe })))
@@ -35,6 +37,12 @@ export function App() {
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
   const [routeNotice, setRouteNotice] = useState<string | null>(null)
+  const [selectedRoute, setSelectedRoute] = useState<AlternativeId | 'manual'>('manual')
+  const [speedKmh, setSpeedKmh] = useState(2)
+  const [riskThresholds, setRiskThresholds] = useState({ caution: 5, elevated: 10 })
+  const terrain = useTerrainRoutes(plan.stops)
+  const chosen = terrain.alternatives.find(item => item.id === selectedRoute)
+  const suggestedRoute = terrain.status === 'ready' && selectedRoute !== 'manual' ? chosen?.route ?? null : null
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
   const count = STOP_ORDER.filter(id => plan.stops[id]).length
@@ -148,6 +156,7 @@ export function App() {
           aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
           <MapView scope={scope} enabled={enabled} opacity={opacity} stops={plan.stops} mode={mode} panelOpen={panel !== null}
             baseRetry={baseRetry} onBaseState={setBaseState}
+            suggestedRoute={suggestedRoute} riskThresholds={riskThresholds}
             region={region} onRegionChange={changeRegion} onPlace={place}
             onMove={movePoint} onInvalid={() => setRouteNotice('Fuera de la región elegida: el punto no cambió. Ampliá la región o elegí una posición dentro.')}
             onLayerState={(id, state) => setStates(current => current[id] === state ? current : { ...current, [id]: state })} />
@@ -217,6 +226,55 @@ export function App() {
                 <button type="button" disabled={scope === 'global' || !count}
                   onClick={() => { dispatch({ type: 'reset' }); setMode({ type: 'explore' }) }}>Restablecer ruta</button></div>
               <p className="fine-print">Los puntos son propuestas del usuario. Distancias con esfera marciana de radio medio 3 389 500 m; no incluyen relieve ni obstáculos.</p>
+              <section className="terrain-planner" aria-label="Alternativas topográficas exploratorias">
+                <h3>Alternativas con DEM CTX · exploratorias</h3>
+                <p>USGS Mars 2020 Science Investigation CTX DEM Mosaic, datos numéricos de 20 m/píxel agregados a 80 m. Las pendientes son proxies; la referencia vertical exacta, obstáculos pequeños y la alineación con CTX WMTS no están validados. Ninguna ruta es segura para uso operacional.</p>
+                <a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">Ficha y procedencia USGS ↗</a>
+                <p role="status">{scope === 'global' ? 'OUT_OF_COVERAGE · Solo Jezero' :
+                  terrain.status === 'loading' ? 'Calculando fuera del hilo principal…' :
+                  terrain.status === 'error' ? `UNVERIFIED · ${terrain.error}` :
+                  terrain.status === 'idle' ? 'Colocá A y P para evaluar el DEM.' :
+                  'Resultados derivados; la ruta manual siempre se conserva.'}</p>
+                <div className="terrain-options">
+                  <button type="button" aria-pressed={selectedRoute === 'manual'} onClick={() => setSelectedRoute('manual')}>Manual</button>
+                  {terrain.alternatives.map(item => <button type="button" key={item.id}
+                    aria-pressed={selectedRoute === item.id}
+                    disabled={scope === 'global' || !item.route.first || (!item.distinct && Boolean(item.route.points))}
+                    onClick={() => setSelectedRoute(item.id)}>{ROUTING_PROFILES[item.id].label}{!item.distinct && item.route.points ? ' · coincide' : ''}</button>)}
+                </div>
+                {terrain.alternatives.map(item => {
+                  const first = item.route.first
+                  const second = item.route.second
+                  const okFirst = first?.ok ? first : null
+                  const okSecond = second?.ok ? second : null
+                  const distance = item.route.distanceMeters
+                  const hours = distance === null ? null : estimateDurationHours(distance, speedKmh)
+                  return <div className="terrain-comparison" key={item.id}>
+                    <strong>{ROUTING_PROFILES[item.id].label}{!item.distinct && item.route.points ? ' · mismo trazado' : ''}</strong>
+                    <small>{ROUTING_PROFILES[item.id].explanation} Máximo permitido {ROUTING_PROFILES[item.id].options.maxSlopeDegrees}°: supuesto configurable en código, NO límite NASA.</small>
+                    <span>A→P: {first ? first.ok ? `${(first.distanceMeters / 1000).toFixed(2)} km` : `no evaluable (${first.reason})` : 'faltan puntos'} ·
+                      P→B: {second ? second.ok ? `${(second.distanceMeters / 1000).toFixed(2)} km` : `no evaluable (${second.reason})` : 'faltan puntos'}</span>
+                    <span>Recorrido: {formatKm(distance)} · tiempo teórico: {hours === null ? 'Sin datos' : `${hours.toFixed(1)} h`}</span>
+                    <span>Pendiente máxima proxy: {okFirst ? `${Math.max(okFirst.maximumSlopeDegrees, okSecond?.maximumSlopeDegrees ?? 0).toFixed(1)}°` : 'Sin datos'} · ascenso/descenso: {okFirst ? `${(okFirst.ascentMeters + (okSecond?.ascentMeters ?? 0)).toFixed(0)} / ${(okFirst.descentMeters + (okSecond?.descentMeters ?? 0)).toFixed(0)} m` : 'Sin datos'}</span>
+                    <small>Cobertura: {item.route.points ? '100 % de las celdas muestreadas en el trazado; sin evaluación subcelda' : 'Incompleta: ningún trayecto total inferible'}. Desvío: {okFirst ? `penalización de pendiente/ascenso y bloqueos NoData o >umbral; ${((distance ?? okFirst.distanceMeters) - okFirst.directMeters - (okSecond?.directMeters ?? 0) > 0 ? 'mayor distancia que línea recta' : 'sin desvío medible')}` : 'Sin datos'}.</small>
+                  </div>
+                })}
+                <label>Velocidad hipotética (km/h, no ritmo EVA validado)
+                  <input type="number" min="0.1" max="10" step="0.1" value={speedKmh}
+                    onChange={event => { const value = Number(event.target.value); if (value >= 0.1 && value <= 10) setSpeedKmh(value) }} />
+                </label>
+                <div className="terrain-legend" aria-label="Leyenda de pendiente derivada del DEM">
+                  <b>Leyenda · proxy de pendiente local del DEM, no seguridad</b>
+                  <span>🟢 Favorable relativo: &lt;{riskThresholds.caution}°</span>
+                  <span>🟡 Precaución: {riskThresholds.caution}–{riskThresholds.elevated}°</span>
+                  <span>🔴 Riesgo elevado estimado: ≥{riskThresholds.elevated}°</span>
+                  <span>⚫ Negro discontinuo con contorno: tramo manual sin ruta DEM evaluable.</span>
+                  <label>Umbral precaución (°) <input type="number" min="1" max="29" value={riskThresholds.caution}
+                    onChange={event => { const value = Number(event.target.value); if (value >= 1 && value < riskThresholds.elevated) setRiskThresholds(current => ({ ...current, caution: value })) }} /></label>
+                  <label>Umbral riesgo elevado (°) <input type="number" min="2" max="30" value={riskThresholds.elevated}
+                    onChange={event => { const value = Number(event.target.value); if (value > riskThresholds.caution && value <= 30) setRiskThresholds(current => ({ ...current, elevated: value })) }} /></label>
+                </div>
+              </section>
             </>}
 
             {panel === 'layers' && <>
@@ -263,8 +321,8 @@ export function App() {
             </>}
           </aside>}
 
-          <div className="map-counter" aria-live="polite"><span className="eyebrow">PLAN MANUAL</span>
-            <strong>{scope === 'global' ? 'Jezero' : formatKm(legs.total)}</strong>
+          <div className="map-counter" aria-live="polite"><span className="eyebrow">{suggestedRoute ? 'DERIVADO DEM · NO OPERACIONAL' : 'PLAN MANUAL'}</span>
+            <strong>{scope === 'global' ? 'Jezero' : formatKm(suggestedRoute ? suggestedRoute.distanceMeters : legs.total)}</strong>
             <small>{scope === 'global' ? `${count}/3 puntos conservados · solo contexto` :
               `${count}/3 puntos · ${count < 3 ? 'trayecto incompleto' : 'trazado completo'}`}</small></div>
         </section>

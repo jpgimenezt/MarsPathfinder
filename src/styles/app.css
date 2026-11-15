@@ -238,6 +238,17 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .drawer .intro { margin: 7px 0 19px; }
 .soft { font-weight: 400; color: #e9b783; }
 .fine-print { color: #aebfb9 !important; font-size: .75rem !important; border-top: 1px solid #48605d; padding-top: 13px; }
+.terrain-planner { border-top: 1px solid #668781; margin-top: 18px; padding-top: 5px; font-size: .76rem; line-height: 1.5; }
+.terrain-planner h3 { margin: 14px 0 8px; }
+.terrain-planner p { font-size: .76rem; }
+.terrain-options { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0; }
+.terrain-options button { flex: 1 1 45%; padding: 7px 4px; color: #f9dfc6; background: #263e44; border: 1px solid #6a8682; border-radius: 6px; font-size: .7rem; }
+.terrain-options button[aria-pressed="true"] { color: #14252c; background: #f0b87b; }
+.terrain-comparison { display: grid; gap: 5px; border: 1px solid #617a77; border-radius: 7px; padding: 9px; margin: 8px 0; overflow-wrap: anywhere; }
+.terrain-comparison small { color: #c4d4cb; line-height: 1.45; }
+.terrain-planner label, .terrain-legend span { display: block; margin: 7px 0; }
+.terrain-planner input { width: 68px; max-width: 100%; margin-left: 4px; padding: 4px; color: #f3ece2; background: #243b41; border: 1px solid #83a099; border-radius: 5px; }
+.terrain-legend { border-top: 1px solid #617a77; margin: 13px 0; padding: 10px 0; }
 .mode-strip { display: flex; margin-bottom: 15px; }
 .mode-strip button, .route-actions button { border: 1px solid #627e79; border-radius: 8px; padding: 8px 11px; color: #e5f3ed; background: #253d43; font-size: .79rem; }
 .mode-strip .mode-active { border-color: #94d3bc; background: #35574f; color: #fff; }

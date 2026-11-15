@@ -27,6 +27,7 @@ import { loadWmts } from '../features/map/wmtsSources'
 import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
+import type { TerrainMissionRoute, TerrainRouteResult } from '../features/route/terrainPathfinder'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
 export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
@@ -47,6 +48,8 @@ interface Props {
   onLayerState: (id: LayerId, state: LayerState) => void
   onBaseState: (state: 'cargando' | 'visible' | 'parcial' | 'error') => void
   baseRetry: number
+  suggestedRoute: TerrainMissionRoute | null
+  riskThresholds: { caution: number; elevated: number }
 }
 
 const markers: Record<StopId, { color: string; text: string }> = {
@@ -55,7 +58,7 @@ const markers: Record<StopId, { color: string; text: string }> = {
   B: { color: '#ff8f77', text: 'Destino propuesto' },
 }
 
-export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState, onBaseState, baseRetry }: Props) {
+export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState, onBaseState, baseRetry, suggestedRoute, riskThresholds }: Props) {
   const element = useRef<HTMLDivElement>(null)
   const map = useRef<Map | null>(null)
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
@@ -73,6 +76,8 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   })
   const manager = useRef<WmtsLayerManager | null>(null)
   const vectors = useRef(new VectorSource())
+  const suggestedVectors = useRef(new VectorSource())
+  const suggestedLayer = useRef<VectorLayer<VectorSource> | null>(null)
   const points = useRef(new VectorSource())
   const pointFeatures = useRef(new globalThis.Map<StopId, Feature<Point>>())
   const regionFeature = useRef(new Feature({ geometry: new Polygon([regionRing(region)]) }))
@@ -139,6 +144,8 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     })
     fallback.current = local
     const route = new VectorLayer({ source: vectors.current })
+    const suggested = new VectorLayer({ source: suggestedVectors.current })
+    suggestedLayer.current = suggested
     const markerLayer = new VectorLayer({ source: points.current })
     const regionVector = new VectorSource({ features: [regionFeature.current] })
     const regionOutline = new VectorLayer({ source: regionVector,
@@ -178,7 +185,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     const instance = new Map({
       target: element.current,
       layers: [vikingFallback, baseLayer.current, local, layers.current.ctx, layers.current.mola, layers.current.themis,
-        border, regionOutline, route, markerLayer, handles],
+        border, regionOutline, route, suggested, markerLayer, handles],
       view: jezero,
       controls: defaultControls({ zoom: false, rotate: false }),
     })
@@ -308,6 +315,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       localView.current = null
       globalView.current = null
       routeLayer.current = null
+      suggestedLayer.current = null
       markerLayerRef.current = null
       roiLayer.current = null
       regionLayer.current = null
@@ -357,6 +365,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     const fallbackLayer = map.current.getLayers().item(0)
     fallbackLayer?.setVisible(scope === 'jezero')
     routeLayer.current?.setVisible(scope === 'jezero')
+    suggestedLayer.current?.setVisible(scope === 'jezero')
     markerLayerRef.current?.setVisible(scope === 'jezero')
     roiLayer.current?.setVisible(scope === 'jezero')
     regionLayer.current?.setVisible(scope === 'jezero' && modeRef.current.type !== 'explore')
@@ -367,6 +376,47 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     for (const source of sources) manager.current?.setEnabled(source.id, scope === 'global' ? source.id === 'mola' : enabled[source.id])
     setZoom(zoomAvailability(map.current.getView()))
   }, [enabled, scope])
+
+  useEffect(() => {
+    suggestedVectors.current.clear()
+    routeLayer.current?.setVisible(scope === 'jezero' && !suggestedRoute)
+    if (!suggestedRoute) return
+    function addLine(points: MarsPoint[], color: string, dashed = false) {
+      if (points.length < 2) return
+      const feature = new Feature({ geometry: new LineString(points.map(point => [...point])) })
+      feature.setStyle([
+        new Style({ stroke: new Stroke({ color: dashed ? '#f4e8d6' : '#0e1b20', width: 9 }) }),
+        new Style({ stroke: new Stroke({ color, width: 4, lineDash: dashed ? [7, 7] : undefined }) }),
+      ])
+      suggestedVectors.current.addFeature(feature)
+    }
+    function leg(result: TerrainRouteResult | null, from: MarsPoint | undefined, to: MarsPoint | undefined) {
+      if (!from || !to) return
+      if (!result?.ok) {
+        // No data do not become a fictional computed path; straight dashed
+        // line is only the user's original manual connection.
+        addLine([from, to], '#101315', true)
+        return
+      }
+      let run: MarsPoint[] = []
+      let previous = ''
+      for (let i = 0; i < result.points.length - 1; i++) {
+        const slope = result.segmentSlopeDegrees[i]
+        const color = slope >= riskThresholds.elevated ? '#f27c6c' :
+          slope >= riskThresholds.caution ? '#f3ca73' : '#67d59b'
+        if (color !== previous && run.length) {
+          addLine(run, previous)
+          run = []
+        }
+        if (!run.length) run.push(result.points[i])
+        run.push(result.points[i + 1])
+        previous = color
+      }
+      addLine(run, previous)
+    }
+    leg(suggestedRoute.first, stops.A, stops.P)
+    leg(suggestedRoute.second, stops.P, stops.B)
+  }, [suggestedRoute, stops, riskThresholds, scope])
 
   useEffect(() => {
     (regionFeature.current.getGeometry() as Polygon).setCoordinates([regionRing(region)])
