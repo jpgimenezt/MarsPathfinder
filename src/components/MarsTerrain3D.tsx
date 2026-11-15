@@ -34,6 +34,8 @@ import {
   getGaleSlopeDegrees,
 } from '../features/terrain/galeElevation'
 import {
+  createMartianSkyDome,
+  generateTerrainBumpMap,
   generateTerrainTexture,
   TERRAIN_LAYERS_CATALOG,
   type TerrainLayerType,
@@ -48,6 +50,16 @@ interface MarsTerrain3DProps {
   onSelectScienceStop?: (point: MarsPoint, name: string) => void
   onSwitchToGlobal?: () => void
   onSwitchToJezero2D?: () => void
+  initialDive?: boolean
+}
+
+interface EdlFlightTelemetry {
+  altitudeStr: string
+  velocityStr: string
+  machStr: string
+  pitchDeg: number
+  phaseName: string
+  percent: number
 }
 
 const REGION_BOUNDS = {
@@ -59,8 +71,8 @@ const REGION_BOUNDS = {
 
 const TERRAIN_WIDTH = 280
 const TERRAIN_HEIGHT = 280
-const VERTEX_SUBDIVISIONS = 128
-const ELEVATION_SCALE = 0.0085 // 5,500 m = ~46.7 units in 3D scene
+const VERTEX_SUBDIVISIONS = 160 // Mayor densidad de vértices para relieve nítido
+const ELEVATION_SCALE = 0.0085 // 5,500 m de Mount Sharp = ~46.7 unidades en 3D
 
 function geoToTerrainPosition(lon: number, lat: number): { x: number; z: number } {
   const u = (lon - REGION_BOUNDS.minLon) / (REGION_BOUNDS.maxLon - REGION_BOUNDS.minLon)
@@ -75,6 +87,7 @@ export function MarsTerrain3D({
   onSelectScienceStop,
   onSwitchToGlobal,
   onSwitchToJezero2D,
+  initialDive = false,
 }: MarsTerrain3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
@@ -82,8 +95,16 @@ export function MarsTerrain3D({
   const [selectedDiscovery, setSelectedDiscovery] = useState<ScientificDiscovery | null>(null)
   const [hoveredInfo, setHoveredInfo] = useState<{ lon: number; lat: number; elev: number; slope: number } | null>(null)
   const [isCinematicPlaying, setIsCinematicPlaying] = useState(false)
+  const [flightTelemetry, setFlightTelemetry] = useState<EdlFlightTelemetry>({
+    altitudeStr: '24,500 km',
+    velocityStr: '21,400 km/h',
+    machStr: 'MACH 24.2',
+    pitchDeg: -88,
+    phaseName: 'ÓRBITA PLANETARIA // ALINEACIÓN DE ENTRADA',
+    percent: 0,
+  })
 
-  // Referencias para el loop de Three.js y controles de cámara
+  // Referencias para Three.js y controles de cámara
   const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<PerspectiveCamera | null>(null)
   const rendererRef = useRef<WebGLRenderer | null>(null)
@@ -94,6 +115,7 @@ export function MarsTerrain3D({
   const animFrameId = useRef<number>(0)
   const cameraModeRef = useRef<CameraViewMode>(cameraMode)
   cameraModeRef.current = cameraMode
+  const stopDiveAnimRef = useRef<(() => void) | null>(null)
 
   // Ruta EVA calculada
   const routePointsList = useMemo(() => {
@@ -128,13 +150,18 @@ export function MarsTerrain3D({
 
     const scene = new Scene()
     sceneRef.current = scene
-    scene.background = new Color(0x130a08)
-    scene.fog = new FogExp2(0xb56338, 0.0032)
+    scene.background = new Color(0x06070a)
+    scene.fog = new FogExp2(0xb56338, 0.0028)
 
-    const camera = new PerspectiveCamera(45, width / height, 0.5, 1200)
+    // Cúpula celeste atmosférica marciana con estrellas y dispersión Mie
+    const skyDome = createMartianSkyDome(850)
+    scene.add(skyDome)
+
+    const camera = new PerspectiveCamera(42, width / height, 0.5, 1600)
     cameraRef.current = camera
-    camera.position.set(-60, 95, 140)
-    camera.lookAt(20, 10, -20)
+    // Posición inicial: perspectiva cinematográfica amplia hacia Mount Sharp
+    camera.position.set(-55, 78, 125)
+    camera.lookAt(18, 14, -18)
 
     let renderer: WebGLRenderer
     try {
@@ -148,37 +175,37 @@ export function MarsTerrain3D({
     renderer.outputColorSpace = SRGBColorSpace
     container.replaceChildren(renderer.domElement)
 
-    // Iluminación solar marciana y dispersión atmosférica
-    const ambientLight = new AmbientLight(0xd97746, 1.4)
+    // Iluminación solar marciana realista
+    const ambientLight = new AmbientLight(0xd47748, 1.25)
     scene.add(ambientLight)
 
-    const sunLight = new DirectionalLight(0xfff3e0, 2.4)
-    sunLight.position.set(-100, 150, 80)
+    const sunLight = new DirectionalLight(0xfffaec, 2.7)
+    sunLight.position.set(-110, 160, 85)
     scene.add(sunLight)
 
-    // Controles orbitales con amortiguación
+    // Controles orbitales con amortiguación suave tipo Google Earth
     const controls = new OrbitControls(camera, renderer.domElement)
     controlsRef.current = controls
     controls.enableDamping = true
-    controls.dampingFactor = 0.07
-    controls.maxPolarAngle = Math.PI / 2 - 0.04 // Evitar pasar por debajo del suelo
-    controls.minDistance = 6
-    controls.maxDistance = 340
-    controls.target.set(10, 8, -10)
+    controls.dampingFactor = 0.065
+    controls.maxPolarAngle = Math.PI / 2 - 0.03
+    controls.minDistance = 4
+    controls.maxDistance = 580
+    controls.target.set(12, 10, -12)
 
-    // Construcción de la Malla de Terreno Georreferenciada de Gale Crater
+    // Malla de Terreno Georreferenciada de Gale Crater
     const terrainGeo = new PlaneGeometry(
       TERRAIN_WIDTH,
       TERRAIN_HEIGHT,
       VERTEX_SUBDIVISIONS,
       VERTEX_SUBDIVISIONS,
     )
-    terrainGeo.rotateX(-Math.PI / 2) // Orientar horizontalmente en el plano XZ
+    terrainGeo.rotateX(-Math.PI / 2)
 
     const posAttr = terrainGeo.attributes.position as Float32BufferAttribute
     const count = posAttr.count
 
-    // Desplazar vértices con elevaciones numéricas reales
+    // Desplazar vértices con elevaciones numéricas de MOLA/HRSC
     for (let i = 0; i < count; i++) {
       const x = posAttr.getX(i)
       const z = posAttr.getZ(i)
@@ -196,12 +223,16 @@ export function MarsTerrain3D({
 
     terrainGeo.computeVertexNormals()
 
-    // Generar textura inicial de albedo óptico
-    const initialTex = generateTerrainTexture('optical', REGION_BOUNDS)
+    // Textura difusa fotorrealista y Bump Map de micro-rugosidad
+    const initialTex = generateTerrainTexture('optical', REGION_BOUNDS, 1024)
+    const initialBump = generateTerrainBumpMap(REGION_BOUNDS, 512)
+
     const terrainMat = new MeshStandardMaterial({
       map: initialTex,
-      roughness: 0.92,
-      metalness: 0.04,
+      bumpMap: initialBump,
+      bumpScale: 0.85,
+      roughness: 0.88,
+      metalness: 0.06,
       flatShading: false,
     })
 
@@ -209,12 +240,11 @@ export function MarsTerrain3D({
     terrainMeshRef.current = terrainMesh
     scene.add(terrainMesh)
 
-    // Grupo para balizas científicas
+    // Balizas científicas de Curiosity
     const beaconsGroup = new Group()
     beaconsGroupRef.current = beaconsGroup
     scene.add(beaconsGroup)
 
-    // Agregar balizas 3D de los descubrimientos de Curiosity
     GALE_DISCOVERIES.forEach((disc) => {
       const { x, z } = geoToTerrainPosition(disc.coordinates.lon, disc.coordinates.lat)
       const y = (disc.elevationMeters + 4500) * ELEVATION_SCALE + 0.5
@@ -223,23 +253,20 @@ export function MarsTerrain3D({
       pinGroup.position.set(x, y, z)
       pinGroup.name = `discovery-${disc.id}`
 
-      // Cilindro vertical holográfico
-      const stemGeo = new CylinderGeometry(0.3, 0.3, 4, 12)
-      stemGeo.translate(0, 2, 0)
+      const stemGeo = new CylinderGeometry(0.3, 0.3, 4.5, 12)
+      stemGeo.translate(0, 2.25, 0)
       const stemMat = new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 })
       const stem = new Mesh(stemGeo, stemMat)
       pinGroup.add(stem)
 
-      // Anillo horizontal pulsante en la base
       const ringGeo = new RingGeometry(1.2, 1.8, 24)
       ringGeo.rotateX(-Math.PI / 2)
       const ringMat = new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7 })
       const ring = new Mesh(ringGeo, ringMat)
       pinGroup.add(ring)
 
-      // Esfera superior brillante
-      const headGeo = new CylinderGeometry(1.2, 0, 1.8, 6)
-      headGeo.translate(0, 4.5, 0)
+      const headGeo = new CylinderGeometry(1.3, 0, 1.8, 6)
+      headGeo.translate(0, 5, 0)
       const headMat = new MeshBasicMaterial({ color: 0xffffff })
       const head = new Mesh(headGeo, headMat)
       pinGroup.add(head)
@@ -247,12 +274,12 @@ export function MarsTerrain3D({
       beaconsGroup.add(pinGroup)
     })
 
-    // Grupo de la ruta EVA 3D
+    // Grupo para la ruta EVA 3D
     const routeGroup = new Group()
     routeGroupRef.current = routeGroup
     scene.add(routeGroup)
 
-    // Raycaster para interactividad de cursor
+    // Raycasting para inspección interactiva
     const raycaster = new Raycaster()
     const mouse = new Vector2()
 
@@ -298,7 +325,6 @@ export function MarsTerrain3D({
     renderer.domElement.addEventListener('mousemove', onPointerMove)
     renderer.domElement.addEventListener('click', onPointerClick)
 
-    // Ajuste responsive
     const resizeObserver = new ResizeObserver(() => {
       if (!container || !renderer || !camera) return
       const w = container.clientWidth
@@ -310,16 +336,13 @@ export function MarsTerrain3D({
     })
     resizeObserver.observe(container)
 
-    // Variables de animación
     let clockTime = 0
     let flyAngle = 0
 
-    // Bucle de renderizado a 60 FPS
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate)
       clockTime += 0.016
 
-      // Pulso de balizas científicas
       beaconsGroup.children.forEach((beacon, index) => {
         const pulse = Math.sin(clockTime * 3 + index * 1.5) * 0.15 + 1
         beacon.scale.set(pulse, 1, pulse)
@@ -328,7 +351,7 @@ export function MarsTerrain3D({
       const currentMode = cameraModeRef.current
 
       if (currentMode === 'fly') {
-        flyAngle += 0.003
+        flyAngle += 0.0028
         const radius = 95
         const camX = Math.sin(flyAngle) * radius + 15
         const camZ = Math.cos(flyAngle) * radius - 15
@@ -338,7 +361,7 @@ export function MarsTerrain3D({
         const lat = REGION_BOUNDS.maxLat - v * (REGION_BOUNDS.maxLat - REGION_BOUNDS.minLat)
         const groundY = (getGaleElevation(lon, lat) + 4500) * ELEVATION_SCALE
         camera.position.set(camX, groundY + 16, camZ)
-        camera.lookAt(20, 25, -20)
+        camera.lookAt(20, 24, -20)
       } else {
         controls.update()
       }
@@ -355,30 +378,36 @@ export function MarsTerrain3D({
       renderer.domElement.removeEventListener('click', onPointerClick)
       controls.dispose()
       initialTex.dispose()
+      initialBump.dispose()
       terrainGeo.dispose()
       terrainMat.dispose()
+      skyDome.geometry.dispose()
+      if (Array.isArray(skyDome.material)) {
+        skyDome.material.forEach(m => m.dispose())
+      } else {
+        skyDome.material.dispose()
+      }
       scene.clear()
       renderer.dispose()
     }
   }, [])
 
-  // Cambio de capa científica: regenera textura dinámicamente
+  // Regeneración de textura al cambiar capa científica
   useEffect(() => {
     if (!terrainMeshRef.current) return
     const mesh = terrainMeshRef.current
     const mat = mesh.material as MeshStandardMaterial
     const oldMap = mat.map
-    const newTex = generateTerrainTexture(activeLayer, REGION_BOUNDS)
+    const newTex = generateTerrainTexture(activeLayer, REGION_BOUNDS, 1024)
     mat.map = newTex
     mat.needsUpdate = true
     if (oldMap) oldMap.dispose()
   }, [activeLayer])
 
-  // Actualización de la Ruta EVA 3D sobre el terreno
+  // Actualización de ruta 3D
   useEffect(() => {
     if (!routeGroupRef.current) return
     const group = routeGroupRef.current
-    // Limpiar geometrías previas
     while (group.children.length > 0) {
       const child = group.children[0] as Mesh
       if (child.geometry) child.geometry.dispose()
@@ -387,9 +416,7 @@ export function MarsTerrain3D({
 
     if (routePointsList.length < 2) return
 
-    // Muestreo de puntos geodésicos a lo largo de los segmentos para adaptar al relieve
     const sampled3DPoints: Vector3[] = []
-
     for (let i = 0; i < routePointsList.length - 1; i++) {
       const p1 = routePointsList[i].point
       const p2 = routePointsList[i + 1].point
@@ -418,7 +445,6 @@ export function MarsTerrain3D({
       group.add(routeMesh)
     }
 
-    // Agregar balizas de parada A, P, B
     routePointsList.forEach((stop) => {
       const { x, z } = geoToTerrainPosition(stop.point[0], stop.point[1])
       const elev = getGaleElevation(stop.point[0], stop.point[1])
@@ -445,15 +471,14 @@ export function MarsTerrain3D({
       controls.enabled = true
       controls.enablePan = false
       controls.enableRotate = true
-      controls.target.set(10, 8, -10)
+      controls.target.set(12, 10, -12)
     } else if (mode === 'pan') {
       controls.enabled = true
       controls.enablePan = true
       controls.enableRotate = false
     } else if (mode === 'firstPerson') {
-      // Astronaut eye level near Pontours
       controls.enabled = false
-      const { x, z } = geoToTerrainPosition(137.404, -4.652)
+      const { x, z } = geoToTerrainPosition(137.404, -4.652) // Cerca de Pontours
       const elev = getGaleElevation(137.404, -4.652)
       const eyeY = (elev + 4500) * ELEVATION_SCALE + 1.8 * ELEVATION_SCALE * 10
       camera.position.set(x, eyeY + 1.2, z + 6)
@@ -479,8 +504,8 @@ export function MarsTerrain3D({
     controls.update()
   }, [])
 
-  // Secuencia de descenso orbital cinemático de ARES
-  const playCinematicEntry = useCallback(() => {
+  // Secuencia de Descenso Continuo Google Earth (Orbital Dive)
+  const playGoogleEarthDive = useCallback(() => {
     const camera = cameraRef.current
     const controls = controlsRef.current
     if (!camera || !controls) return
@@ -488,30 +513,76 @@ export function MarsTerrain3D({
     setIsCinematicPlaying(true)
     controls.enabled = false
 
-    // Estado inicial en órbita alta
-    camera.position.set(-180, 240, 260)
-    camera.lookAt(15, 10, -10)
+    // Posición inicial: Órbita espacial alta (24,500 km virtuales), mirando perpendicularmente al cráter
+    const spacePos = new Vector3(0, 480, 240)
+    const targetNadir = new Vector3(10, 0, -10)
+    camera.position.copy(spacePos)
+    camera.lookAt(targetNadir)
 
-    let progress = 0
-    const durationMs = 3800
+    const endPos = new Vector3(-45, 26, 52)
+    const endTarget = new Vector3(15, 30, -30)
+
+    let isStopped = false
+    stopDiveAnimRef.current = () => {
+      isStopped = true
+      setIsCinematicPlaying(false)
+      camera.position.copy(endPos)
+      camera.lookAt(endTarget)
+      controls.enabled = true
+      controls.target.copy(endTarget)
+      controls.update()
+    }
+
+    const durationMs = 5200
     const start = performance.now()
 
     const step = (now: number) => {
+      if (isStopped) return
       const elapsed = now - start
-      progress = Math.min(1, elapsed / durationMs)
-      // Easing cúbico natural
-      const ease = 1 - Math.pow(1 - progress, 3)
+      const rawT = Math.min(1, elapsed / durationMs)
+      // Easing quintic súper suave estilo Google Earth
+      const ease = 1 - Math.pow(1 - rawT, 4)
 
-      const targetPos = new Vector3(-45, 75, 110)
-      camera.position.lerpVectors(new Vector3(-180, 240, 260), targetPos, ease)
-      camera.lookAt(15, 12, -15)
+      // Interpolación de posición de cámara con arco de descenso atmosférico
+      const currentPos = new Vector3()
+      currentPos.lerpVectors(spacePos, endPos, ease)
+      // Ligera parábola orográfica
+      currentPos.y += Math.sin(rawT * Math.PI) * 18
+      camera.position.copy(currentPos)
 
-      if (progress < 1) {
+      // Interpolación de orientación (de nadir 90° a rasante hacia Mount Sharp)
+      const currentTarget = new Vector3()
+      currentTarget.lerpVectors(targetNadir, endTarget, ease)
+      camera.lookAt(currentTarget)
+
+      // Actualizar telemetría EDL de vuelo en tiempo real
+      const altKm = Math.round(24500 * (1 - ease) + 0.14)
+      const altStr = altKm > 100 ? `${altKm.toLocaleString()} km` : `${(altKm * 1000).toLocaleString()} m`
+      const velMach = Math.max(0, 24.2 * (1 - ease)).toFixed(1)
+      const velKmh = Math.round(21400 * (1 - ease) + 80)
+      const pitch = Math.round(-88 + ease * 66)
+
+      let phase = 'ÓRBITA PLANETARIA // ALINEACIÓN DE ENTRADA'
+      if (rawT > 0.25 && rawT <= 0.50) phase = 'INTERFAZ ATMOSFÉRICA // FRENO HIPERSÓNICO (EI-125)'
+      else if (rawT > 0.50 && rawT <= 0.75) phase = 'CORREDOR DE ENTRADA // RADAR RELATIVO AL TERRENO (TRN)'
+      else if (rawT > 0.75 && rawT <= 0.95) phase = 'APROXIMACIÓN TERMINAL // APERTURA DE RETÍCULA'
+      else if (rawT > 0.95) phase = 'SUPERFICIE CONTACTADA // MODO EXPLORACIÓN EVA ACTIVO'
+
+      setFlightTelemetry({
+        altitudeStr: altStr,
+        velocityStr: `${velKmh.toLocaleString()} km/h`,
+        machStr: `MACH ${velMach}`,
+        pitchDeg: pitch,
+        phaseName: phase,
+        percent: Math.round(rawT * 100),
+      })
+
+      if (rawT < 1) {
         requestAnimationFrame(step)
       } else {
         setIsCinematicPlaying(false)
         controls.enabled = true
-        controls.target.set(15, 12, -15)
+        controls.target.copy(endTarget)
         controls.update()
       }
     }
@@ -519,30 +590,99 @@ export function MarsTerrain3D({
     requestAnimationFrame(step)
   }, [])
 
+  // Secuencia de Ascenso a Órbita (Zoom Google Earth hacia el Espacio)
+  const playGoogleEarthAscent = useCallback(() => {
+    const camera = cameraRef.current
+    const controls = controlsRef.current
+    if (!camera || !controls) return
+
+    controls.enabled = false
+    const startPos = camera.position.clone()
+    const targetSpace = new Vector3(0, 480, 240)
+    const targetCenter = new Vector3(10, 0, -10)
+
+    let progress = 0
+    const durationMs = 3600
+    const start = performance.now()
+
+    const step = (now: number) => {
+      const elapsed = now - start
+      progress = Math.min(1, elapsed / durationMs)
+      const ease = 1 - Math.pow(1 - progress, 3)
+
+      camera.position.lerpVectors(startPos, targetSpace, ease)
+      camera.lookAt(targetCenter)
+
+      if (progress < 1) {
+        requestAnimationFrame(step)
+      } else {
+        controls.enabled = true
+        controls.target.copy(targetCenter)
+        controls.update()
+      }
+    }
+
+    requestAnimationFrame(step)
+  }, [])
+
+  useEffect(() => {
+    if (initialDive) {
+      const timer = setTimeout(() => {
+        playGoogleEarthDive()
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [initialDive, playGoogleEarthDive])
+
+  const skipCinematic = useCallback(() => {
+    if (stopDiveAnimRef.current) {
+      stopDiveAnimRef.current()
+    }
+  }, [])
+
   return (
     <div className="ares-terrain-container" aria-label="Explorador 3D de Gale Crater y Mount Sharp">
       {/* Contenedor del Canvas de Three.js */}
       <div className="ares-canvas-host" ref={containerRef} />
 
-      {/* Banner de Secuencia Cinemática de Entrada Orbital */}
+      {/* HUD de Vuelo Cinemático Google Earth / EDL */}
       {isCinematicPlaying && (
-        <div className="ares-cinematic-overlay" role="status">
-          <div className="cinematic-hud">
-            <span className="cinematic-badge">[MANIOBRA ORBITAL]</span>
-            <h3>DESCENSO A SUPERFICIE // GALE CRATER</h3>
-            <p>Trayectoria hiperbólica · Inclinación 25.2° · Altura Areoide: 4.8 km</p>
+        <div className="ares-google-earth-overlay" role="status">
+          <div className="edl-reticle-bracket" aria-hidden="true" />
+
+          {/* Cinta de Velocidad (Izquierda) */}
+          <div className="edl-left-tape">
+            <span className="tape-label">VELOCIDAD</span>
+            <strong className="tape-value">{flightTelemetry.velocityStr}</strong>
+            <span className="tape-sub">{flightTelemetry.machStr}</span>
           </div>
-          <button
-            type="button"
-            className="cinematic-skip-btn"
-            onClick={() => setIsCinematicPlaying(false)}
-          >
-            SALTEAR ANIMACIÓN ⏭
-          </button>
+
+          {/* Panel Central EDL */}
+          <div className="edl-center-hud">
+            <div className="edl-phase-tag">[MANIOBRA GOOGLE EARTH // EDL ENTRY]</div>
+            <h2 className="edl-target-title">DESCENSO A GALE CRATER & MOUNT SHARP</h2>
+            <p className="edl-target-coords">5.37°S · 137.44°E // AREOIDE MOLA 6.1 MBAR</p>
+            <div className="edl-phase-bar">
+              <span className="phase-text">{flightTelemetry.phaseName}</span>
+              <div className="phase-track">
+                <div className="phase-fill" style={{ width: `${flightTelemetry.percent}%` }} />
+              </div>
+            </div>
+            <button type="button" className="edl-skip-btn" onClick={skipCinematic}>
+              SALTEAR ANIMACIÓN ⏭
+            </button>
+          </div>
+
+          {/* Cinta de Altitud (Derecha) */}
+          <div className="edl-right-tape">
+            <span className="tape-label">ALTITUD</span>
+            <strong className="tape-value">{flightTelemetry.altitudeStr}</strong>
+            <span className="tape-sub">PITCH: {flightTelemetry.pitchDeg}°</span>
+          </div>
         </div>
       )}
 
-      {/* Barra de Telemetría Superior del Escenario 3D */}
+      {/* Barra de Telemetría Superior */}
       <header className="ares-stage-telemetry" aria-label="Telemetría de Navegación 3D">
         <div className="stage-telemetry-item">
           <span className="telemetry-label">REGIÓN PRINCIPAL</span>
@@ -571,11 +711,19 @@ export function MarsTerrain3D({
         <div className="stage-actions">
           <button
             type="button"
-            className="ares-btn-secondary"
-            onClick={playCinematicEntry}
-            title="Reproducir maniobra de entrada orbital cinematográfica a Gale Crater"
+            className="ares-btn-primary glow-btn"
+            onClick={playGoogleEarthDive}
+            title="Iniciar descenso orbital cinemático continuo estilo Google Earth hacia Gale Crater"
           >
-            🎬 Entrada Orbital
+            🎬 Descenso Google Earth
+          </button>
+          <button
+            type="button"
+            className="ares-btn-secondary"
+            onClick={playGoogleEarthAscent}
+            title="Ascender a órbita espacial alta (Zoom out planetario)"
+          >
+            🚀 Ascender a Órbita
           </button>
           <button
             type="button"

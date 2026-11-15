@@ -30,6 +30,7 @@ const formatKm = (meters: number | null) => (meters === null ? 'Sin datos' : `${
 
 export function App() {
   const [screen, setScreen] = useState<AppScreen>('globe')
+  const [autoTriggerDive, setAutoTriggerDive] = useState(false)
   const [enabled, setEnabled] = useState(initialEnabled)
   const [opacity, setOpacity] = useState(initialOpacity)
   const [states, setStates] = useState<Record<LayerId, LayerState>>({
@@ -52,6 +53,11 @@ export function App() {
     setScope('jezero')
     setMode({ type: 'explore' })
     setScreen('map')
+  }, [])
+
+  const openGaleTerrain = useCallback((dive = true) => {
+    setAutoTriggerDive(dive)
+    setScreen('terrain3d')
   }, [])
 
   const globeFailed = useCallback(() => {
@@ -103,8 +109,8 @@ export function App() {
           <button
             type="button"
             className={`nav-mode-btn ${screen === 'terrain3d' ? 'active' : ''}`}
-            onClick={() => setScreen('terrain3d')}
-            title="Visualizador 3D de terreno de Gale Crater y Mount Sharp"
+            onClick={() => openGaleTerrain(true)}
+            title="Visualizador 3D de terreno de Gale Crater y Mount Sharp con descenso continuo Google Earth"
           >
             🏔 Terreno 3D Gale
           </button>
@@ -167,6 +173,7 @@ export function App() {
           >
             <MarsTerrain3D
               currentStops={plan.stops}
+              initialDive={autoTriggerDive}
               onSelectScienceStop={handleSelectScienceStopFrom3D}
               onSwitchToGlobal={() => setScreen('globe')}
               onSwitchToJezero2D={openJezero}
@@ -191,7 +198,7 @@ export function App() {
             >
               <MarsGlobe
                 onJezero={openJezero}
-                onGaleTerrain={() => setScreen('terrain3d')}
+                onGaleTerrain={() => openGaleTerrain(true)}
                 onFailure={globeFailed}
               />
             </Suspense>
