@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useId, useCallback } from 'react'
 import { queryMarsAgent, type ChatMessage } from '../features/agent/marsAgentService'
 import type { MarsPoint } from '../features/route/marsDistance'
 import type { StopId } from '../features/route/routePlan'
+import { useLanguage } from '../features/i18n/appI18n'
 
 interface AresAgentChatProps {
   currentStops?: Partial<Record<StopId, MarsPoint | null>>
@@ -233,6 +234,8 @@ export function AresAgentChat({
   onOpen: controlledOnOpen,
   hideFab = false,
 }: AresAgentChatProps) {
+  const { language, number } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const isControlled = controlledIsOpen !== undefined
   const isModalOpen = isControlled ? controlledIsOpen : internalIsOpen
@@ -252,15 +255,26 @@ export function AresAgentChat({
       id: 'init-msg',
       role: 'assistant',
       content:
-        'SISTEMA ARES // CONSOLA TÁCTICA DE EXPLORACIÓN DE SUPERFICIE\n\n' +
-        '[ESTADO]: ENLACE ORBITAL ACTIVO // RELAY UHF 401.5 MHz\n' +
-        '[REFERENCIA]: MARTE · DATUM AREOIDE 6.1 MBAR\n\n' +
-        'Copiloto táctico de navegación para misiones de superficie marciana (NASA Space Apps 2026). ' +
-        'Asistencia en análisis geodésico (R = 3,389.5 km), evaluación de transitabilidad y pendientes en Jezero y Mount Sharp, ' +
-        'y verificación de cobertura con datos de misiones de NASA (CTX, MOLA, THEMIS, HiRISE).',
+        language === 'en'
+          ? 'ARES SYSTEM // EXPLORATORY SURFACE MISSION COPILOT\n\n' +
+            '[STATUS]: RESEARCH PROTOTYPE // NOT FOR OPERATIONAL NAVIGATION\n\n' +
+            'I can help examine Mars mission data, estimate distances on Mars and identify uncertainties. ' +
+            'DEM slope estimates do not assess small obstacles or guarantee route safety.'
+          : 'SISTEMA ARES // COPILOTO DE EXPLORACIÓN DE SUPERFICIE\n\n' +
+            '[ESTADO]: PROTOTIPO DE INVESTIGACIÓN // NO APTO PARA NAVEGACIÓN OPERACIONAL\n\n' +
+            'Puedo examinar datos de misiones marcianas, estimar distancias en Marte y señalar incertidumbres. ' +
+            'Las pendientes derivadas del DEM no evalúan obstáculos pequeños ni garantizan seguridad.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     },
   ])
+  useEffect(() => {
+    setMessages(previous => previous.map(item => item.id === 'init-msg' ? {
+      ...item,
+      content: language === 'en'
+        ? 'ARES SYSTEM // EXPLORATORY SURFACE MISSION COPILOT\n\n[STATUS]: RESEARCH PROTOTYPE // NOT FOR OPERATIONAL NAVIGATION\n\nI can help examine Mars mission data, estimate distances on Mars and identify uncertainties. DEM slope estimates do not assess small obstacles or guarantee route safety.'
+        : 'SISTEMA ARES // COPILOTO DE EXPLORACIÓN DE SUPERFICIE\n\n[ESTADO]: PROTOTIPO DE INVESTIGACIÓN // NO APTO PARA NAVEGACIÓN OPERACIONAL\n\nPuedo examinar datos de misiones marcianas, estimar distancias en Marte y señalar incertidumbres. Las pendientes derivadas del DEM no evalúan obstáculos pequeños ni garantizan seguridad.',
+    } : item))
+  }, [language])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'telemetry'>('chat')
@@ -305,7 +319,7 @@ export function AresAgentChat({
   }, [isModalOpen, handleClose])
 
   const hasRoute = currentStops && (currentStops.A || currentStops.P || currentStops.B)
-  const formatKm = (m: number | null | undefined) => (m ? (m / 1000).toFixed(2) : '0.00')
+  const formatKm = (m: number | null | undefined) => number((m ?? 0) / 1000)
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || input).trim()
@@ -329,7 +343,7 @@ export function AresAgentChat({
         content: m.content,
       }))
 
-    const agentRes = await queryMarsAgent(query, historyPayload)
+    const agentRes = await queryMarsAgent(query, historyPayload, 10000, language)
 
     // Filtrar cualquier bloque interno de razonamiento <thinking>
     let cleanReply = agentRes.reply || ''
@@ -351,12 +365,14 @@ export function AresAgentChat({
   const sendCurrentRouteInspection = () => {
     if (!currentStops) return
     const pts = []
-    if (currentStops.A) pts.push(`Origen A: [${currentStops.A[1].toFixed(4)}°N, ${currentStops.A[0].toFixed(4)}°E]`)
-    if (currentStops.P) pts.push(`Parada P: [${currentStops.P[1].toFixed(4)}°N, ${currentStops.P[0].toFixed(4)}°E]`)
-    if (currentStops.B) pts.push(`Destino B: [${currentStops.B[1].toFixed(4)}°N, ${currentStops.B[0].toFixed(4)}°E]`)
+    if (currentStops.A) pts.push(`${language === 'en' ? 'Start' : 'Origen'} A: [${currentStops.A[1].toFixed(4)}°N, ${currentStops.A[0].toFixed(4)}°E]`)
+    if (currentStops.P) pts.push(`${language === 'en' ? 'Science stop' : 'Parada'} P: [${currentStops.P[1].toFixed(4)}°N, ${currentStops.P[0].toFixed(4)}°E]`)
+    if (currentStops.B) pts.push(`${language === 'en' ? 'Destination' : 'Destino'} B: [${currentStops.B[1].toFixed(4)}°N, ${currentStops.B[0].toFixed(4)}°E]`)
 
     const distStr = formatKm(totalDistanceMeters)
-    const prompt = `Evalúa la viabilidad táctica de mi ruta actual trazada en Jezero Crater con distancia total de ${distStr} km:\n${pts.join('\n')}\n¿Es segura y viable a pie para un astronauta según los límites fisiológicos y las reglas de walkback de la NASA?`
+    const prompt = language === 'en'
+      ? `Assess my exploratory Jezero route (${distStr} km):\n${pts.join('\n')}\nSeparate observed, DEM-derived and unknown hazards. Do not claim the route is safe or cite unverified NASA EVA limits.`
+      : `Evaluá mi ruta exploratoria en Jezero (${distStr} km):\n${pts.join('\n')}\nDistinguí peligros observados, derivados del DEM y desconocidos. No afirmes que la ruta es segura ni cites límites EVA de NASA sin verificar.`
     handleSend(prompt)
   }
 
@@ -368,16 +384,16 @@ export function AresAgentChat({
           type="button"
           className="ares-fab-trigger"
           onClick={handleOpen}
-          aria-label="Abrir consola táctica de navegación Ares"
-          title="Consola Táctica de Navegación (Copiloto EVA)"
+          aria-label={ui('Open Ares exploration copilot', 'Abrir consola de exploración Ares')}
+          title={ui('Exploration copilot (not operational navigation)', 'Copiloto de exploración (no operacional)')}
         >
           <div className="ares-fab-core-container">
             <span className="ares-fab-sonar-ping" aria-hidden="true" />
             <JarvisAiCore size={36} withOuterOrbits={true} className="ares-fab-jarvis" />
           </div>
           <div className="ares-fab-labels">
-            <span className="ares-fab-badge">[IA TÁCTICA]</span>
-            <span className="ares-fab-text">COPILOTO TÁCTICO</span>
+            <span className="ares-fab-badge">{ui('[EXPLORATORY AI]', '[IA TÁCTICA]')}</span>
+            <span className="ares-fab-text">{ui('SCIENCE COPILOT', 'COPILOTO TÁCTICO')}</span>
           </div>
         </button>
       )}
@@ -411,9 +427,9 @@ export function AresAgentChat({
               <div className="hud-title-group">
                 <JarvisAiCore size={32} withOuterOrbits={false} className="hud-header-jarvis" />
                 <div className="hud-title-text-block">
-                  <div className="hud-sub">CONSOLA TÁCTICA // NASA SPACE APPS</div>
+                  <div className="hud-sub">{ui('SCIENCE CONSOLE // NASA SPACE APPS', 'CONSOLA TÁCTICA // NASA SPACE APPS')}</div>
                   <h2 id="agent-title" className="hud-title">
-                    ARES-NAV <span>SISTEMA DE ASISTENCIA</span>
+                    ARES-NAV <span>{ui('EXPLORATION ASSISTANT', 'SISTEMA DE ASISTENCIA')}</span>
                   </h2>
                 </div>
               </div>
@@ -421,20 +437,20 @@ export function AresAgentChat({
               <div className="hud-telemetry-strip">
                 <div className="telemetry-badge active">
                   <span className="dot online" />
-                  <span>ENLACE: ACTIVO</span>
+                  <span>{ui('LINK: ACTIVE', 'ENLACE: ACTIVO')}</span>
                 </div>
                 <div className="telemetry-badge">
-                  <span>DATUM: AREOIDE 6.1 MBAR</span>
+                  <span>{ui('MARS MEAN-RADIUS MODEL', 'DATUM: AREOIDE 6.1 MBAR')}</span>
                 </div>
                 <div className="telemetry-badge highlight">
-                  <span>GEODESIA: 3,389.5 KM</span>
+                  <span>{ui('GEODESY', 'GEODESIA')}: 3,389.5 KM</span>
                 </div>
                 <button
                   type="button"
                   className="hud-close-btn"
                   onClick={handleClose}
-                  aria-label="Cerrar consola táctica"
-                  title="Cerrar consola (Esc)"
+                  aria-label={ui('Close console', 'Cerrar consola táctica')}
+                  title={ui('Close console (Esc)', 'Cerrar consola (Esc)')}
                 >
                   <CloseIcon />
                 </button>
@@ -449,14 +465,14 @@ export function AresAgentChat({
                   className={`hud-tab ${activeTab === 'chat' ? 'active' : ''}`}
                   onClick={() => setActiveTab('chat')}
                 >
-                  COMUNICADOR TÁCTICO
+                  {ui('SCIENCE CHAT', 'COMUNICADOR TÁCTICO')}
                 </button>
                 <button
                   type="button"
                   className={`hud-tab ${activeTab === 'telemetry' ? 'active' : ''}`}
                   onClick={() => setActiveTab('telemetry')}
                 >
-                  PARÁMETROS Y SENSORES
+                  {ui('DATA & SENSORS', 'PARÁMETROS Y SENSORES')}
                 </button>
               </div>
 
@@ -466,10 +482,10 @@ export function AresAgentChat({
                   className="hud-action-pill glow"
                   onClick={sendCurrentRouteInspection}
                   disabled={loading}
-                  title="Transmite las coordenadas reales del mapa al sistema"
+                  title={ui('Send selected map coordinates for exploratory assessment', 'Enviar las coordenadas del mapa para evaluación exploratoria')}
                 >
                   <BoltIcon />
-                  <span>EVALUAR RUTA ({formatKm(totalDistanceMeters)} KM)</span>
+                  <span>{ui('ASSESS ROUTE', 'EVALUAR RUTA')} ({formatKm(totalDistanceMeters)} KM)</span>
                 </button>
               )}
             </div>
@@ -478,54 +494,54 @@ export function AresAgentChat({
             {activeTab === 'chat' ? (
               <div className="hud-chat-body">
                 {/* Sugerencias Tácticas - Sin Emojis */}
-                <div className="hud-chips-tray" aria-label="Sugerencias de navegación">
+                <div className="hud-chips-tray" aria-label={ui('Suggested questions', 'Sugerencias de navegación')}>
                   <button
                     type="button"
                     className="hud-chip"
                     onClick={() =>
                       handleSend(
-                        '¿Qué son las formaciones boxwork en Monte Sharp y por qué la NASA las destacó para la misión?'
+                        ui('What are the Mount Sharp boxwork formations, and what evidence supports their scientific significance?', '¿Qué son las formaciones boxwork en Monte Sharp y qué evidencia respalda su valor científico?')
                       )
                     }
                     disabled={loading}
                   >
-                    [OBJETIVO] Formaciones Boxwork (Gale)
+                    {ui('[SCIENCE] Boxwork formations (Gale)', '[OBJETIVO] Formaciones Boxwork (Gale)')}
                   </button>
                   <button
                     type="button"
                     className="hud-chip"
                     onClick={() =>
                       handleSend(
-                        '¿Por qué no se puede usar la capa MOLA visual para calcular pendientes seguras de caminata?'
+                        ui('Why can’t the visual MOLA layer establish walkable slopes?', '¿Por qué no se puede usar la capa MOLA visual para calcular pendientes transitables?')
                       )
                     }
                     disabled={loading}
                   >
-                    [ANÁLISIS] Resolución MOLA vs DTM
+                    {ui('[DATA] MOLA vs numerical DEM', '[ANÁLISIS] Resolución MOLA vs DTM')}
                   </button>
                   <button
                     type="button"
                     className="hud-chip"
                     onClick={() =>
                       handleSend(
-                        '¿Cuáles son los objetivos astrobiológicos clave en el abanico deltaico de Jezero?'
+                        ui('What science questions motivate exploration of the Jezero delta?', '¿Qué preguntas científicas motivan la exploración del delta de Jezero?')
                       )
                     }
                     disabled={loading}
                   >
-                    [CIENCIA] Delta de Jezero (Biofirmas)
+                    {ui('[SCIENCE] Jezero delta', '[CIENCIA] Delta de Jezero (Biofirmas)')}
                   </button>
                   <button
                     type="button"
                     className="hud-chip"
                     onClick={() =>
                       handleSend(
-                        '¿Cuáles son las reglas de seguridad y límites de pendiente para un astronauta con traje mEMU en Marte?'
+                        ui('Which route hazards remain unknown and which slope thresholds are illustrative rather than NASA operational limits?', '¿Qué peligros siguen sin evaluar y qué umbrales de pendiente son ilustrativos, no límites operacionales NASA?')
                       )
                     }
                     disabled={loading}
                   >
-                    [SEGURIDAD] Límites EVA y Pendientes
+                    {ui('[LIMITATIONS] EVA and slopes', '[SEGURIDAD] Límites EVA y Pendientes')}
                   </button>
                 </div>
 
@@ -554,13 +570,13 @@ export function AresAgentChat({
                         {msg.toolsCalled && msg.toolsCalled.length > 0 && (
                           <details className="hud-tool-details">
                             <summary className="tool-details-summary">
-                              <span className="summary-badge">[EVIDENCIA TÉCNICA NASA ({msg.toolsCalled.length})]</span>
-                              <span className="summary-toggle-text">Ver parámetros del sensor ▾</span>
+                              <span className="summary-badge">[{ui('TOOL OUTPUT', 'EVIDENCIA TÉCNICA')} ({msg.toolsCalled.length})]</span>
+                              <span className="summary-toggle-text">{ui('View sensor parameters ▾', 'Ver parámetros del sensor ▾')}</span>
                             </summary>
                             <div className="tool-details-body">
                               {msg.toolsCalled.map((tc, tidx) => (
                                 <div key={tidx} className="tool-card-item">
-                                  <div className="tool-card-title">FUNCIÓN EJECUTADA: {tc.tool}</div>
+                                  <div className="tool-card-title">{ui('TOOL CALLED:', 'FUNCIÓN EJECUTADA:')} {tc.tool}</div>
                                   {typeof tc.output === 'object' && tc.output !== null ? (
                                     <dl className="tool-dl">
                                       {Object.entries(tc.output as Record<string, unknown>).map(([key, val]) => (
@@ -592,7 +608,7 @@ export function AresAgentChat({
                       <div className="hud-message-bubble loading-bubble">
                         <div className="hud-typing-indicator">
                           <span className="scan-wave" aria-hidden="true" />
-                          <span className="typing-text">PROCESANDO TELEMETRÍA Y GEODESIA...</span>
+                          <span className="typing-text">{ui('PROCESSING MISSION DATA…', 'PROCESANDO TELEMETRÍA Y GEODESIA...')}</span>
                         </div>
                       </div>
                     </div>
@@ -609,7 +625,7 @@ export function AresAgentChat({
                   }}
                 >
                   <label htmlFor={inputId} className="visually-hidden">
-                    Consulta táctica de superficie
+                    {ui('Surface science question', 'Consulta táctica de superficie')}
                   </label>
                   <div className="hud-input-wrapper">
                     <span className="hud-input-prefix" aria-hidden="true">❯</span>
@@ -618,7 +634,7 @@ export function AresAgentChat({
                       id={inputId}
                       type="text"
                       className="hud-input"
-                      placeholder="Consultar coordenadas, límites de terreno, objetivos científicos..."
+                      placeholder={ui('Ask about coordinates, terrain limits, science targets…', 'Consultar coordenadas, límites de terreno, objetivos científicos...')}
                       value={input}
                       onChange={e => setInput(e.target.value)}
                       disabled={loading}
@@ -628,57 +644,52 @@ export function AresAgentChat({
                     type="submit"
                     className="hud-send-btn glow"
                     disabled={loading || !input.trim()}
-                    aria-label="Transmitir consulta"
+                    aria-label={ui('Send question', 'Transmitir consulta')}
                   >
                     <SendIcon />
-                    <span>TRANSMITIR</span>
+                    <span>{ui('SEND', 'TRANSMITIR')}</span>
                   </button>
                 </form>
               </div>
             ) : (
               /* Pestaña de Parámetros Científicos y Sensores */
               <div className="hud-telemetry-body">
-                <h3>PARÁMETROS DE MISIÓN Y SISTEMAS DE REFERENCIA</h3>
+                <h3>{ui('MISSION DATA AND REFERENCE SYSTEMS', 'PARÁMETROS DE MISIÓN Y SISTEMAS DE REFERENCIA')}</h3>
                 <div className="telemetry-grid">
                   <div className="telemetry-card">
-                    <h4>SISTEMA DE REFERENCIA MARCIANO</h4>
+                    <h4>{ui('MARTIAN REFERENCE SYSTEM', 'SISTEMA DE REFERENCIA MARCIANO')}</h4>
                     <ul>
-                      <li><strong>Radio Medio ($R_M$):</strong> 3,389.50 km (3,389,500 m)</li>
-                      <li><strong>Gravedad Superficial:</strong> 0.38 g (3.72 m/s²)</li>
-                      <li><strong>Datum Vertical:</strong> Areoide MOLA (presión media 6.1 mbar)</li>
-                      <li><strong>Convención de Coordenadas:</strong> Latitud Planetocéntrica, Longitud Este</li>
-                      <li><strong>Navegación Superficial:</strong> Odometría visual + TRN (sin red GNSS)</li>
+                      <li><strong>{ui('Mean radius ($R_M$):', 'Radio Medio ($R_M$):')}</strong> 3,389.50 km (3,389,500 m)</li>
+                      <li><strong>{ui('Surface gravity:', 'Gravedad Superficial:')}</strong> 0.38 g (3.72 m/s²)</li>
+                      <li><strong>{ui('Vertical reference:', 'Referencia vertical:')}</strong> {ui('DEM mosaic vertical datum not independently validated', 'Datum vertical del mosaico DEM no validado independientemente')}</li>
+                      <li><strong>{ui('Coordinate convention:', 'Convención de Coordenadas:')}</strong> {ui('Planetocentric latitude, east longitude', 'Latitud planetocéntrica, longitud este')}</li>
+                      <li><strong>{ui('Surface navigation:', 'Navegación Superficial:')}</strong> {ui('research prototype, no operational guidance', 'prototipo de investigación, sin guía operacional')}</li>
                     </ul>
                   </div>
 
                   <div className="telemetry-card">
-                    <h4>CRITERIOS DE SEGURIDAD EVA (TRAJE mEMU)</h4>
+                    <h4>{ui('ILLUSTRATIVE EVA ROUTE ASSUMPTIONS (NOT NASA LIMITS)', 'SUPUESTOS ILUSTRATIVOS DE RUTA EVA (NO LÍMITES NASA)')}</h4>
                     <ul>
-                      <li><strong>Límite Walkback a Pie:</strong> 5.0 km nominal (8.0 km contingencia)</li>
-                      <li><strong>Pendiente Nominal:</strong> &lt; 8° (tránsito a pie seguro)</li>
-                      <li><strong>Pendiente Moderada:</strong> 8° a 15° (incremento metabólico +50%)</li>
-                      <li><strong>Pendiente Difícil:</strong> 15° a 20° (resbalamiento en regolito fino)</li>
-                      <li><strong>Zona Crítica (NO-GO):</strong> &gt; 20° (infranqueable a pie)</li>
+                      <li>{ui('Sample walkback distances and slope bands in this prototype are configurable assumptions, not published NASA EVA thresholds.', 'Las distancias de retorno y rangos de pendiente de este prototipo son supuestos configurables, no umbrales EVA publicados por NASA.')}</li>
+                      <li>{ui('Route safety, small obstacles, local weather and radiation remain unassessed.', 'La seguridad de la ruta, obstáculos pequeños, clima y radiación locales siguen sin evaluar.')}</li>
                     </ul>
                   </div>
 
                   <div className="telemetry-card">
-                    <h4>SENSORES ORBITALES EN CATÁLOGO</h4>
+                    <h4>{ui('ORBITAL SENSOR CATALOG', 'SENSORES ORBITALES EN CATÁLOGO')}</h4>
                     <ul>
-                      <li><strong>MRO CTX:</strong> ~6 m/px óptico (mosaico controlado Jezero)</li>
-                      <li><strong>MRO HiRISE:</strong> ~0.25 m/px óptico / 1-2 m DTM de relieve</li>
-                      <li><strong>MGS MOLA:</strong> ~463 m/px relieve regional respecto al Areoide</li>
-                      <li><strong>Mars Odyssey THEMIS:</strong> 100 m/px infrarrojo térmico (Day IR)</li>
+                      <li><strong>MRO CTX:</strong> ~6 m/px {ui('optical (controlled Jezero mosaic)', 'óptico (mosaico controlado Jezero)')}</li>
+                      <li><strong>MRO HiRISE:</strong> ~0.25 m/px {ui('optical; separate stereo DTM products require coverage verification', 'óptico; los DTM estéreo requieren verificar cobertura')}</li>
+                      <li><strong>MGS MOLA:</strong> ~463 m/px {ui('regional color-shaded relief (visual product)', 'relieve regional sombreado en color (producto visual)')}</li>
+                      <li><strong>Mars Odyssey THEMIS:</strong> 100 m/px {ui('historical daytime infrared mosaic', 'mosaico infrarrojo diurno histórico')}</li>
                     </ul>
                   </div>
 
                   <div className="telemetry-card">
-                    <h4>ENLACE DE COMUNICACIONES TÁCTICO</h4>
+                    <h4>{ui('COMMUNICATIONS CONTEXT', 'CONTEXTO DE COMUNICACIONES')}</h4>
                     <ul>
-                      <li><strong>Banda de Radio Superficie:</strong> UHF Proximity-1 (401.5 MHz)</li>
-                      <li><strong>Latencia Tierra-Marte:</strong> 3 a 22 minutos (un trayecto)</li>
-                      <li><strong>Requisito Operativo:</strong> Autonomía de decisión en superficie</li>
-                      <li><strong>Integridad de Datos:</strong> Prohibición estricta de extrapolación sin DTM métrico</li>
+                      <li><strong>{ui('Earth–Mars communications delay:', 'Demora de comunicaciones Tierra–Marte:')}</strong> {ui('varies by planetary geometry; no live link is provided here', 'varía con la geometría planetaria; aquí no existe un enlace en vivo')}</li>
+                      <li><strong>{ui('Data integrity:', 'Integridad de datos:')}</strong> {ui('no unsupported terrain extrapolation', 'sin extrapolación de terreno sin respaldo')}</li>
                     </ul>
                   </div>
                 </div>
@@ -687,7 +698,7 @@ export function AresAgentChat({
 
             {/* Footer de la Consola */}
             <footer className="hud-footer">
-              <span>SISTEMA ARES-NAV // NASA SPACE APPS CHALLENGE 2026</span>
+              <span>{ui('ARES-NAV SYSTEM', 'SISTEMA ARES-NAV')} // NASA SPACE APPS CHALLENGE 2026</span>
               <span className="hud-coord-indicator">
                 {currentStops?.A ? `A: [${currentStops.A[1].toFixed(2)}°N, ${currentStops.A[0].toFixed(2)}°E]` : 'A: --'} |{' '}
                 {currentStops?.P ? `P: [${currentStops.P[1].toFixed(2)}°N, ${currentStops.P[0].toFixed(2)}°E]` : 'P: --'} |{' '}

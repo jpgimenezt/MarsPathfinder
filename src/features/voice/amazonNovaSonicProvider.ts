@@ -69,8 +69,8 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
   constructor(initialConfig?: Partial<VoiceConfig>) {
     this.config = {
-      voiceId: initialConfig?.voiceId || 'carlos', // Voz natural en español por defecto
-      language: initialConfig?.language || 'es', // Español por defecto
+      voiceId: initialConfig?.voiceId || 'matthew',
+      language: initialConfig?.language || 'en',
       endpointUrl: resolveGatewayEndpoint(initialConfig?.endpointUrl),
       interactionMode: initialConfig?.interactionMode || 'HANDS_FREE',
       volume: initialConfig?.volume ?? 1.0,

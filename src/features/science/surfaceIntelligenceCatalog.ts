@@ -178,3 +178,28 @@ export const SURFACE_INTELLIGENCE_GALLERY: SurfaceObservationImage[] = [
     filtersUsed: 'Filtro solar neutral Mastcam-Z',
   },
 ]
+
+const englishImages: Record<string, { title: string; targetRegion: string }> = {
+  'gale-pontours-mudcracks': { title: 'Polygonal mud cracks (Pontours)', targetRegion: 'Gale Crater · Mount Sharp context' },
+  'gale-gediz-vallis-ridge': { title: 'Gediz Vallis ridge', targetRegion: 'Gale Crater · Gediz Vallis context' },
+  'gale-bagnold-dune-ripple': { title: 'Wind ripples at Bagnold Dunes', targetRegion: 'Gale Crater · Bagnold Dunes context' },
+  'gale-yellowknife-cumberland': { title: 'Cumberland drilling site', targetRegion: 'Gale Crater · Yellowknife Bay context' },
+  'gale-vera-rubin-ridge-panorama': { title: 'Vera Rubin Ridge panorama', targetRegion: 'Gale Crater · Vera Rubin Ridge context' },
+  'jezero-delta-front-belva': { title: 'Jezero delta and Belva Crater context', targetRegion: 'Jezero Crater · not Gale' },
+  'jezero-abrasion-patch-skinner': { title: 'Skinner Ridge abrasion context', targetRegion: 'Jezero Crater · not Gale' },
+  'jezero-martian-sunset': { title: 'Martian sunset context', targetRegion: 'Jezero Crater · not Gale' },
+}
+
+/** Gallery URLs are retained, but image-to-title, sol and coordinate matches require independent verification. */
+export function localizedSurfaceImage(image: SurfaceObservationImage, language: 'en' | 'es'): SurfaceObservationImage {
+  if (language === 'es') return image
+  const names = englishImages[image.id]
+  return {
+    ...image,
+    title: names?.title ?? image.mission + ' image',
+    targetRegion: names?.targetRegion ?? `${image.mission} mission context`,
+    geologicalContext: 'Geological interpretation and photo-to-site match not independently verified for this catalog entry.',
+    scienceSummary: 'Mission image presented as contextual material only. Check the linked original record for the acquisition date, instrument, location and scientific interpretation. Do not infer terrain conditions at the displayed camera position.',
+    filtersUsed: 'See original image record; calibration not verified here.',
+  }
+}

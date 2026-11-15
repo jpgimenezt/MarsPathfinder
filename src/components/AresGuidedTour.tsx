@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLanguage } from '../features/i18n/appI18n'
 
 export interface GuidedTourStep {
   id: string
@@ -75,6 +76,44 @@ export const GUIDED_TOUR_STEPS: GuidedTourStep[] = [
   },
 ]
 
+const EN_STEPS: Record<string, Pick<GuidedTourStep, 'title' | 'subtitle' | 'description' | 'actionHint'>> = {
+  'stage-planetary-view': {
+    title: 'STAGE 1 — PLANETARY VIEW AND 3D EXPLORER', subtitle: 'Explore Mars in three dimensions',
+    description: 'This Gale Crater scene is an approximate procedural terrain reconstruction, not a measured local DEM. Drag to rotate, right-drag to pan, and scroll to zoom.',
+    actionHint: 'Rotate to inspect the illustrative flanks of Mount Sharp and Gale’s crater walls.',
+  },
+  'stage-camera-modes': {
+    title: 'STAGE 2 — CAMERA NAVIGATION', subtitle: 'Orbit, pan, first person and flight',
+    description: 'Use the Camera tab to change between orbital, pan, simulated eye-level and flight views. Camera altitude is not operational terrain data.',
+    actionHint: 'Try first-person mode for an approximate sense of scale.',
+  },
+  'stage-scientific-layers': {
+    title: 'STAGE 3 — SCIENTIFIC LAYERS', subtitle: 'Orbital imagery and geologic context',
+    description: 'Compare CTX imagery, USGS geologic context and THEMIS historical infrared imagery. Procedural Gale elevation, slope and radiation overlays are simulations, not validated local measurements.',
+    actionHint: 'Compare CTX visual imagery with regional USGS geologic context.',
+  },
+  'stage-scientific-discoveries': {
+    title: 'STAGE 4 — CURIOSITY SCIENCE', subtitle: 'Science landmarks and historical traverse',
+    description: 'Inspect selected Curiosity science locations, including Yellowknife Bay, Bagnold Dunes and Vera Rubin Ridge. Tour positions and camera viewpoints are illustrative and require independent spatial validation.',
+    actionHint: 'Select a landmark for its documented scientific context.',
+  },
+  'stage-mission-routes': {
+    title: 'STAGE 5 — EXPLORATORY EVA PLANNING', subtitle: 'Mars distances and uncertainty',
+    description: 'Set A, P and B to compare proposed paths. Distances use Martian geometry; modeled Gale slopes and walkback thresholds are not validated NASA EVA safety criteria.',
+    actionHint: 'Open route details and inspect what remains unassessed.',
+  },
+  'stage-mars-habitat': {
+    title: 'STAGE 6 — CONCEPTUAL HABITAT', subtitle: 'Educational Base Alpha simulation',
+    description: 'Explore simulated habitat modules. Crew, energy and resource figures are conceptual, not measured mission operations or approved designs.',
+    actionHint: 'Open the Base Alpha tab to explore conceptual facilities.',
+  },
+  'stage-mission-control': {
+    title: 'STAGE 7 — MISSION DATA AND SOURCES', subtitle: 'Scientific data, images and ARES',
+    description: 'Inspect dataset provenance, browse mission imagery and ask ARES about uncertainty. This prototype does not provide live operational navigation.',
+    actionHint: 'Finish the tutorial and explore the sources and limitations.',
+  },
+}
+
 interface Props {
   isOpen: boolean
   onClose: () => void
@@ -82,12 +121,15 @@ interface Props {
 }
 
 export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
+  const { language } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [isWelcomeScreen, setIsWelcomeScreen] = useState(true)
 
   if (!isOpen) return null
 
-  const step = GUIDED_TOUR_STEPS[currentStepIndex]
+  const originalStep = GUIDED_TOUR_STEPS[currentStepIndex]
+  const step = language === 'en' ? { ...originalStep, ...EN_STEPS[originalStep.id] } : originalStep
   const totalSteps = GUIDED_TOUR_STEPS.length
 
   const handleNext = () => {
@@ -110,35 +152,35 @@ export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
   }
 
   return (
-    <div className="ares-tour-backdrop" role="dialog" aria-modal="true" aria-label="Recorrido Guiado ARES">
+    <div className="ares-tour-backdrop" role="dialog" aria-modal="true" aria-label={ui('ARES guided tour', 'Recorrido Guiado ARES')}>
       {/* Pantalla de Bienvenida Inicial */}
       {isWelcomeScreen ? (
         <div className="ares-tour-welcome-card">
-          <div className="welcome-tag">[SISTEMA DE EXPLORACIÓN PLANETARIA // ARES]</div>
+          <div className="welcome-tag">{ui('[PLANETARY EXPLORATION PROTOTYPE // ARES]', '[PROTOTIPO DE EXPLORACIÓN PLANETARIA // ARES]')}</div>
           <h2 className="welcome-title">ARES / MARS EXPLORATION SYSTEM</h2>
           <p className="welcome-lead">
-            Bienvenido al sistema de exploración planetaria. Descubrí el terreno marciano, analizá datos científicos y planificá futuras expediciones humanas.
+            {ui('Welcome to the Mars research explorer. Examine mission imagery and scientific sources, then plan exploratory routes while keeping uncertainty visible.', 'Bienvenido al explorador marciano. Examiná imágenes y fuentes científicas, y planificá rutas exploratorias sin ocultar la incertidumbre.')}
           </p>
           <div className="welcome-feature-list">
             <div className="welcome-feature-item">
-              <strong>CARTOGRAFÍA OFICIAL NASA / USGS:</strong>
-              <span>Mosaico orbital CTX a 6 m/px, mapas geológicos SIM 3292 y modelo hipsométrico.</span>
+              <strong>{ui('NASA / USGS DATA:', 'DATOS NASA / USGS:')}</strong>
+              <span>{ui('CTX imagery, regional geology and visual MOLA shaded relief. The Gale 3D terrain is an educational simulation.', 'Imágenes CTX, geología regional y relieve visual MOLA. El terreno 3D de Gale es una simulación educativa.')}</span>
             </div>
             <div className="welcome-feature-item">
-              <strong>HERENCIA DE EXPLORACIÓN CURIOSITY:</strong>
-              <span>Travesía histórica de 32 km en Mount Sharp y comparación con caminatas humanas.</span>
+              <strong>{ui('CURIOSITY SCIENCE:', 'CIENCIA CURIOSITY:')}</strong>
+              <span>{ui('Historical traverse and documented geological context near Mount Sharp.', 'Travesía histórica y contexto geológico documentado cerca de Mount Sharp.')}</span>
             </div>
             <div className="welcome-feature-item">
-              <strong>PLANIFICACIÓN TÁCTICA EVA:</strong>
-              <span>Cálculo de trayectos con geodesia marciana y límite de soporte vital (Walkback Limit).</span>
+              <strong>{ui('EXPLORATORY EVA PLANNING:', 'PLANIFICACIÓN EVA EXPLORATORIA:')}</strong>
+              <span>{ui('Martian distances and clearly identified modeled or unknown hazards. No operational safety certification.', 'Distancias marcianas y peligros modelados o desconocidos identificados. Sin certificación de seguridad operacional.')}</span>
             </div>
           </div>
           <div className="welcome-actions">
             <button type="button" className="hud-btn highlight welcome-btn" onClick={handleStartTour}>
-              [INICIAR EXPLORACIÓN]
+              {ui('[START TOUR]', '[INICIAR RECORRIDO]')}
             </button>
             <button type="button" className="hud-btn welcome-btn-secondary" onClick={onClose}>
-              [OMITIR INTRODUCCIÓN]
+              {ui('[SKIP INTRODUCTION]', '[OMITIR INTRODUCCIÓN]')}
             </button>
           </div>
         </div>
@@ -148,13 +190,13 @@ export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
           <header className="tour-step-header">
             <div>
               <span className="tour-step-tag">
-                ETAPA {step.stageNumber} DE {totalSteps} // ARES ONBOARDING
+                {ui('STAGE', 'ETAPA')} {step.stageNumber} {ui('OF', 'DE')} {totalSteps} // ARES
               </span>
               <h3 className="tour-step-title">{step.title}</h3>
               <p className="tour-step-subtitle">{step.subtitle}</p>
             </div>
-            <button type="button" className="tour-close-btn" onClick={onClose} aria-label="Cerrar tutorial">
-              [SALIR]
+            <button type="button" className="tour-close-btn" onClick={onClose} aria-label={ui('Close tutorial', 'Cerrar tutorial')}>
+              {ui('[EXIT]', '[SALIR]')}
             </button>
           </header>
 
@@ -162,7 +204,7 @@ export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
             <p className="tour-step-desc">{step.description}</p>
             {step.actionHint && (
               <div className="tour-action-hint">
-                <strong>ACCIÓN SUGERIDA:</strong> {step.actionHint}
+                <strong>{ui('SUGGESTED ACTION:', 'ACCIÓN SUGERIDA:')}</strong> {step.actionHint}
               </div>
             )}
           </div>
@@ -182,17 +224,17 @@ export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
                 onClick={handlePrev}
                 disabled={currentStepIndex === 0}
               >
-                [ANTERIOR]
+                {ui('[PREVIOUS]', '[ANTERIOR]')}
               </button>
               <div className="tour-step-indicator">
-                PASO {currentStepIndex + 1} / {totalSteps}
+                {ui('STEP', 'PASO')} {currentStepIndex + 1} / {totalSteps}
               </div>
               <button
                 type="button"
                 className="hud-btn highlight"
                 onClick={handleNext}
               >
-                {currentStepIndex === totalSteps - 1 ? '[FINALIZAR]' : '[SIGUIENTE]'}
+                {currentStepIndex === totalSteps - 1 ? ui('[FINISH]', '[FINALIZAR]') : ui('[NEXT]', '[SIGUIENTE]')}
               </button>
             </div>
           </footer>

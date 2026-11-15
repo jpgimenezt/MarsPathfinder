@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ARES_SCIENTIFIC_REGISTRY,
   ARES_DISCLAIMER_NOTICE,
+  localizedScientificRegistry,
   queryScientificObservationProfile,
 } from '../src/features/science/scientificDataCenter'
 
@@ -26,7 +27,7 @@ describe('ARES Scientific Data Center & Observation Profile', () => {
       expect(ds.unitOfMeasure).toBeTruthy()
       expect(ds.license).toBeTruthy()
       expect(ds.credits).toBeTruthy()
-      expect(ds.availabilityStatus).toBe('AVAILABLE')
+      expect(ds.availabilityStatus).toMatch(/AVAILABLE|PARTIAL/)
       expect(ds.limitations).toBeTruthy()
     }
   })
@@ -58,5 +59,21 @@ describe('ARES Scientific Data Center & Observation Profile', () => {
     expect(profile.geologySummary).toContain('Gale Crater')
     expect(profile.missionHeritageNearby.some(h => h.includes('Curiosity'))).toBe(true)
     expect(profile.missionHeritageNearby.some(h => h.includes('CTX'))).toBe(true)
+  })
+  it('no presenta la geometría procedural de Gale ni el relieve MOLA visual como DEM medido', () => {
+    const modeled = ARES_SCIENTIFIC_REGISTRY.find(ds => ds.datasetId === 'ares-topographic-dem')!
+    expect(modeled.dataType).toBe('MODELED')
+    expect(modeled.availabilityStatus).toBe('PARTIAL')
+    const profile = queryScientificObservationProfile(137.4485, -4.5925, -4520, 'en')
+    expect(profile.availableDatasets.some(ds => ds.datasetId === modeled.datasetId)).toBe(false)
+    expect(profile.terrainSummary).toContain('No validated local numeric Gale DEM')
+    expect(profile.geologySummary).not.toContain('-4520')
+    const mola = profile.availableDatasets.find(ds => ds.datasetId === 'mgs-mola-clrshade')!
+    expect(mola.unitOfMeasure).toContain('no numerical elevation')
+    const en = localizedScientificRegistry('en')
+    const es = localizedScientificRegistry('es')
+    expect(en.map(dataset => dataset.datasetId)).toEqual(es.map(dataset => dataset.datasetId))
+    expect(en.find(dataset => dataset.datasetId === modeled.datasetId)?.name).toContain('NOT a validated DEM')
+    expect(en.find(dataset => dataset.datasetId === modeled.datasetId)?.originUrl).toBe(modeled.originUrl)
   })
 })

@@ -34,7 +34,7 @@ export interface WakeWordMatchResult {
  * con tolerancia a truncamientos acústicos iniciales (clipping de fonemas como "res", "eiares", "ey ares")
  * y reconocimiento inmediato de comandos adjuntos.
  */
-export function matchWakeWordPhonetic(rawText: string, currentLang: SupportedLanguage = 'es'): WakeWordMatchResult | null {
+export function matchWakeWordPhonetic(rawText: string, currentLang: SupportedLanguage = 'en'): WakeWordMatchResult | null {
   if (!rawText || !rawText.trim()) return null
   const text = rawText.trim()
   const lower = text.toLowerCase()
@@ -97,7 +97,7 @@ export class LocalWakeWordDetector {
   private recognition: any = null
   private isListening = false
   private isCommandListening = false
-  private currentLanguage: SupportedLanguage = 'es'
+  private currentLanguage: SupportedLanguage = 'en'
   private listeners: WakeWordListener[] = []
   private commandListeners: CommandListener[] = []
   private disconnectListeners: DisconnectListener[] = []

@@ -205,6 +205,25 @@ export const GALE_DISCOVERIES: ScientificDiscovery[] = [
   },
 ]
 
+const discoveryNames: Record<string, string> = {
+  'pontours-mud-cracks': 'Pontours · polygonal mud-crack context',
+  'mount-sharp-boxwork': 'Aeolis Mons · boxwork formations',
+  'vera-rubin-ridge': 'Vera Rubin Ridge · hematite-bearing context',
+  'yellowknife-bay': 'Yellowknife Bay · Sheepbed mudstone',
+}
+/** Presentation only. Scene coordinates, elevations and photo pairing are not independently verified. */
+export function localizedGaleDiscovery(discovery: ScientificDiscovery, language: 'en' | 'es'): ScientificDiscovery {
+  if (language === 'es') return discovery
+  return {
+    ...discovery,
+    name: discoveryNames[discovery.id] ?? 'Gale scientific context',
+    geologicalUnit: 'Regional geologic interpretation; local contact unverified',
+    significance: 'Curiosity mission findings provide context for past aqueous environments in Gale Crater. This animated point and image association are illustrative; they do not demonstrate life.',
+    safetyNotes: 'Local slopes, obstacles and EVA traversability are not assessed by this procedural 3D model.',
+    details: { ...discovery.details, scientificValue: 'ESTRATÉGICO' },
+  }
+}
+
 /**
  * Datos ambientales de superficie recopilados por REMS y RAD (Curiosity) en Gale Crater.
  * Proporcionan contexto científico real sin simular pronóstico en tiempo real.

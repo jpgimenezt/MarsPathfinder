@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act } from 'react'
+import { act, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AresAgentChat } from '../src/components/AresAgentChat'
+import { LanguageProvider, LANGUAGE_STORAGE_KEY } from '../src/features/i18n/appI18n'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -14,7 +15,13 @@ afterEach(() => {
     act(() => root.unmount())
   }
   container?.remove()
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY)
 })
+// Existing HUD interaction checks assert the Spanish variant.
+const spanishChat = (props: ComponentProps<typeof AresAgentChat>) => {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, 'es')
+  return <LanguageProvider><AresAgentChat {...props} /></LanguageProvider>
+}
 
 describe('AresAgentChat - Tactical Martian HUD Component', () => {
   it('renderiza el botón flotante (FAB) cuando el modal está cerrado', () => {
@@ -23,7 +30,7 @@ describe('AresAgentChat - Tactical Martian HUD Component', () => {
     root = createRoot(container)
 
     act(() => {
-      root.render(<AresAgentChat isOpen={false} onClose={vi.fn()} />)
+      root.render(spanishChat({ isOpen: false, onClose: vi.fn() }))
     })
 
     const fab = container.querySelector('.ares-fab-trigger')
@@ -39,12 +46,7 @@ describe('AresAgentChat - Tactical Martian HUD Component', () => {
 
     act(() => {
       root.render(
-        <AresAgentChat
-          isOpen={true}
-          onClose={vi.fn()}
-          currentStops={{ A: [77.45, 18.42] }}
-          totalDistanceMeters={5200}
-        />
+        spanishChat({ isOpen: true, onClose: vi.fn(), currentStops: { A: [77.45, 18.42] }, totalDistanceMeters: 5200 })
       )
     })
 
@@ -70,7 +72,7 @@ describe('AresAgentChat - Tactical Martian HUD Component', () => {
     root = createRoot(container)
 
     act(() => {
-      root.render(<AresAgentChat isOpen={true} onClose={vi.fn()} />)
+      root.render(spanishChat({ isOpen: true, onClose: vi.fn() }))
     })
 
     const telemetryTabBtn = container.querySelectorAll<HTMLButtonElement>('.hud-tab')[1]
@@ -83,6 +85,7 @@ describe('AresAgentChat - Tactical Martian HUD Component', () => {
     // Debe mostrar los parámetros geodésicos y sensores
     expect(container.textContent).toContain('PARÁMETROS DE MISIÓN Y SISTEMAS DE REFERENCIA')
     expect(container.textContent).toContain('Radio Medio ($R_M$): 3,389.50 km')
+    expect(container.textContent).toContain('NO LÍMITES NASA')
     expect(container.textContent).toContain('MRO CTX')
     expect(container.textContent).toContain('MGS MOLA')
   })
@@ -94,7 +97,7 @@ describe('AresAgentChat - Tactical Martian HUD Component', () => {
     root = createRoot(container)
 
     act(() => {
-      root.render(<AresAgentChat isOpen={true} onClose={handleClose} />)
+      root.render(spanishChat({ isOpen: true, onClose: handleClose }))
     })
 
     const closeBtn = container.querySelector<HTMLButtonElement>('.hud-close-btn')

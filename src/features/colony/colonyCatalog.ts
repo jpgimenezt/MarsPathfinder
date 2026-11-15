@@ -305,3 +305,26 @@ export const DEFAULT_COLONY_MODULES: HabitatModuleConfig[] = [
     },
   },
 ]
+
+const moduleNames: Record<HabitatModuleType, { en: string; es: string }> = {
+  landing: { en: 'Conceptual landing module', es: 'Módulo de aterrizaje conceptual' },
+  habitat: { en: 'Conceptual habitat', es: 'Hábitat conceptual' },
+  greenhouse: { en: 'Conceptual greenhouse', es: 'Invernadero conceptual' },
+  laboratory: { en: 'Conceptual laboratory', es: 'Laboratorio conceptual' },
+  storage: { en: 'Conceptual storage', es: 'Almacén conceptual' },
+  energy: { en: 'Conceptual power module', es: 'Módulo energético conceptual' },
+  isru: { en: 'Conceptual ISRU module', es: 'Módulo ISRU conceptual' },
+  rover: { en: 'Conceptual rover', es: 'Rover conceptual' },
+  astronaut: { en: 'Simulated astronaut', es: 'Astronauta simulado' },
+  corridor: { en: 'Conceptual corridor', es: 'Corredor conceptual' },
+}
+
+/** Presentation for unbuilt habitat assets; no model parameters or technical IDs are changed. */
+export function localizedColonyModule(module: HabitatModuleConfig, language: 'en' | 'es'): HabitatModuleConfig {
+  const name = moduleNames[module.type][language]
+  const note = language === 'en'
+    ? 'Educational concept only. Power, capacity, dimensions, placement and operational suitability are illustrative assumptions, not validated mission requirements.'
+    : 'Concepto educativo. Energía, capacidad, dimensiones, ubicación y aptitud operativa son supuestos ilustrativos, no requisitos de misión validados.'
+  return { ...module, name, designation: note, functionSummary: note,
+    description: note, subsystems: [note], technicalReference: note }
+}

@@ -185,6 +185,72 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
   },
 }
 
+// Presentation only: never use translated metadata to derive elevations or risk.
+const terrainEnglish: Record<TerrainLayerType, { name: string; legend: string[]; limitations: string }> = {
+  optical: {
+    name: 'Orbital imagery / illustrative terrain texture (NASA MRO / HRSC)',
+    legend: ['Basaltic regolith and Gale aeolian mantle', 'Sedimentary context of Aeolis Mons', 'Dark dune material', 'Bright sulfate/clay-bearing outcrops'],
+    limitations: 'Orbital imagery is visual evidence. Procedural terrain color and shape are not measured local elevations.',
+  },
+  ctx_mosaic: {
+    name: 'Gale CTX mosaic (Gale_CTX_BlockAdj_dd)',
+    legend: ['Bright albedo in the visual product', 'Intermediate albedo', 'Dark albedo and dune fields'],
+    limitations: 'CTX reflectance is not a numerical DEM or obstacle assessment.',
+  },
+  dem: {
+    name: 'Approximate procedural elevation (MOLA/HRSC context)',
+    legend: ['Lower simulated elevation', 'Intermediate simulated elevation', 'Lower Mount Sharp flank (simulated)', 'Higher simulated elevation', 'Simulated summit'],
+    limitations: 'The rendered Gale surface is procedural. Absolute elevation and vertical registration are not independently validated measurements.',
+  },
+  slope: {
+    name: 'Simulated slope proxy (not EVA safety)',
+    legend: ['<8° · relatively lower simulated slope, NOT safe', '8–15° · illustrative caution', '>15° · higher simulated slope, NOT operational hazard classification'],
+    limitations: 'Computed from procedural Gale terrain; no verified EVA safety or sub-meter obstacles.',
+  },
+  geology: {
+    name: 'Geologic context (USGS SIM 3292)',
+    legend: ['lApm: central-mound sulfate strata', 'eHh: lacustrine/clay context', 'AHv: aeolian dune units', 'mNh: crater floor / alluvial fans', 'Nhm: crater rim massifs'],
+    limitations: 'Regional geology; local contacts and texture registration require independent verification.',
+  },
+  thermal: {
+    name: 'THEMIS historical infrared context',
+    legend: ['Lower illustrative thermal inertia', 'Intermediate illustrative thermal inertia', 'Higher illustrative thermal inertia'],
+    limitations: 'Historical imagery, not current weather, a measured local temperature or verified thermal safety.',
+  },
+  spectral: {
+    name: 'CRISM / ChemCam mineralogical context',
+    legend: ['Phyllosilicate context', 'Hematite context', 'Magnesium/calcium sulfate context'],
+    limitations: 'Spectral coverage is discontinuous; the procedural overlay is not a georeferenced mineral measurement.',
+  },
+  radiation: {
+    name: 'RAD radiation context (not a live dose map)',
+    legend: ['Illustrative lower model band', 'Illustrative intermediate model band', 'Illustrative higher model band'],
+    limitations: 'Simulated spatial categories do not measure local radiation or current solar events.',
+  },
+}
+export function localizedTerrainLayer(type: TerrainLayerType, language: 'en' | 'es'): LayerMetadata {
+  const original = TERRAIN_LAYERS_CATALOG[type]
+  if (language === 'es') return original
+  const english = terrainEnglish[type]
+  return {
+    ...original,
+    name: english.name,
+    mission: type === 'dem' || type === 'slope' || type === 'radiation'
+      ? 'AresRoute procedural visualization (NASA mission context is separate)' : original.mission,
+    instrument: type === 'dem' || type === 'slope' || type === 'radiation'
+      ? 'Procedural simulation, not a calibrated sensor map'
+      : type === 'geology' ? 'USGS regional compilation (local units unverified)' : original.instrument,
+    resolution: type === 'dem' || type === 'slope' || type === 'radiation'
+      ? 'Physical resolution unvalidated' : original.resolution,
+    acquisition: type === 'dem' || type === 'slope' || type === 'radiation'
+      ? 'Not applicable to simulated overlay' : original.acquisition,
+    units: type === 'dem' || type === 'slope' || type === 'radiation'
+      ? 'Illustrative model values, not observations' : original.units,
+    legend: original.legend.map((entry, index) => ({ ...entry, label: english.legend[index] ?? 'Illustrative overlay' })),
+    limitations: english.limitations,
+  }
+}
+
 /**
  * Genera una textura dinámica CanvasTexture de alta fidelidad (1024x1024) para el terreno 3D
  * con estratigrafía geológica multicapa realista y detalles de albedo de MRO/HiRISE.

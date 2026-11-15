@@ -2,6 +2,7 @@
  * AresRoute - Martian AI Agent Service
  * Conecta con el backend Serverless desplegado en AWS (Amazon Bedrock + Lambda)
  */
+import type { SupportedLanguage } from '../i18n/commsTranslations'
 
 export const AWS_AGENT_ENDPOINT =
   import.meta.env.VITE_AWS_AGENT_ENDPOINT ||
@@ -33,7 +34,8 @@ export interface ChatMessage {
 export async function queryMarsAgent(
   message: string,
   history: Array<{ role: string; content: string }> = [],
-  timeoutMs = 30000
+  timeoutMs = 30000,
+  language: SupportedLanguage = 'en'
 ): Promise<AgentResponse> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
@@ -48,13 +50,14 @@ export async function queryMarsAgent(
       body: JSON.stringify({
         message,
         history: history.slice(-6), // Mantener contexto reciente
+        language,
       }),
     })
 
     clearTimeout(timeoutId)
 
     if (!response.ok) {
-      throw new Error(`Error en el servidor AWS (HTTP ${response.status})`)
+      throw new Error(language === 'en' ? `AWS server error (HTTP ${response.status})` : `Error en el servidor AWS (HTTP ${response.status})`)
     }
 
     const data: AgentResponse = await response.json()
@@ -63,10 +66,10 @@ export async function queryMarsAgent(
     clearTimeout(timeoutId)
     const isTimeout = err instanceof Error && err.name === 'AbortError'
     const errorMessage = isTimeout
-      ? 'Tiempo de espera de telemetría orbital excedido (>10s). Activando contingencia de datos científicos locales.'
-      : (err instanceof Error ? err.message : 'Error desconocido al contactar al satélite de enlace')
+      ? language === 'en' ? 'Orbital telemetry timed out (>10s). Scientific data are unavailable.' : 'Tiempo de espera de telemetría orbital excedido (>10s). Datos científicos no disponibles.'
+      : (err instanceof Error ? err.message : language === 'en' ? 'Unknown relay communication error' : 'Error desconocido al contactar al enlace')
     return {
-      reply: `⚠️ [AVISO TÁCTICO]: ${errorMessage}`,
+      reply: `⚠️ [${language === 'en' ? 'NOTICE' : 'AVISO'}]: ${errorMessage}`,
       error: errorMessage,
     }
   }

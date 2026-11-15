@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useReducer, useState, useMemo } from 'reac
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
 import { AresMissionCommsModal } from '../components/AresMissionCommsModal'
-import { sources, vikingBase, type LayerId } from '../data/sourceManifest'
+import { localizedSources, localizedVikingBase, type LayerId } from '../data/sourceManifest'
 import { ROI, insideAnyActiveRoi, insideRoi } from '../features/map/marsProjection'
 import { JEZERO_CONTEXT, inRegion, segmentCoverage, validRegion, type Region } from '../features/map/planningRegion'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
@@ -12,6 +12,7 @@ import type { AppActionHandlers } from '../features/agent/toolExecutionEngine'
 import type { TerrainLayerType } from '../features/terrain/terrainShaderUtils'
 import { estimateDurationHours, ROUTING_PROFILES, type AlternativeId } from '../features/route/terrainAlternatives'
 import { useTerrainRoutes } from '../features/route/useTerrainRoutes'
+import { useLanguage } from '../features/i18n/appI18n'
 import '../styles/agentChat.css'
 import '../styles/terrain3D.css'
 
@@ -23,18 +24,25 @@ const MarsTerrain3D = lazy(() => import('../components/MarsTerrain3D').then(modu
 
 const initialEnabled: Record<LayerId, boolean> = { ctx: true, mola: false, themis: false }
 const initialOpacity: Record<LayerId, number> = { ctx: 1, mola: 0.75, themis: 0.75 }
-const stops: Record<StopId, { title: string; sub: string }> = {
-  A: { title: 'Origen', sub: 'Inicio propuesto' },
-  P: { title: 'Parada', sub: 'Investigación propuesta' },
-  B: { title: 'Destino', sub: 'Final propuesto' },
-}
-
 const formatPoint = (point: MarsPoint) =>
   `${point[1] >= 0 ? `${point[1].toFixed(5)}°N` : `${Math.abs(point[1]).toFixed(5)}°S`} · ${point[0].toFixed(5)}°E`
 
-const formatKm = (meters: number | null) => (meters === null ? 'Sin datos' : `${(meters / 1000).toFixed(2)} km`)
-
 export function App() {
+  const { language, setLanguage, t, number, distance } = useLanguage()
+  const ui = (english: string, spanish: string) => language === 'en' ? english : spanish
+  const layerStateLabel = (state: string) => ({
+    cargando: ui('loading', 'cargando'),
+    apagada: ui('off', 'apagada'),
+    parcial: ui('partial', 'parcial'),
+    'sin cobertura': ui('out of coverage', 'sin cobertura'),
+  }[state] ?? state)
+  const sources = localizedSources(language)
+  const vikingBase = localizedVikingBase(language)
+  const stops: Record<StopId, { title: string; sub: string }> = {
+    A: { title: t('start'), sub: ui('Proposed start', 'Inicio propuesto') },
+    P: { title: t('scienceStop'), sub: ui('Proposed investigation', 'Investigación propuesta') },
+    B: { title: t('destination'), sub: ui('Proposed finish', 'Final propuesto') },
+  }
   const [screen, setScreen] = useState<AppScreen>('globe')
   const [autoTriggerDive, setAutoTriggerDive] = useState(false)
   const [enabled, setEnabled] = useState(initialEnabled)
@@ -106,7 +114,7 @@ export function App() {
   function place(id: StopId, point: MarsPoint) {
     if (scope !== 'jezero' || (mode.type !== 'place' && mode.type !== 'move') || mode.id !== id) return
     if (!inRegion(point, region)) {
-      setRouteNotice('Fuera de la región elegida: el punto no cambió. Podés ampliar la región o seleccionar otra posición.')
+      setRouteNotice(ui('Outside the selected region: point unchanged. Expand the region or choose another position.', 'Fuera de la región elegida: el punto no cambió. Podés ampliar la región o seleccionar otra posición.'))
       return
     }
     dispatch({ type: 'set', id, point, region })
@@ -117,7 +125,7 @@ export function App() {
   function movePoint(id: StopId, point: MarsPoint) {
     if (scope !== 'jezero' || !plan.stops[id]) return
     if (!inRegion(point, region)) {
-      setRouteNotice('Fuera de la región elegida: el punto no cambió. Podés ampliar la región o moverlo adentro.')
+      setRouteNotice(ui('Outside the selected region: point unchanged. Expand the region or move it inside.', 'Fuera de la región elegida: el punto no cambió. Podés ampliar la región o moverlo adentro.'))
       return
     }
     dispatch({ type: 'set', id, point, region })
@@ -126,7 +134,7 @@ export function App() {
 
   function changeRegion(next: Region) {
     if (!validRegion(next)) {
-      setRouteNotice('Región no modificada: respetá el tamaño mínimo y el entorno local de Jezero.')
+      setRouteNotice(ui('Region unchanged: keep the minimum size and stay within the Jezero area.', 'Región no modificada: respetá el tamaño mínimo y el entorno local de Jezero.'))
       return
     }
     setRegion(next)
@@ -139,10 +147,10 @@ export function App() {
     if (!a || !b) return null
     const coverage = segmentCoverage(a, b, ROI)
     return coverage === 'complete'
-      ? 'CTX verificado en el tramo dibujado'
+      ? ui('CTX coverage verified along the drawn leg', 'CTX verificado en el tramo dibujado')
       : coverage === 'partial'
-      ? 'CTX parcial; sectores sin imagen detallada'
-      : 'Sin imagen CTX detallada'
+      ? ui('Partial CTX; sections lack detailed imagery', 'CTX parcial; sectores sin imagen detallada')
+      : ui('No detailed CTX image', 'Sin imagen CTX detallada')
   }
 
   function handleSelectScienceStopFrom3D(point: MarsPoint, _name: string) {
@@ -292,8 +300,8 @@ export function App() {
           type="button"
           className="brand brand-button"
           onClick={goHome}
-          aria-label="Ir a la página de inicio (Globo 3D)"
-          title="Ir a la página de inicio (Globo 3D)"
+          aria-label={t('home')}
+          title={t('home')}
         >
           <div className="ares-insignia" aria-hidden="true">
             <svg viewBox="0 0 40 40" width="28" height="28" className="ares-logo-svg">
@@ -311,12 +319,12 @@ export function App() {
         </button>
 
         {/* Selector Central Segmentado FUI */}
-        <nav className="header-nav-modes" aria-label="Selector de visualizador ARES">
+        <nav className="header-nav-modes" aria-label={language === 'en' ? 'ARES view selector' : 'Selector de visualizador ARES'}>
           <button
             type="button"
             className={`nav-mode-btn ${screen === 'terrain3d' ? 'active' : ''}`}
             onClick={() => openGaleTerrain(true)}
-            title="Visualizador 3D de terreno de Gale Crater y Mount Sharp con descenso continuo Google Earth"
+            title={t('galeTitle')}
           >
             <span className="nav-btn-code">01</span>
             <span className="nav-btn-text">GALE 3D</span>
@@ -325,10 +333,10 @@ export function App() {
             type="button"
             className={`nav-mode-btn ${screen === 'globe' ? 'active' : ''}`}
             onClick={() => setScreen('globe')}
-            title="Globo 3D planetario de Marte (MGS MOLA / Viking)"
+            title={t('globeTitle')}
           >
             <span className="nav-btn-code">02</span>
-            <span className="nav-btn-text">GLOBO ORBITAL</span>
+            <span className="nav-btn-text">{t('globe')}</span>
           </button>
           <button
             type="button"
@@ -337,7 +345,7 @@ export function App() {
               setScope('jezero')
               setScreen('map')
             }}
-            title="Mapa cartográfico 2D de Jezero Crater con capas WMTS"
+            title={t('jezeroTitle')}
           >
             <span className="nav-btn-code">03</span>
             <span className="nav-btn-text">JEZERO 2D</span>
@@ -345,6 +353,12 @@ export function App() {
         </nav>
 
         <div className="header-right">
+          <label className="language-switch" htmlFor="app-language">{t('language')}
+            <select id="app-language" aria-label={t('language')} value={language}
+              onChange={event => setLanguage(event.target.value as 'en' | 'es')}>
+              <option value="en">EN</option><option value="es">ES</option>
+            </select>
+          </label>
           <div className="telemetry-block">
             <span className="telemetry-micro">MET CLOCK</span>
             <span className="telemetry-clock">SOL 3148 · 14:22 UTC-M</span>
@@ -354,9 +368,9 @@ export function App() {
             {screen === 'terrain3d'
               ? 'GALE CRATER // 3D'
               : screen === 'globe'
-              ? 'MARTE GLOBAL // 3D'
+              ? language === 'en' ? 'MARS GLOBAL // 3D' : 'MARTE GLOBAL // 3D'
               : scope === 'global'
-              ? 'MARTE GLOBAL // 2D'
+              ? language === 'en' ? 'MARS GLOBAL // 2D' : 'MARTE GLOBAL // 2D'
               : 'JEZERO CRATER // 2D'}
           </span>
         </div>
@@ -403,9 +417,9 @@ export function App() {
             <Suspense
               fallback={
                 <div className="globe-fallback" role="status">
-                  Preparando exploración 3D…{' '}
+                  {ui('Preparing 3D exploration…', 'Preparando exploración 3D…')}{' '}
                   <button type="button" onClick={openJezero}>
-                    Explorar Jezero en 2D
+                    {ui('Explore Jezero in 2D', 'Explorar Jezero en 2D')}
                   </button>
                 </div>
               }
@@ -426,32 +440,32 @@ export function App() {
           <div className="toolbar">
             <div className="toolbar-title">
               <span className="eyebrow">
-                {scope === 'global' ? 'CONTEXTO PLANETARIO · MOLA' : 'REGIÓN DE INVESTIGACIÓN'}
+                {scope === 'global' ? ui('PLANETARY CONTEXT · MOLA', 'CONTEXTO PLANETARIO · MOLA') : ui('RESEARCH REGION', 'REGIÓN DE INVESTIGACIÓN')}
               </span>
-              <strong>{scope === 'global' ? 'Marte global' : 'Jezero Crater'}</strong>
+              <strong>{scope === 'global' ? ui('Global Mars', 'Marte global') : 'Jezero Crater'}</strong>
               <span>
                 {scope === 'global'
-                  ? 'Relieve visual · sin rutas ni altitudes numéricas'
-                  : `Región manual: ${region[0].toFixed(2)}–${region[2].toFixed(2)}°E · ${region[1].toFixed(2)}–${region[3].toFixed(2)}°N`}
+                  ? ui('Visual relief · no routes or numerical elevations', 'Relieve visual · sin rutas ni altitudes numéricas')
+                  : `${ui('Manual region', 'Región manual')}: ${number(region[0])}–${number(region[2])}°E · ${number(region[1])}–${number(region[3])}°N`}
               </span>
             </div>
-            <nav className="tabs" aria-label="Paneles de exploración">
-              {panelButton('route', 'Ruta')}
-              {panelButton('layers', 'Capas')}
-              {panelButton('science', 'Ciencia y riesgos')}
+            <nav className="tabs" aria-label={ui('Exploration panels', 'Paneles de exploración')}>
+              {panelButton('route', t('routePlanner'))}
+              {panelButton('layers', t('scientificLayers'))}
+              {panelButton('science', ui('Science & risks', 'Ciencia y riesgos'))}
               <button
                 type="button"
                 className={`tab tab-agent ${isCommsOpen ? 'active' : ''}`}
                 aria-pressed={isCommsOpen}
                 onClick={() => setIsCommsOpen(prev => !prev)}
-                title="Ares Copilot // Asistente táctico y de voz con Amazon Nova 2.5 Sonic"
+                title={ui('Ares Copilot // Voice and exploration assistant with Amazon Nova 2.5 Sonic', 'Ares Copilot // Asistente táctico y de voz con Amazon Nova 2.5 Sonic')}
               >
                 <span className="tab-agent-indicator" aria-hidden="true" />
                 Ares Copilot
               </button>
             </nav>
             {mode.type === 'edit-region' && (
-              <div className="edit-shortcuts" aria-label="Controles de región">
+              <div className="edit-shortcuts" aria-label={ui('Region controls', 'Controles de región')}>
                 <button
                   type="button"
                   onClick={() => {
@@ -459,13 +473,13 @@ export function App() {
                     setPanel('route')
                   }}
                 >
-                  Terminar edición
+                  {ui('Finish editing', 'Terminar edición')}
                 </button>
                 <button type="button" onClick={() => changeRegion(JEZERO_CONTEXT)}>
-                  Restablecer región
+                  {ui('Reset region', 'Restablecer región')}
                 </button>
                 <button type="button" onClick={() => changeRegion(ROI)}>
-                  Usar sector CTX verificado
+                  {ui('Use verified CTX sector', 'Usar sector CTX verificado')}
                 </button>
               </div>
             )}
@@ -477,7 +491,7 @@ export function App() {
                 setMode({ type: 'explore' })
               }}
             >
-              {scope === 'global' ? '↙ Volver a Jezero' : '◌ Marte global'}
+              {scope === 'global' ? ui('↙ Back to Jezero', '↙ Volver a Jezero') : ui('◌ Global Mars', '◌ Marte global')}
             </button>
             <button
               type="button"
@@ -486,7 +500,7 @@ export function App() {
                 setScreen('terrain3d')
               }}
             >
-              [01] TERRENO 3D GALE
+              {ui('[01] GALE 3D TERRAIN', '[01] TERRENO 3D GALE')}
             </button>
             <button
               type="button"
@@ -496,13 +510,13 @@ export function App() {
                 setScreen('globe')
               }}
             >
-              ◉ Volver al globo 3D
+              {ui('◉ Back to 3D globe', '◉ Volver al globo 3D')}
             </button>
           </div>
 
           <section
             className={`map-stage${panel ? ' map-stage--panel' : ''}${mode.type === 'edit-region' ? ' map-stage--editing' : ''}`}
-            aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}
+            aria-label={scope === 'global' ? ui('Global 2D view of Mars', 'Vista 2D global de Marte') : ui('Jezero 2D explorer', 'Explorador 2D de Jezero')}
           >
             <MapView
               scope={scope}
@@ -521,7 +535,7 @@ export function App() {
               onMove={movePoint}
               onInvalid={() =>
                 setRouteNotice(
-                  'Fuera de la región elegida: el punto no cambió. Ampliá la región o elegí una posición dentro.'
+                  ui('Outside the selected region: point unchanged. Expand the region or choose a position inside.', 'Fuera de la región elegida: el punto no cambió. Ampliá la región o elegí una posición dentro.')
                 )
               }
               onLayerState={(id, state) =>
@@ -531,23 +545,23 @@ export function App() {
             {scope === 'jezero' && (
               <div className="base-status" role="status">
                 <a href={vikingBase.sourceUrl} target="_blank" rel="noreferrer">
-                  Viking · contexto ↗
+                  {ui('Viking · context ↗', 'Viking · contexto ↗')}
                 </a>
                 <span>
-                  WMTS {baseState}
-                  {baseState !== 'visible' ? ' · miniatura local' : ''}
+                  WMTS {layerStateLabel(baseState)}
+                  {baseState !== 'visible' ? ui(' · local preview', ' · miniatura local') : ''}
                 </span>
                 {baseState === 'error' && (
                   <button type="button" onClick={() => setBaseRetry(current => current + 1)}>
-                    Reintentar
+                    {ui('Retry', 'Reintentar')}
                   </button>
                 )}
               </div>
             )}
             {scope === 'jezero' && routeNotice && (
               <div className="roi-notice" role="alert">
-                {routeNotice} Ningún límite indica que una zona sea peligrosa o segura.
-                <button type="button" onClick={() => setRouteNotice(null)} aria-label="Cerrar aviso">
+                {routeNotice} {ui('A boundary does not establish whether terrain is hazardous or safe.', 'Ningún límite indica que una zona sea peligrosa o segura.')}
+                <button type="button" onClick={() => setRouteNotice(null)} aria-label={ui('Dismiss notice', 'Cerrar aviso')}>
                   ×
                 </button>
               </div>
@@ -557,24 +571,24 @@ export function App() {
                 className="drawer"
                 aria-label={
                   panel === 'route'
-                    ? 'Planificador de ruta'
+                    ? t('routePlanner')
                     : panel === 'layers'
-                    ? 'Capas científicas'
-                    : 'Ciencia y riesgos'
+                    ? t('scientificLayers')
+                    : ui('Science & risks', 'Ciencia y riesgos')
                 }
               >
                 <div className="drawer-header">
                   <span className="eyebrow">
                     {panel === 'route'
-                      ? 'TRAZADO MANUAL'
+                      ? ui('MANUAL ROUTE', 'TRAZADO MANUAL')
                       : panel === 'layers'
-                      ? 'DATOS ORBITALES'
-                      : 'CONTEXTO CIENTÍFICO'}
+                      ? ui('ORBITAL DATA', 'DATOS ORBITALES')
+                      : ui('SCIENTIFIC CONTEXT', 'CONTEXTO CIENTÍFICO')}
                   </span>
                   <button
                     type="button"
                     className="close-button"
-                    aria-label="Cerrar panel"
+                    aria-label={ui('Close panel', 'Cerrar panel')}
                     onClick={() => setPanel(null)}
                   >
                     ×
@@ -584,20 +598,17 @@ export function App() {
                 {panel === 'route' && (
                   <>
                     <h2>
-                      Tu recorrido <span className="soft">exploratorio</span>
+                      {ui('Your', 'Tu')} {ui('exploratory route', 'recorrido exploratorio')}
                     </h2>
                     {scope === 'global' && (
                       <div className="notice">
-                        <b>OUT_OF_COVERAGE · Planificación desactivada</b>
+                        <b>OUT_OF_COVERAGE · {ui('Planning unavailable', 'Planificación desactivada')}</b>
                         <br />
-                        El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA
-                        regional. Volvé a Jezero para editar la ruta.
+                        {ui('Your Jezero plan is retained, but the global view only shows regional MOLA relief. Return to Jezero to edit the route.', 'El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA regional. Volvé a Jezero para editar la ruta.')}
                       </div>
                     )}
                     <p className="intro">
-                      Elegí A/P/B o arrastrá sus marcadores. La región manual aparece al colocar puntos o al editarla; el
-                      contorno turquesa identifica CTX auditado. Viking es solo contexto global. Ninguno garantiza
-                      transitabilidad.
+                      {ui('Place A/P/B or drag their markers. The editable region appears when you place points or edit it; the turquoise outline identifies audited CTX coverage. Viking provides only global context. None establishes traversability.', 'Elegí A/P/B o arrastrá sus marcadores. La región manual aparece al colocar puntos o al editarla; el contorno turquesa identifica CTX auditado. Viking es solo contexto global. Ninguno garantiza transitabilidad.')}
                     </p>
                     <div className="region-actions">
                       <button
@@ -612,45 +623,40 @@ export function App() {
                           }
                         }}
                       >
-                        {mode.type === 'edit-region' ? 'Terminar edición' : 'Editar región'}
+                        {mode.type === 'edit-region' ? ui('Finish editing', 'Terminar edición') : ui('Edit region', 'Editar región')}
                       </button>
                       <button
                         type="button"
                         disabled={scope === 'global'}
                         onClick={() => changeRegion(JEZERO_CONTEXT)}
                       >
-                        Restablecer región
+                        {ui('Reset region', 'Restablecer región')}
                       </button>
                       <button
                         type="button"
                         disabled={scope === 'global'}
                         onClick={() => changeRegion(ROI)}
                       >
-                        Usar sector CTX verificado
+                        {ui('Use verified CTX sector', 'Usar sector CTX verificado')}
                       </button>
                     </div>
                     {mode.type === 'edit-region' && (
                       <p className="notice">
-                        Arrastrá las esquinas, los lados o el interior para ajustar el rectángulo. Durante esta edición no se
-                        mueven los puntos ni el mapa dentro del rectángulo.
+                        {ui('Drag the corners, sides or interior to adjust the rectangle. During editing, markers and the map inside the rectangle do not move.', 'Arrastrá las esquinas, los lados o el interior para ajustar el rectángulo. Durante esta edición no se mueven los puntos ni el mapa dentro del rectángulo.')}
                       </p>
                     )}
                     {outsideStops.length > 0 && (
                       <div className="notice" role="status">
-                        <b>OUT_OF_COVERAGE · Región manual</b>
+                        <b>OUT_OF_COVERAGE · {ui('Manual region', 'Región manual')}</b>
                         <br />
-                        {outsideStops.join(', ')} {outsideStops.length === 1 ? 'quedó' : 'quedaron'} fuera de la región elegida.
-                        El plan se conserva: ampliá la región o mové cada punto adentro; las distancias siguen siendo geométricas,
-                        no una evaluación de riesgo.
+                        {outsideStops.join(', ')} {ui('outside the selected region. The plan is retained: expand the region or move each point inside. Distances remain geometric, not risk assessments.', 'fuera de la región elegida. El plan se conserva: ampliá la región o mové cada punto adentro; las distancias siguen siendo geométricas, no una evaluación de riesgo.')}
                       </div>
                     )}
                     {scope === 'jezero' && (!enabled.ctx || states.ctx !== 'visible') && (
                       <div className="notice">
-                        <b>CTX {enabled.ctx ? states.ctx : 'apagada'} · imagen no disponible o no confirmada en este momento</b>
+                        <b>CTX {enabled.ctx ? layerStateLabel(states.ctx) : ui('off', 'apagada')} · {ui('imagery unavailable or not currently confirmed', 'imagen no disponible o no confirmada en este momento')}</b>
                         <br />
-                        El respaldo estático cubre solo el sector anterior; fuera de él la imagen depende del servicio WMTS.
-                        La cobertura auditada no acredita que una tesela haya cargado ahora. La ruta es una propuesta, no una
-                        evaluación del terreno.
+                        {ui('The static fallback covers only the earlier sector; elsewhere imagery depends on WMTS. Audited coverage does not confirm that a tile has loaded now. The route is a proposal, not a terrain assessment.', 'El respaldo estático cubre solo el sector anterior; fuera de él la imagen depende del servicio WMTS. La cobertura auditada no acredita que una tesela haya cargado ahora. La ruta es una propuesta, no una evaluación del terreno.')}
                       </div>
                     )}
                     <div className="mode-strip">
@@ -661,7 +667,7 @@ export function App() {
                         className={mode.type === 'explore' ? 'mode-active' : ''}
                         onClick={() => setMode({ type: 'explore' })}
                       >
-                        ✥ &nbsp; Explorar mapa
+                        ✥ &nbsp; {ui('Explore map', 'Explorar mapa')}
                       </button>
                     </div>
                     <ol className="stop-list">
@@ -677,10 +683,10 @@ export function App() {
                             <div className="stop-info">
                               <strong>{stops[id].title}</strong>
                               <small>{point ? formatPoint(point) : stops[id].sub}</small>
-                              {point && !inRegion(point, region) && <small>FUERA DE REGIÓN · corregir</small>}
+                              {point && !inRegion(point, region) && <small>{ui('OUTSIDE REGION · adjust point', 'FUERA DE REGIÓN · corregir')}</small>}
                               {point && (
                                 <small>
-                                  {insideRoi(point) ? 'CTX auditado en este punto' : 'Sin imagen CTX detallada'}
+                                  {insideRoi(point) ? ui('CTX audited at this point', 'CTX auditado en este punto') : ui('No detailed CTX image', 'Sin imagen CTX detallada')}
                                 </small>
                               )}
                             </div>
@@ -688,22 +694,22 @@ export function App() {
                               type="button"
                               disabled={scope === 'global' || !previous}
                               aria-pressed={active}
-                              aria-label={`${point ? 'Mover' : 'Colocar'} ${stops[id].title} ${id}`}
+                              aria-label={`${point ? ui('Move', 'Mover') : ui('Place', 'Colocar')} ${stops[id].title} ${id}`}
                               onClick={() =>
                                 setMode(active ? { type: 'explore' } : { type: point ? 'move' : 'place', id })
                               }
                             >
-                              {active ? 'Cancelar' : point ? 'Mover' : 'Colocar'}
+                              {active ? ui('Cancel', 'Cancelar') : point ? ui('Move', 'Mover') : ui('Place', 'Colocar')}
                             </button>
                             {index === 1 && (
                               <span className="leg-detail">
-                                A → P <strong>{formatKm(legs.first)}</strong>
+                                A → P <strong>{distance(legs.first)}</strong>
                                 {coverageLabel('A', 'P') && <small>{coverageLabel('A', 'P')}</small>}
                               </span>
                             )}
                             {index === 2 && (
                               <span className="leg-detail">
-                                P → B <strong>{formatKm(legs.second)}</strong>
+                                P → B <strong>{distance(legs.second)}</strong>
                                 {coverageLabel('P', 'B') && <small>{coverageLabel('P', 'B')}</small>}
                               </span>
                             )}
@@ -712,9 +718,9 @@ export function App() {
                       })}
                     </ol>
                     <div className="route-total">
-                      <span>Distancia trazada {count < 3 && count > 0 ? '· parcial' : ''}</span>
-                      <strong>{formatKm(legs.total)}</strong>
-                      <small>Tramos rectos aproximados, no sendero verificado.</small>
+                      <span>{ui('Planned distance', 'Distancia trazada')} {count < 3 && count > 0 ? ui('· partial', '· parcial') : ''}</span>
+                      <strong>{distance(legs.total)}</strong>
+                      <small>{ui('Approximate straight legs, not a verified trail.', 'Tramos rectos aproximados, no sendero verificado.')}</small>
                     </div>
                     <div className="route-actions">
                       <button
@@ -725,7 +731,7 @@ export function App() {
                           setMode({ type: 'explore' })
                         }}
                       >
-                        ↶ Deshacer
+                        ↶ {t('undo')}
                       </button>
                       <button
                         type="button"
@@ -735,59 +741,57 @@ export function App() {
                           setMode({ type: 'explore' })
                         }}
                       >
-                        Restablecer ruta
+                        {ui('Reset route', 'Restablecer ruta')}
                       </button>
                     </div>
                     <p className="fine-print">
-                      Los puntos son propuestas del usuario. Distancias con esfera marciana de radio medio 3 389 500 m;
-                      no incluyen relieve ni obstáculos.
+                      {t('manualNote')}
                     </p>
-              <section className="terrain-planner" aria-label="Alternativas topográficas exploratorias">
-                <h3>Alternativas con DEM CTX · exploratorias</h3>
-                <p>USGS Mars 2020 Science Investigation CTX DEM Mosaic, datos numéricos de 20 m/píxel agregados a 80 m. Las pendientes son proxies; la referencia vertical exacta, obstáculos pequeños y la alineación con CTX WMTS no están validados. Ninguna ruta es segura para uso operacional.</p>
-                <a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">Ficha y procedencia USGS ↗</a>
-                <p role="status">{scope === 'global' ? 'OUT_OF_COVERAGE · Solo Jezero' :
-                  terrain.status === 'loading' ? 'Calculando fuera del hilo principal…' :
-                  terrain.status === 'error' ? `UNVERIFIED · ${terrain.error}` :
-                  terrain.status === 'idle' ? 'Colocá A y P para evaluar el DEM.' :
-                  'Resultados derivados; la ruta manual siempre se conserva.'}</p>
+              <section className="terrain-planner" aria-label={t('demTitle')}>
+                <h3>{t('demTitle')}</h3>
+                <p>{t('demDescription')} {t('routeWarning')}</p>
+                <a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">{t('demSource')}</a>
+                <p role="status">{scope === 'global' ? t('demGlobal') :
+                  terrain.status === 'loading' ? t('demLoading') :
+                  terrain.status === 'error' ? `${t('terrainWarning')} · ${terrain.error}` :
+                  terrain.status === 'idle' ? t('demIdle') : t('demReady')}</p>
                 <div className="terrain-options">
-                  <button type="button" aria-pressed={selectedRoute === 'manual'} onClick={() => setSelectedRoute('manual')}>Manual</button>
+                  <button type="button" aria-pressed={selectedRoute === 'manual'} onClick={() => setSelectedRoute('manual')}>{t('demManual')}</button>
                   {terrain.alternatives.map(item => <button type="button" key={item.id}
                     aria-pressed={selectedRoute === item.id}
                     disabled={scope === 'global' || !item.route.first || (!item.distinct && Boolean(item.route.points))}
-                    onClick={() => setSelectedRoute(item.id)}>{ROUTING_PROFILES[item.id].label}{!item.distinct && item.route.points ? ' · coincide' : ''}</button>)}
+                    onClick={() => setSelectedRoute(item.id)}>{t(item.id === 'short' ? 'demShort' : item.id === 'balanced' ? 'demBalanced' : 'demCautious')}{!item.distinct && item.route.points ? t('demDuplicate') : ''}</button>)}
                 </div>
                 {terrain.alternatives.map(item => {
                   const first = item.route.first
                   const second = item.route.second
                   const okFirst = first?.ok ? first : null
                   const okSecond = second?.ok ? second : null
-                  const distance = item.route.distanceMeters
-                  const hours = distance === null ? null : estimateDurationHours(distance, speedKmh)
+                  const routeDistance = item.route.distanceMeters
+                  const hours = routeDistance === null ? null : estimateDurationHours(routeDistance, speedKmh)
                   return <div className="terrain-comparison" key={item.id}>
-                    <strong>{ROUTING_PROFILES[item.id].label}{!item.distinct && item.route.points ? ' · mismo trazado' : ''}</strong>
-                    <small>{ROUTING_PROFILES[item.id].explanation} Máximo permitido {ROUTING_PROFILES[item.id].options.maxSlopeDegrees}°: supuesto configurable en código, NO límite NASA.</small>
-                    <span>A→P: {first ? first.ok ? `${(first.distanceMeters / 1000).toFixed(2)} km` : `no evaluable (${first.reason})` : 'faltan puntos'} ·
-                      P→B: {second ? second.ok ? `${(second.distanceMeters / 1000).toFixed(2)} km` : `no evaluable (${second.reason})` : 'faltan puntos'}</span>
-                    <span>Recorrido: {formatKm(distance)} · tiempo teórico: {hours === null ? 'Sin datos' : `${hours.toFixed(1)} h`}</span>
-                    <span>Pendiente máxima proxy: {okFirst ? `${Math.max(okFirst.maximumSlopeDegrees, okSecond?.maximumSlopeDegrees ?? 0).toFixed(1)}°` : 'Sin datos'} · ascenso/descenso: {okFirst ? `${(okFirst.ascentMeters + (okSecond?.ascentMeters ?? 0)).toFixed(0)} / ${(okFirst.descentMeters + (okSecond?.descentMeters ?? 0)).toFixed(0)} m` : 'Sin datos'}</span>
-                    <small>Cobertura: {item.route.points ? '100 % de las celdas muestreadas en el trazado; sin evaluación subcelda' : 'Incompleta: ningún trayecto total inferible'}. Desvío: {okFirst ? `penalización de pendiente/ascenso y bloqueos NoData o >umbral; ${((distance ?? okFirst.distanceMeters) - okFirst.directMeters - (okSecond?.directMeters ?? 0) > 0 ? 'mayor distancia que línea recta' : 'sin desvío medible')}` : 'Sin datos'}.</small>
+                    <strong>{t(item.id === 'short' ? 'demShort' : item.id === 'balanced' ? 'demBalanced' : 'demCautious')}{!item.distinct && item.route.points ? t('demDuplicate') : ''}</strong>
+                    <small>{t(item.id === 'short' ? 'demShortExplanation' : item.id === 'balanced' ? 'demBalancedExplanation' : 'demCautiousExplanation')} {t('demMax', { degrees: ROUTING_PROFILES[item.id].options.maxSlopeDegrees ?? 0 })}</small>
+                    <span>A→P: {first ? first.ok ? distance(first.distanceMeters) : `${t('demUnevaluable')} (${first.reason})` : t('demMissing')} ·
+                      P→B: {second ? second.ok ? distance(second.distanceMeters) : `${t('demUnevaluable')} (${second.reason})` : t('demMissing')}</span>
+                    <span>{t('demDistance', { distance: distance(routeDistance), time: hours === null ? t('noData') : t('unitsHours', { value: number(hours, 1) }) })}</span>
+                    <span>{t('demSlope', { slope: okFirst ? `${number(Math.max(okFirst.maximumSlopeDegrees, okSecond?.maximumSlopeDegrees ?? 0), 1)}°` : t('noData'), ascent: okFirst ? number(okFirst.ascentMeters + (okSecond?.ascentMeters ?? 0), 0) : t('noData'), descent: okFirst ? number(okFirst.descentMeters + (okSecond?.descentMeters ?? 0), 0) : t('noData') })}</span>
+                    <small>{t('demCoverage', { coverage: item.route.points ? t('demFullCoverage') : t('demIncomplete'), detour: okFirst ? `${t('demDetour')}; ${((routeDistance ?? okFirst.distanceMeters) - okFirst.directMeters - (okSecond?.directMeters ?? 0) > 0 ? t('demLonger') : t('demNoDetour'))}` : t('noData') })}</small>
                   </div>
                 })}
-                <label>Velocidad hipotética (km/h, no ritmo EVA validado)
+                <label>{t('demSpeed')}
                   <input type="number" min="0.1" max="10" step="0.1" value={speedKmh}
                     onChange={event => { const value = Number(event.target.value); if (value >= 0.1 && value <= 10) setSpeedKmh(value) }} />
                 </label>
-                <div className="terrain-legend" aria-label="Leyenda de pendiente derivada del DEM">
-                  <b>Leyenda · proxy de pendiente local del DEM, no seguridad</b>
-                  <span>🟢 Favorable relativo: &lt;{riskThresholds.caution}°</span>
-                  <span>🟡 Precaución: {riskThresholds.caution}–{riskThresholds.elevated}°</span>
-                  <span>🔴 Riesgo elevado estimado: ≥{riskThresholds.elevated}°</span>
-                  <span>⚫ Negro discontinuo con contorno: tramo manual sin ruta DEM evaluable.</span>
-                  <label>Umbral precaución (°) <input type="number" min="1" max="29" value={riskThresholds.caution}
+                <div className="terrain-legend" aria-label={t('demLegend')}>
+                  <b>{t('demLegend')}</b>
+                  <span>🟢 {t('demGreen', { degrees: riskThresholds.caution })}</span>
+                  <span>🟡 {t('demYellow', { from: riskThresholds.caution, to: riskThresholds.elevated })}</span>
+                  <span>🔴 {t('demRed', { degrees: riskThresholds.elevated })}</span>
+                  <span>⚫ {t('demBlack')}</span>
+                  <label>{t('demCaution')} <input type="number" min="1" max="29" value={riskThresholds.caution}
                     onChange={event => { const value = Number(event.target.value); if (value >= 1 && value < riskThresholds.elevated) setRiskThresholds(current => ({ ...current, caution: value })) }} /></label>
-                  <label>Umbral riesgo elevado (°) <input type="number" min="2" max="30" value={riskThresholds.elevated}
+                  <label>{t('demElevated')} <input type="number" min="2" max="30" value={riskThresholds.elevated}
                     onChange={event => { const value = Number(event.target.value); if (value > riskThresholds.caution && value <= 30) setRiskThresholds(current => ({ ...current, elevated: value })) }} /></label>
                 </div>
               </section>
@@ -796,23 +800,22 @@ export function App() {
 
                 {panel === 'layers' && (
                   <>
-                    <h2>Capas científicas</h2>
+                    <h2>{t('scientificLayers')}</h2>
                     <p className="intro">
                       {scope === 'global'
-                        ? 'Solo MOLA tiene cobertura global en esta vista. CTX Jezero y THEMIS se conservan para el modo local.'
-                        : 'Tres misiones. Activá y compará imágenes; una capa visual no equivale a una medición de seguridad.'}
+                        ? ui('Only MOLA has global coverage in this view. Jezero CTX and THEMIS selections are retained for the local view.', 'Solo MOLA tiene cobertura global en esta vista. CTX Jezero y THEMIS se conservan para el modo local.')
+                        : ui('Three missions. Toggle and compare imagery; a visual layer is not a safety measurement.', 'Tres misiones. Activá y compará imágenes; una capa visual no equivale a una medición de seguridad.')}
                     </p>
                     {scope === 'jezero' && (
-                      <section className="notice" aria-label="Origen del mapa base Viking">
-                        <b>Mapa base · Viking MDIM 2.1 colorizado</b>
+                      <section className="notice" aria-label={ui('Viking basemap source', 'Origen del mapa base Viking')}>
+                        <b>{ui('Basemap · Viking MDIM 2.1 colorized', 'Mapa base · Viking MDIM 2.1 colorizado')}</b>
                         <br />
-                        NASA Ames/USGS · Viking. {vikingBase.resolution}. {vikingBase.coverage}. Imágenes históricas 1976–1980;
-                        fecha local: sin datos. {vikingBase.limitations}{' '}
+                        NASA Ames/USGS · Viking. {vikingBase.resolution}. {vikingBase.coverage}. {vikingBase.acquisitionDate}. {vikingBase.limitations}{' '}
                         <a href={vikingBase.sourceUrl} target="_blank" rel="noreferrer">
-                          GetCapabilities oficial ↗
+                          {ui('Official GetCapabilities ↗', 'GetCapabilities oficial ↗')}
                         </a>
                         <br />
-                        WMTS: {baseState}; cuando no carga, se ve una miniatura local, no detalle CTX.
+                        WMTS: {baseState}; {ui('when unavailable, a local preview appears, not detailed CTX.', 'cuando no carga, se ve una miniatura local, no detalle CTX.')}
                       </section>
                     )}
                     {sources.map(item => (
@@ -831,14 +834,14 @@ export function App() {
                             className={`status ${states[item.id] === 'error' ? 'bad' : ''}`}
                             aria-live="polite"
                           >
-                            {states[item.id]}
+                            {layerStateLabel(states[item.id])}
                           </span>
                         </label>
                         <small>
                           {item.mission} · {item.kind}
                         </small>
                         <label className="opacity">
-                          Opacidad {Math.round(opacity[item.id] * 100)} %
+                          {ui('Opacity', 'Opacidad')} {Math.round(opacity[item.id] * 100)} %
                           <input
                             type="range"
                             min="0"
@@ -858,33 +861,33 @@ export function App() {
                           className="text-button"
                           onClick={() => setSelected(item.id)}
                         >
-                          Ver ficha y leyenda →
+                          {ui('View source and legend →', 'Ver ficha y leyenda →')}
                         </button>
                       </div>
                     ))}
-                    <section className="source-details" aria-label="Ficha de fuente">
-                      <span className="eyebrow">PROVENIENCIA · {source.kind}</span>
+                    <section className="source-details" aria-label={ui('Source details', 'Ficha de fuente')}>
+                      <span className="eyebrow">{ui('PROVENANCE', 'PROVENIENCIA')} · {source.kind}</span>
                       <h3>{source.title}</h3>
                       <p>
-                        <b>Leyenda:</b> {source.legend}
+                        <b>{ui('Legend:', 'Leyenda:')}</b> {source.legend}
                       </p>
                       <dl>
-                        <dt>Producto</dt>
+                        <dt>{ui('Product', 'Producto')}</dt>
                         <dd>{source.productId}</dd>
-                        <dt>Resolución</dt>
+                        <dt>{ui('Resolution', 'Resolución')}</dt>
                         <dd>{source.resolution}</dd>
-                        <dt>Cobertura publicada</dt>
+                        <dt>{ui('Published coverage', 'Cobertura publicada')}</dt>
                         <dd>{source.coverage}</dd>
-                        <dt>Adquisición</dt>
+                        <dt>{ui('Acquisition', 'Adquisición')}</dt>
                         <dd>{source.acquisitionDate}</dd>
-                        <dt>Créditos</dt>
+                        <dt>{ui('Credits', 'Créditos')}</dt>
                         <dd>{source.attribution}</dd>
                       </dl>
                       <p>
-                        <b>Límite:</b> {source.limitations}
+                        <b>{ui('Limitations:', 'Límite:')}</b> {source.limitations}
                       </p>
                       <a href={source.sourceUrl} target="_blank" rel="noreferrer">
-                        GetCapabilities oficial ↗
+                        {ui('Official GetCapabilities ↗', 'GetCapabilities oficial ↗')}
                       </a>
                     </section>
                   </>
@@ -892,38 +895,36 @@ export function App() {
 
                 {panel === 'science' && (
                   <>
-                    <h2>¿Por qué Jezero?</h2>
+                    <h2>{ui('Why Jezero?', '¿Por qué Jezero?')}</h2>
                     <p>
-                      NASA describe un antiguo sistema de lago y delta fluvial en Jezero. Sus depósitos podrían
-                      preservar indicios del ambiente antiguo. Explorarlos tiene valor científico;{' '}
-                      <b>no implica haber descubierto vida</b>.
+                      {ui('NASA describes an ancient lake and river delta at Jezero. These deposits may preserve evidence of past environments. Exploring them is scientifically valuable;', 'NASA describe un antiguo sistema de lago y delta fluvial en Jezero. Sus depósitos podrían preservar indicios del ambiente antiguo. Explorarlos tiene valor científico;')}{' '}
+                      <b>{ui('it does not mean life has been discovered', 'no implica haber descubierto vida')}</b>.
                     </p>
                     <a
                       href="https://science.nasa.gov/mission/mars-2020-perseverance/science-objectives/"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Objetivos de Perseverance · NASA ↗
+                      {ui('Perseverance science objectives · NASA ↗', 'Objetivos de Perseverance · NASA ↗')}
                     </a>
-                    <h3>Riesgos y evidencia</h3>
+                    <h3>{ui('Risks and evidence', 'Riesgos y evidencia')}</h3>
                     <div className="notice">
-                      <b>UNVERIFIED · Perfil y pendientes</b>
+                      <b>UNVERIFIED · {ui('DEM slope estimates', 'Estimaciones de pendiente DEM')}</b>
                       <br />
-                      El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en un recorte anterior; su cobertura en la región manual, referencia vertical y registro con estas capas no están validados. No se publican cotas, desniveles ni pendientes.{' '}
+                      {ui('The USGS numerical CTX DEM (20 m/pixel) has valid samples in a limited sector. Exact vertical reference and independent alignment with the displayed layers are not validated; derived slopes and ascent are exploratory proxies, not operational assessments.', 'El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en un sector limitado. La referencia vertical exacta y el registro independiente con estas capas no están validados; las pendientes y ascensos derivados son proxies exploratorios, no evaluaciones operacionales.')}{' '}
                       <a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">
-                        Ficha DEM USGS ↗
+                        {ui('USGS DEM source ↗', 'Ficha DEM USGS ↗')}
                       </a>
                     </div>
                     <div className="notice">
                       <b>LOW_RESOLUTION · MOLA</b>
                       <br />
-                      El relieve visual regional no permite detectar rocas o escalones.
+                      {ui('Regional shaded relief cannot detect individual rocks or steps.', 'El relieve visual regional no permite detectar rocas o escalones.')}
                     </div>
                     <div className="notice">
-                      <b>UNVERIFIED · Ruta</b>
+                      <b>UNVERIFIED · {ui('Route', 'Ruta')}</b>
                       <br />
-                      Transitabilidad, obstáculos pequeños, clima y radiación locales no evaluados. Las paradas elegidas
-                      son propuestas del usuario, no sitios de muestreo verificados.
+                      {ui('Traversability, small obstacles, local weather and radiation are unassessed. Selected stops are user proposals, not verified sampling sites.', 'Transitabilidad, obstáculos pequeños, clima y radiación locales no evaluados. Las paradas elegidas son propuestas del usuario, no sitios de muestreo verificados.')}
                     </div>
                   </>
                 )}
@@ -931,12 +932,12 @@ export function App() {
             )}
 
             <div className="map-counter" aria-live="polite">
-              <span className="eyebrow">{suggestedRoute ? 'DERIVADO DEM · NO OPERACIONAL' : 'PLAN MANUAL'}</span>
-              <strong>{scope === 'global' ? 'Jezero' : formatKm(suggestedRoute ? suggestedRoute.distanceMeters : legs.total)}</strong>
+              <span className="eyebrow">{suggestedRoute ? ui('DEM-DERIVED · NON-OPERATIONAL', 'DERIVADO DEM · NO OPERACIONAL') : ui('MANUAL PLAN', 'PLAN MANUAL')}</span>
+              <strong>{scope === 'global' ? 'Jezero' : distance(suggestedRoute ? suggestedRoute.distanceMeters : legs.total)}</strong>
               <small>
                 {scope === 'global'
-                  ? `${count}/3 puntos conservados · solo contexto`
-                  : `${count}/3 puntos · ${count < 3 ? 'trayecto incompleto' : 'trazado completo'}`}
+                  ? `${count}/3 ${ui('points retained · context only', 'puntos conservados · solo contexto')}`
+                  : `${count}/3 ${ui('points', 'puntos')} · ${count < 3 ? ui('incomplete route', 'trayecto incompleto') : ui('route drawn', 'trazado completo')}`}
               </small>
             </div>
           </section>
@@ -947,17 +948,17 @@ export function App() {
         <footer className="footer">
           <div className="footer-status-left">
             <span className="footer-status-badge">● DSN ONLINE</span>
-            <span className="footer-datum">DATUM: AREOIDE 6.1 MBAR · ESFERA RM = 3,389,500 M</span>
+            <span className="footer-datum">{ui('MARS MEAN-RADIUS SPHERE', 'ESFERA DE RADIO MEDIO MARCIANO')}: 3,389,500 M</span>
           </div>
           <div className="footer-status-center">
             <span>
               {screen === 'globe'
-                ? 'GLOBO ESFÉRICO: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)'
+                ? ui('SPHERICAL GLOBE: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)', 'GLOBO ESFÉRICO: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)')
                 : 'ORBITAL GIS: MRO CTX + MGS MOLA + MARS ODYSSEY THEMIS (NASA/JPL/ASU/USGS)'}
             </span>
           </div>
           <div className="footer-status-right">
-            <strong>PROTOTIPO INDEPENDIENTE // NO CERTIFICADO PARA VUELO</strong>
+            <strong>{ui('INDEPENDENT PROTOTYPE // NOT CERTIFIED FOR FLIGHT', 'PROTOTIPO INDEPENDIENTE // NO CERTIFICADO PARA VUELO')}</strong>
           </div>
         </footer>
       )}

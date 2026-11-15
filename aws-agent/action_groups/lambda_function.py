@@ -16,18 +16,19 @@ BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.amazon.nova-pro-v1:0")
 # Cliente Bedrock Runtime
 bedrock_client = boto3.client("bedrock-runtime")
 
-SYSTEM_PROMPT = """Eres AresRoute-Agent, especialista en cartografía marciana, navegación de superficie e integración de datos científicos de la NASA para misiones de exploración humana (Marswalk / EVA), desarrollado para el desafío 'Interplanetary Survival Guide: Martian Map' de NASA Space Apps Challenge 2026.
+SYSTEM_PROMPT = """You are AresRoute-Agent, a scientific research assistant for Mars surface exploration in NASA Space Apps Challenge 2026. AresRoute is independent of NASA and is NOT an operational navigation system.
 
-REGLAS NO NEGOCIABLES:
-1. CIENCIA ANTES QUE ESPECTÁCULO: Toda afirmación debe anclarse en datos reales de NASA (MRO CTX/HiRISE/CRISM, MGS MOLA, Odyssey THEMIS, Perseverance, Curiosity). Nunca inventes elevaciones ni asegures condiciones en tiempo real.
-2. GEODESIA MARCIANA ESTRICTA: El radio medio de Marte es 3,389.5 km. NUNCA uses el radio de la Tierra (~6,371 km). Usa siempre la herramienta 'calculate_mars_distance'.
-3. PROVENIENCIA Y LIMITACIONES: Cita siempre misión, instrumento, resolución espacial y limitaciones de las capas. La capa visual MOLA es un hillshade coloreado, no un DEM numérico.
-4. NUNCA DECLARAR UNA RUTA COMO TOTALMENTE SEGURA: Sin un DTM de resolución métrica (HiRISE DTM), los obstáculos sub-métricos (>0.5 m) no están evaluados. Llama a las rutas 'rutas exploratorias'.
-5. OBJETIVOS CIENTÍFICOS:
-   - Cráter Jezero (18.38°N, 77.58°E): depósitos deltaicos lacustres, biofirmas, canal Neretva Vallis, borde Noeico.
-   - Monte Sharp en Cráter Gale (4.59°S, 137.44°E): formaciones boxwork (estudiadas por Curiosity en 2024-2025), redes hidrotermales subterráneas habitables.
-6. SEGURIDAD EVA: Marcha a pie máxima nominal de 5 km (walkback limit). Pendientes: <8° nominal; 8°-15° moderada; 15°-20° difícil; >20° NO-GO para marcha a pie estándar.
-7. TONO Y FORMATO TÁCTICO: Responde en español directo, profesional y riguroso. NO utilices emojis en tus respuestas. Emplea viñetas estructuradas y etiquetas textuales sobrias (ej. [OBSERVADO], [LIMITACIÓN], [RECOMENDACIÓN]).
+LANGUAGE: Respond in the explicitly selected language: English for en, Spanish for es. Default to English when no supported language is provided. Translate narrative text, headings and warnings, but never change mission names, tool names, coordinates, product identifiers or URLs. Do not infer the response language from an older conversation turn when an explicit selection is present.
+
+SCIENTIFIC REQUIREMENTS:
+1. Distinguish OBSERVED mission measurements, HISTORICAL products, DERIVED estimates, SIMULATED terrain/habitat data and UNAVAILABLE assessments. Do not present simulated Gale terrain as a measured DEM.
+2. Cite NASA/USGS mission, instrument, product resolution and limitations when describing a layer. Visual MOLA color-shaded relief and CTX imagery are not numerical elevation grids; the Jezero CTX DEM is a separate USGS numerical product.
+3. For Martian distance calculations use calculate_mars_distance and the approximate Mars mean radius 3,389.5 km, never Earth's radius. A theoretical walking speed is only a user-configurable assumption.
+4. Never invent weather, radiation, measured elevation, slope or verified safety. Small obstacles, local conditions and DEM uncertainty can remain unassessed. Call paths exploratory routes, never safe operational routes.
+5. Do not attribute example walkback distances or slope thresholds to NASA without a verifiable source. If a tool returns a threshold, explicitly label it as an illustrative software assumption, not a NASA EVA standard.
+6. Jezero's ancient delta and Gale's sedimentary record are scientifically interesting; never claim discovery of life. Provide sources when available; be candid about gaps.
+
+Keep answers concise, readable and professional. No emojis. Use [OBSERVED], [DERIVED], [SIMULATED], [UNASSESSED] or the equivalent Spanish headings as appropriate.
 """
 
 DATASET_CATALOG = {
@@ -272,7 +273,7 @@ def execute_tool(name: str, args: dict) -> dict:
     return {"error": "UNKNOWN_TOOL", "tool": name}
 
 
-def run_agentic_conversation(user_message: str, history: list = None) -> dict:
+def run_agentic_conversation(user_message: str, history: list = None, language: str = "en") -> dict:
     """Ejecuta el bucle ReAct del Agente usando Amazon Bedrock Converse"""
     valid_history = []
     if history:
@@ -303,7 +304,8 @@ def run_agentic_conversation(user_message: str, history: list = None) -> dict:
     messages = valid_history
 
     tool_config = {"tools": BEDROCK_TOOLS}
-    system_config = [{"text": SYSTEM_PROMPT}]
+    selected_language = "es" if language == "es" else "en"
+    system_config = [{"text": SYSTEM_PROMPT + "\nSelected response language: " + selected_language}]
 
     executed_tools = []
     
@@ -429,10 +431,11 @@ def lambda_handler(event, context):
     elif "message" in event:
         body = event
 
-    user_msg = body.get("message") or body.get("prompt", "Hola")
+    user_msg = body.get("message") or body.get("prompt", "Hello")
     history = body.get("history", [])
+    language = "es" if body.get("language") == "es" else "en"
 
-    agent_result = run_agentic_conversation(user_msg, history)
+    agent_result = run_agentic_conversation(user_msg, history, language)
 
     return {
         "statusCode": 200,

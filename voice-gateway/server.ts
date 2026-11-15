@@ -146,7 +146,7 @@ wss.on('connection', (ws: WebSocket, req) => {
         case 'init': {
           cleanup()
           const voiceId = message.voiceId || GATEWAY_CONFIG.defaultVoice
-          const language = message.language || GATEWAY_CONFIG.defaultLanguage || 'es'
+          const language = message.language || GATEWAY_CONFIG.defaultLanguage || 'en'
           console.log(`[ARES VOICE GATEWAY] Inicializando sesión de Nova Sonic | Voz: ${voiceId} | Idioma predeterminado: ${language}`)
           send({ type: 'state_change', state: 'CONNECTING' })
 
@@ -204,7 +204,9 @@ wss.on('connection', (ws: WebSocket, req) => {
               const isExpired =
                 err.message?.toLowerCase().includes('expired') || (err as any).name === 'ExpiredTokenException'
               const friendlyMessage = isExpired
-                ? "⚠️ [SESIÓN AWS EXPIRADA]: Tus credenciales temporales de Amazon Bedrock han caducado. Ejecuta 'aws login' en tu terminal para reactivar el streaming de Nova Sonic."
+                ? language === 'es'
+                  ? "La sesión AWS expiró. Las credenciales del servidor deben renovarse para reactivar Nova Sonic."
+                  : 'AWS session expired. Server credentials must be renewed to resume Nova Sonic.'
                 : err.message
               console.error(`[ARES VOICE GATEWAY] Error en sesión Bedrock:`, friendlyMessage)
               send({
@@ -240,7 +242,7 @@ wss.on('connection', (ws: WebSocket, req) => {
             const err = initErr instanceof Error ? initErr : new Error(String(initErr))
             send({
               type: 'error',
-              message: `Fallo al iniciar enlace con Bedrock Nova Sonic: ${err.message}`,
+              message: `${language === 'es' ? 'No se pudo iniciar el enlace con Bedrock Nova Sonic' : 'Could not start the Bedrock Nova Sonic link'}: ${err.message}`,
               code: 'SESSION_INIT_FAILED',
             })
             send({ type: 'state_change', state: 'ERROR' })

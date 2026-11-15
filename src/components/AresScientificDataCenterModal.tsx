@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import {
-  ARES_SCIENTIFIC_REGISTRY,
   ARES_DISCLAIMER_NOTICE,
+  EN_DISCLAIMER_NOTICE,
+  localizedScientificRegistry,
   type AresDatasetMetadata,
 } from '../features/science/scientificDataCenter'
+import { useLanguage } from '../features/i18n/appI18n'
 
 interface Props {
   isOpen: boolean
@@ -11,24 +13,28 @@ interface Props {
 }
 
 export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
+  const { language } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
+  const registry = localizedScientificRegistry(language)
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [activeDataset, setActiveDataset] = useState<AresDatasetMetadata | null>(
-    ARES_SCIENTIFIC_REGISTRY[0] || null
+  const [activeDatasetId, setActiveDatasetId] = useState<AresDatasetMetadata['datasetId'] | null>(
+    registry[0]?.datasetId ?? null
   )
 
   if (!isOpen) return null
 
   const categories = [
-    { id: 'ALL', label: 'TODAS LAS FUENTES' },
-    { id: 'CARTOGRAPHY', label: 'CARTOGRAFÍA' },
-    { id: 'GEOLOGY', label: 'GEOLOGÍA' },
-    { id: 'MISSION_HERITAGE', label: 'HERENCIA DE MISIÓN' },
-    { id: 'SURFACE_IMAGERY', label: 'IMÁGENES DE SUPERFICIE' },
-    { id: 'TERRAIN_ANALYSIS', label: 'ANÁLISIS DE TERRENO' },
+    { id: 'ALL', label: ui('ALL SOURCES', 'TODAS LAS FUENTES') },
+    { id: 'CARTOGRAPHY', label: ui('CARTOGRAPHY', 'CARTOGRAFÍA') },
+    { id: 'GEOLOGY', label: ui('GEOLOGY', 'GEOLOGÍA') },
+    { id: 'MISSION_HERITAGE', label: ui('MISSION HISTORY', 'HERENCIA DE MISIÓN') },
+    { id: 'SURFACE_IMAGERY', label: ui('SURFACE IMAGERY', 'IMÁGENES DE SUPERFICIE') },
+    { id: 'TERRAIN_ANALYSIS', label: ui('TERRAIN MODEL', 'MODELO DE TERRENO') },
   ]
 
-  const filteredDatasets = ARES_SCIENTIFIC_REGISTRY.filter((ds) => {
+  const activeDataset = registry.find(ds => ds.datasetId === activeDatasetId) ?? null
+  const filteredDatasets = registry.filter((ds) => {
     const matchesCat = selectedCategory === 'ALL' || ds.category === selectedCategory
     const matchesQuery =
       searchQuery === '' ||
@@ -44,18 +50,18 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
         className="ares-modal-container scientific-center-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Centro de Fuentes Científicas ARES"
+        aria-label={ui('ARES Scientific Data Center', 'Centro de Fuentes Científicas ARES')}
       >
         <header className="ares-modal-header">
           <div>
-            <span className="modal-tag">[SISTEMA CARTOGRÁFICO & MULTIMISIÓN]</span>
+            <span className="modal-tag">{ui('[MULTI-MISSION SOURCE CATALOG]', '[CATÁLOGO DE FUENTES MULTIMISIÓN]')}</span>
             <h2 className="modal-title">ARES SCIENTIFIC DATA CENTER</h2>
             <p className="modal-subtitle">
-              Catálogo centralizado de fuentes oficiales, metadatos espaciales y trazabilidad de datos de la NASA / USGS / PDS.
+              {ui('Research catalog of NASA / USGS / PDS sources and their limitations. Listed sources are not necessarily validated against the procedural Gale scene.', 'Catálogo de fuentes NASA / USGS / PDS y sus límites. Las fuentes enumeradas no están necesariamente validadas contra la escena procedural de Gale.')}
             </p>
           </div>
           <button type="button" className="modal-close-btn" onClick={onClose}>
-            [CERRAR]
+            {ui('[CLOSE]', '[CERRAR]')}
           </button>
         </header>
 
@@ -65,7 +71,8 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
             <div className="dataset-search-wrap">
               <input
                 type="text"
-                placeholder="Buscar por instrumento, misión o nombre..."
+                placeholder={ui('Search instrument, mission or name…', 'Buscar por instrumento, misión o nombre…')}
+                aria-label={ui('Search data sources', 'Buscar fuentes de datos')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="dataset-search-input"
@@ -91,7 +98,7 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
                   key={ds.datasetId}
                   type="button"
                   className={`dataset-list-item ${activeDataset?.datasetId === ds.datasetId ? 'active' : ''}`}
-                  onClick={() => setActiveDataset(ds)}
+                   onClick={() => setActiveDatasetId(ds.datasetId)}
                 >
                   <div className="ds-item-header">
                     <span className={`ds-status-badge ${ds.availabilityStatus.toLowerCase()}`}>
@@ -115,7 +122,7 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
                     <span className="ds-category-badge">{activeDataset.category}</span>
                     <span className="ds-datatype-badge">{activeDataset.dataType}</span>
                     <span className={`ds-status-badge ${activeDataset.availabilityStatus.toLowerCase()}`}>
-                      ESTADO: {activeDataset.availabilityStatus}
+                       {ui('STATUS', 'ESTADO')}: {activeDataset.availabilityStatus}
                     </span>
                   </div>
                   <h3 className="ds-detail-title">{activeDataset.name}</h3>
@@ -128,53 +135,53 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
                     <code>{activeDataset.datasetId}</code>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>ORGANIZACIÓN RESPONSABLE</label>
+                     <label>{ui('RESPONSIBLE ORGANIZATION', 'ORGANIZACIÓN RESPONSABLE')}</label>
                     <span>{activeDataset.organization}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>MISIÓN ESPACIAL</label>
+                     <label>{ui('MISSION', 'MISIÓN ESPACIAL')}</label>
                     <span>{activeDataset.mission}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>INSTRUMENTO CIENTÍFICO</label>
+                     <label>{ui('INSTRUMENT', 'INSTRUMENTO CIENTÍFICO')}</label>
                     <span>{activeDataset.instrument}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>FECHA DE ADQUISICIÓN</label>
+                     <label>{ui('ACQUISITION', 'FECHA DE ADQUISICIÓN')}</label>
                     <span>{activeDataset.acquisitionDate}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>FECHA DE PUBLICACIÓN</label>
+                     <label>{ui('PUBLICATION', 'FECHA DE PUBLICACIÓN')}</label>
                     <span>{activeDataset.publicationDate}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>RESOLUCIÓN ESPACIAL</label>
+                     <label>{ui('SPATIAL RESOLUTION', 'RESOLUCIÓN ESPACIAL')}</label>
                     <span>{activeDataset.resolution}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>SISTEMA DE COORDENADAS (CRS)</label>
+                     <label>{ui('COORDINATE REFERENCE (CRS)', 'SISTEMA DE COORDENADAS (CRS)')}</label>
                     <span>{activeDataset.crs}</span>
                   </div>
                   <div className="ds-meta-cell full-width">
-                    <label>EXTENSIÓN GEOGRÁFICA</label>
+                     <label>{ui('GEOGRAPHIC EXTENT', 'EXTENSIÓN GEOGRÁFICA')}</label>
                     <span>{activeDataset.geographicExtent}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>UNIDAD DE MEDIDA</label>
+                     <label>{ui('UNIT OF MEASURE', 'UNIDAD DE MEDIDA')}</label>
                     <span>{activeDataset.unitOfMeasure}</span>
                   </div>
                   <div className="ds-meta-cell">
-                    <label>CONDICIONES DE USO / LICENCIA</label>
+                     <label>{ui('USE / LICENSE', 'CONDICIONES DE USO / LICENCIA')}</label>
                     <span>{activeDataset.license}</span>
                   </div>
                   <div className="ds-meta-cell full-width">
-                    <label>CRÉDITOS Y ATRIBUCIÓN OFICIAL</label>
+                     <label>{ui('CREDITS / ATTRIBUTION', 'CRÉDITOS Y ATRIBUCIÓN')}</label>
                     <span>{activeDataset.credits}</span>
                   </div>
                 </div>
 
                 <div className="ds-limitations-box">
-                  <strong>LIMITACIONES CIENTÍFICAS Y REGLAS DE USO:</strong>
+                   <strong>{ui('SCIENTIFIC LIMITATIONS:', 'LIMITACIONES CIENTÍFICAS:')}</strong>
                   <p>{activeDataset.limitations}</p>
                 </div>
 
@@ -185,13 +192,13 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
                     rel="noreferrer noopener"
                     className="hud-btn highlight"
                   >
-                    [VER FUENTE OFICIAL NASA / PDS]
+                     {ui('[OPEN ORIGINAL SOURCE]', '[VER FUENTE ORIGINAL]')}
                   </a>
                 </div>
               </div>
             ) : (
               <div className="ds-empty-state">
-                Selecciona un conjunto de datos del listado para inspeccionar su ficha técnica.
+                 {ui('Select a data source to inspect its metadata.', 'Seleccioná una fuente de datos para ver sus metadatos.')}
               </div>
             )}
           </main>
@@ -199,7 +206,7 @@ export function AresScientificDataCenterModal({ isOpen, onClose }: Props) {
 
         <footer className="ares-modal-footer">
           <p className="disclaimer-text">
-            <strong>AVISO INSTITUCIONAL:</strong> {ARES_DISCLAIMER_NOTICE}
+             <strong>{ui('INDEPENDENT PROJECT:', 'PROYECTO INDEPENDIENTE:')}</strong> {language === 'en' ? EN_DISCLAIMER_NOTICE : ARES_DISCLAIMER_NOTICE}
           </p>
         </footer>
       </div>

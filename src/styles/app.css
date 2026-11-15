@@ -288,6 +288,23 @@ main {
   font-family: ui-monospace, "SF Mono", monospace;
   font-size: 0.72rem;
 }
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #e2e8f0;
+  font-size: .68rem;
+  white-space: nowrap;
+}
+.language-switch select {
+  color: #fff;
+  background: #102731;
+  border: 1px solid #42b8c3;
+  border-radius: 5px;
+  padding: 6px;
+  cursor: pointer;
+}
+.language-switch select:focus-visible { outline: 2px solid #f5b97a; outline-offset: 2px; }
 
 .telemetry-block {
   display: flex;
@@ -1342,8 +1359,25 @@ main {
     padding: 8px 14px;
   }
   .header-right {
-    display: none;
+    display: flex;
+    margin-left: auto;
   }
+  .header-nav-modes { width: 100%; justify-content: space-between; }
+  .nav-mode-btn { flex: 1; justify-content: center; min-width: 0; padding: 6px 4px; font-size: .65rem; }
+  .nav-btn-text { overflow: hidden; text-overflow: ellipsis; }
+  .tabs { width: 100%; max-width: calc(100vw - 28px); overflow-x: auto; scrollbar-width: thin; }
+  .tab { flex: 0 0 auto; }
+  .nav-tools { right: 8px; }
+  .nav-tools .nav-home, .nav-tools .nav-preset {
+    width: 64px;
+    height: auto;
+    min-height: 36px;
+    padding: 4px;
+    font-size: .68rem;
+    line-height: 1.12;
+    overflow-wrap: break-word;
+  }
+  .header-right .telemetry-block, .header-right .header-location { display: none; }
   .footer-status-center {
     display: none;
   }
@@ -1384,4 +1418,10 @@ main {
   .roi-notice {
     top: 140px;
   }
+}
+@media (max-width: 430px) {
+  .header-right { order: 2; width: 100%; justify-content: flex-end; }
+  .header-nav-modes { order: 3; }
+  .nav-mode-btn { font-size: .58rem; }
+  .nav-btn-code { display: none; }
 }

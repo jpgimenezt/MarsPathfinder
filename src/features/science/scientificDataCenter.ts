@@ -63,11 +63,11 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
     resolution: '463 metros / píxel a nivel ecuatorial (128 píxeles/grado)',
     crs: 'Equirectangular, Areoide de referencia gravitatorio (6.1 mbar)',
     geographicExtent: 'Global marciano (180°W a 180°E, 90°S a 90°N)',
-    unitOfMeasure: 'Elevación topográfica en metros respecto al Areoide marciano',
+    unitOfMeasure: 'Colores de relieve sombreado; no contiene alturas numéricas por píxel',
     license: 'NASA Open Data Policy (Dominio público)',
     credits: 'NASA/GSFC, DLR Institute of Planetary Research, Mars Trek Planetary Geodata',
     availabilityStatus: 'AVAILABLE',
-    limitations: 'La resolución de 463 m/px es apta para contexto regional pero insuficiente para detectar microrrelieve, rocas o peligros locales de una caminata EVA.',
+    limitations: 'Imagen RGB de relieve sombreado, no DEM numérico. No permite medir alturas, pendientes ni obstáculos de una EVA.',
     category: 'CARTOGRAPHY',
   },
   {
@@ -84,7 +84,7 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
     resolution: '100 metros / píxel',
     crs: 'Equirectangular, Latitudes 65°S a 65°N',
     geographicExtent: 'Cobertura planetaria casi global entre latitudes medias',
-    unitOfMeasure: 'Brillo de temperatura diurna en Kelvin / Inercia térmica (J·m⁻²·K⁻¹·s⁻½)',
+    unitOfMeasure: 'Intensidad visual del mosaico infrarrojo; sin lectura local actual de temperatura',
     license: 'Dominio Público NASA / ASU Space Exploration Dataset',
     credits: 'NASA / JPL / Arizona State University (ASU)',
     availabilityStatus: 'AVAILABLE',
@@ -104,7 +104,7 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
     dataType: 'DERIVED',
     resolution: 'Escala 1:20,000,000 (Mapeo regional de Gale a escala 1:500,000)',
     crs: 'Proyección Planetocéntrica, Datum Areoide IAU/IAG 2000',
-    geographicExtent: 'Global planetario con unidades estratigráficas detalladas en Gale Crater',
+    geographicExtent: 'Global; los contactos detallados de Gale requieren un producto local distinto',
     unitOfMeasure: 'Clasificación de facies y unidades litoestratigráficas',
     license: 'Dominio Público Gubernamental de los Estados Unidos (USGS)',
     credits: 'Tanaka, K.L., Skinner, J.A., Jr., Dohm, J.M., et al., USGS Astrogeology',
@@ -115,7 +115,7 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
   {
     datasetId: 'msl-curiosity-traverse',
     name: 'Curiosity Proposed Path up Mount Sharp & Historical Traverse',
-    description: 'Reconstrucción georreferenciada de la ruta histórica y planeada de ascenso por las capas sedimentarias de Mount Sharp desde Bradbury Landing.',
+    description: 'Recurso de referencia sobre una ruta propuesta de Curiosity; no valida cada waypoint ni el recorrido animado en esta aplicación.',
     organization: 'NASA / JPL-Caltech / Mars Science Laboratory',
     mission: 'Mars Science Laboratory (Curiosity Rover)',
     instrument: 'Mastcam, Navcam, CheMin, SAM, ChemCam, APXS, DAN, MARDI',
@@ -130,7 +130,7 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
     license: 'Dominio Público NASA / JPL-Caltech',
     credits: 'NASA / JPL-Caltech / ESA / University of Arizona',
     availabilityStatus: 'AVAILABLE',
-    limitations: 'La ruta publicada en 2019 es una propuesta estratégica planificada y documenta los hitos ya recorridos, no la telemetría en tiempo real de este instante.',
+    limitations: 'La ruta propuesta publicada no es telemetría en tiempo real; los waypoints y tiempos ilustrativos de la escena Gale no están validados contra el producto fuente.',
     category: 'MISSION_HERITAGE',
   },
   {
@@ -156,23 +156,23 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
   },
   {
     datasetId: 'ares-topographic-dem',
-    name: 'Modelo Topográfico Hipsométrico ARES (Reconstrucción Procedural Educativa)',
-    description: 'Malla topográfica hipsométrica basada en perfiles de MOLA y HRSC para visualización 3D y análisis exploratorio de gradientes. Reconstrucción matemática continua, no DEM oficial georreferenciado.',
-    organization: 'ARES Geospatial Systems (Modelo Educativo)',
-    mission: 'Modelo conceptual derivado de perfiles de MGS MOLA y Mars Express HRSC',
-    instrument: 'Interpolación matemática de superficie hipsométrica en Areoide marciano',
+    name: 'Reconstrucción procedural ilustrativa de Gale (NO es DEM validado)',
+    description: 'Escena 3D generada mediante fórmulas procedurales para visualización educativa; no se obtuvo un DEM numérico local georreferenciado para esta escena.',
+    organization: 'AresRoute (simulación educativa independiente)',
+    mission: 'Contexto regional MOLA/HRSC; la malla local es simulada',
+    instrument: 'Generación procedural de geometría, no altímetro',
     originUrl: 'https://pds-geosciences.wustl.edu/missions/mgs/mola.html',
-    acquisitionDate: 'Datos de referencia: 1999 - 2020',
+    acquisitionDate: 'No aplica a la malla procedural',
     publicationDate: '2026-11-15',
     dataType: 'MODELED',
-    resolution: 'Malla procedural (~50 metros / vértice)',
-    crs: 'Areoide de referencia gravitacional marciano (Radio ecuatorial 3,389.5 km)',
+    resolution: 'Resolución física sin validar; el tamaño de celda computacional no equivale a resolución de observación',
+    crs: 'Posicionamiento de la escena no validado contra un DEM local',
     geographicExtent: 'Región de operaciones de Gale: 136.75°E a 138.15°E; 5.75°S a 4.45°S',
-    unitOfMeasure: 'Metros estimados sobre el nivel de referencia cero marciano (6.1 mbar)',
-    license: 'Derivado Educativo ARES para NASA Space Apps Challenge 2026',
-    credits: 'Equipo ARES · Reconstrucción geométrica continua',
-    availabilityStatus: 'AVAILABLE',
-    limitations: 'El relieve de Gale es una reconstrucción procedural con fines educativos. Las alturas, pendientes y rutas simuladas no constituyen mediciones topográficas verificadas ni evaluaciones de seguridad operacional.',
+    unitOfMeasure: 'Alturas y pendientes simuladas (no mediciones)',
+    license: 'Escena educativa AresRoute; consultar por separado condiciones de fuentes externas',
+    credits: 'AresRoute · simulación; MOLA/HRSC solo como contexto histórico',
+    availabilityStatus: 'PARTIAL',
+    limitations: 'No es un DEM georreferenciado ni apto para perfiles, tracción, seguridad EVA o inferencias de obstáculos. Valores verticales sin validación independiente.',
     category: 'TERRAIN_ANALYSIS',
   },
 ]
@@ -181,13 +181,106 @@ export const ARES_DISCLAIMER_NOTICE =
   'ARES es un proyecto independiente desarrollado para el NASA Space Apps Challenge. ' +
   'No está afiliado, respaldado ni patrocinado por la NASA. Las fuentes y datos científicos se identifican individualmente en la aplicación.'
 
+type LocalizedField = 'name' | 'description' | 'acquisitionDate' | 'publicationDate' | 'resolution' | 'crs' | 'geographicExtent' | 'unitOfMeasure' | 'license' | 'limitations'
+const englishRegistry: Record<string, Partial<Pick<AresDatasetMetadata, LocalizedField>>> = {
+  'nasa-trek-gale-ctx': {
+    name: 'Gale CTX controlled mosaic (Gale_CTX_BlockAdj_dd)',
+    description: 'Orbital context imagery from the Context Camera. Coverage and alignment with procedural Gale scene are not independently verified.',
+    acquisitionDate: 'Multi-year compilation; individual image dates unavailable here',
+    publicationDate: 'Unverified for this mosaic', resolution: '6.0 m/pixel (source imagery)',
+    crs: 'Equirectangular Mars mapping; check source capabilities for exact parameters',
+    geographicExtent: 'Gale region; precise bounds require service verification',
+    unitOfMeasure: 'Visual grayscale intensity, not numerical elevation',
+    license: 'NASA data; verify reuse terms at source',
+    limitations: 'Two-dimensional orbital image, not a numeric DEM or verified obstacle map.',
+  },
+  'mgs-mola-clrshade': {
+    name: 'MOLA color-shaded relief (visual)',
+    description: 'Regional color-shaded relief based on Mars Global Surveyor MOLA; the displayed mosaic is an image, not a numerical height grid.',
+    acquisitionDate: 'Historical MOLA observations (1999–2001); no per-pixel date',
+    publicationDate: 'Mosaic publication date unverified',
+    resolution: '≈463 m/pixel (visual product)',
+    crs: 'Mars equirectangular; source projection requires verification',
+    geographicExtent: 'Global Mars',
+    unitOfMeasure: 'Shaded-relief RGB; no numerical elevation per pixel',
+    license: 'NASA data; verify reuse terms at source',
+    limitations: 'Cannot measure elevation, slope, individual rocks or EVA route safety from this RGB layer.',
+  },
+  'themis-day-ir-mosaic': {
+    name: 'THEMIS daytime infrared mosaic',
+    description: 'Historical daytime infrared image mosaic from Mars Odyssey, not a live local temperature reading.',
+    acquisitionDate: 'Multi-year observations; local acquisition date unavailable',
+    publicationDate: 'October 2018 mosaic version',
+    resolution: '≈100 m/pixel (source mosaic)', crs: 'Mars equirectangular (verify service)',
+    geographicExtent: 'Approximate coverage between 65°S and 65°N',
+    unitOfMeasure: 'Visual infrared mosaic intensity; no current local temperature',
+    license: 'NASA/ASU data; verify reuse terms at source',
+    limitations: 'Historical image mosaic. Does not measure current meteorology or thermal safety.',
+  },
+  'usgs-sim-3292-geology': {
+    name: 'USGS geologic map of Mars (SIM 3292)',
+    description: 'Global geologic synthesis. Detailed Gale contacts require a separate local product and spatial verification.',
+    acquisitionDate: 'Synthesis of historical observations', publicationDate: '2014 (USGS publication)',
+    resolution: 'Global map at 1:20,000,000; not a local Gale map',
+    crs: 'Refer to official USGS map projection', geographicExtent: 'Global Mars',
+    unitOfMeasure: 'Geologic unit classification, not obstacle measurements',
+    license: 'USGS publication; consult source for terms',
+    limitations: 'Regional geologic contacts are interpretations, not walkable boundaries or detailed Gale units.',
+  },
+  'msl-curiosity-traverse': {
+    name: 'Curiosity proposed path up Mount Sharp',
+    description: 'NASA reference graphic for a proposed rover route; the animated application path is illustrative, not a verified rover telemetry track.',
+    acquisitionDate: 'Historical rover mission; not live telemetry',
+    publicationDate: 'Refer to NASA resource for publication date',
+    resolution: 'Illustrative path graphic; not a surveyed waypoint dataset',
+    crs: 'Not established for the illustrated path',
+    geographicExtent: 'Gale Crater (Mars)',
+    unitOfMeasure: 'Path context; no verified per-waypoint odometry in this app',
+    license: 'NASA resource; consult source for terms',
+    limitations: 'Proposed path is not a live rover track. App waypoints and elapsed-time comparisons lack independent validation.',
+  },
+  'perseverance-surface-imagery': {
+    name: 'Perseverance raw image archive',
+    description: 'Mars 2020 camera imagery from Jezero Crater. Images are contextual and must not be pinned to Gale locations.',
+    acquisitionDate: 'From 2021 onward; see individual image record for dates',
+    publicationDate: 'Varies by image', resolution: 'Varies by camera and image',
+    crs: 'Image-specific pointing; no verified georeference in this catalog',
+    geographicExtent: 'Jezero Crater; not Gale Crater',
+    unitOfMeasure: 'Image pixels; not a local elevation grid',
+    license: 'NASA data; verify individual image attribution',
+    limitations: 'Jezero observations cannot establish conditions in Gale. Individual photos require verified acquisition metadata and location.',
+  },
+  'ares-topographic-dem': {
+    name: 'Gale procedural terrain (NOT a validated DEM)',
+    description: 'Educational 3D geometry generated from procedural formulas; no georeferenced numerical local DEM was validated for this scene.',
+    acquisitionDate: 'Not applicable to procedural geometry',
+    publicationDate: '2026-11-15 (prototype)',
+    resolution: 'Physical resolution unvalidated; computational cell size is not observation resolution',
+    crs: 'Scene registration against local DEM unvalidated',
+    geographicExtent: 'Illustrative Gale region; spatial coverage unverified',
+    unitOfMeasure: 'Simulated heights and slopes, not observations',
+    license: 'AresRoute educational simulation; external sources separately attributed',
+    limitations: 'Cannot support elevation profiles, walkability, small-obstacle or EVA safety claims.',
+  },
+}
+
+export const EN_DISCLAIMER_NOTICE =
+  'AresRoute is an independent NASA Space Apps Challenge project. It is not affiliated with, endorsed or sponsored by NASA. Scientific sources and their limitations are listed individually.'
+
+export function localizedScientificRegistry(language: 'en' | 'es'): AresDatasetMetadata[] {
+  return language === 'en'
+    ? ARES_SCIENTIFIC_REGISTRY.map(dataset => ({ ...dataset, ...englishRegistry[dataset.datasetId] }))
+    : ARES_SCIENTIFIC_REGISTRY
+}
+
 /**
  * Consulta qué observaciones y datasets científicos cubren una coordenada dada en Marte
  */
 export function queryScientificObservationProfile(
   lon: number,
   lat: number,
-  elevationMeters: number
+  elevationMeters: number,
+  language: 'en' | 'es' = 'en'
 ): {
   targetCoordinates: { lon: number; lat: number; elevationMeters: number }
   availableDatasets: AresDatasetMetadata[]
@@ -198,25 +291,28 @@ export function queryScientificObservationProfile(
   // Gale bounds: lon 136.75..138.15, lat -5.75..-4.45
   const isInsideGale = lon >= 136.75 && lon <= 138.15 && lat >= -5.75 && lat <= -4.45
 
-  const matchedDatasets = ARES_SCIENTIFIC_REGISTRY.filter((ds) => {
+  const matchedDatasets = localizedScientificRegistry(language).filter((ds) => {
+    if (ds.datasetId === 'ares-topographic-dem') return false // Simulation is not an observation.
     if (ds.category === 'SURFACE_IMAGERY') return true // Galería de análogo comparativo disponible
     if (isInsideGale) return true
-    return ds.geographicExtent.toLowerCase().includes('global')
+    return ds.datasetId === 'mgs-mola-clrshade' || ds.datasetId === 'usgs-sim-3292-geology'
   })
 
   const geologySummary = isInsideGale
-    ? `Sector geológico de Gale Crater con elevación estimada de ${Math.round(elevationMeters)} m sobre el Areoide. Evidencia de sedimentación lacustre estratificada y capas ricas en arcillas o sulfatos.`
-    : 'Ubicación fuera del cuadrante de alta resolución de Gale Crater. Contexto geológico global de baja resolución.'
+    ? language === 'en'
+      ? 'Gale Crater has documented sedimentary geology. The displayed cursor height comes from an unvalidated procedural model, not a measured elevation.'
+      : 'Gale Crater tiene geología sedimentaria documentada. La altura del cursor proviene de un modelo procedural sin validar, no de una medición.'
+    : language === 'en' ? 'Outside Gale: only coarse global geologic context is available.' : 'Fuera de Gale: solo hay contexto geológico global de baja resolución.'
 
   const terrainSummary = isInsideGale
-    ? 'Modelo topográfico conceptual 3D disponible (~50 m/vértice interpolado). Estimación de pendientes y análisis exploratorio de transitabilidad.'
-    : 'Datos topográficos locales no resueltos para esta coordenada.'
+    ? language === 'en' ? 'No validated local numeric Gale DEM. Modeled slope and route safety cannot be assessed.' : 'Sin DEM numérico local validado para Gale. No se puede evaluar pendiente medida ni seguridad de ruta.'
+    : language === 'en' ? 'No validated local topographic data for this coordinate.' : 'Sin datos topográficos locales validados para esta coordenada.'
 
   const missionHeritageNearby: string[] = []
   if (isInsideGale) {
-    missionHeritageNearby.push('Misión Mars Science Laboratory (Curiosity Rover, 2012 - presente): Travesía histórica de 32 km en este cráter.')
-    missionHeritageNearby.push('MRO CTX: Cobertura fotográfica completa con resolución de 6 m/px (Mosaico Gale_CTX_BlockAdj_dd).')
-    missionHeritageNearby.push('Mars Odyssey THEMIS: Registro térmico infrarrojo controlado de 100 m/px.')
+    missionHeritageNearby.push(language === 'en' ? 'Mars Science Laboratory (Curiosity): historical Gale mission context; the animated track is illustrative.' : 'Mars Science Laboratory (Curiosity): contexto histórico de Gale; el recorrido animado es ilustrativo.')
+    missionHeritageNearby.push(language === 'en' ? 'MRO CTX: visual orbital context; precise coverage and registration in this scene are unverified.' : 'MRO CTX: contexto orbital visual; cobertura exacta y registro en esta escena sin verificar.')
+    missionHeritageNearby.push(language === 'en' ? 'Mars Odyssey THEMIS: historical infrared mosaic; not current temperature.' : 'Mars Odyssey THEMIS: mosaico infrarrojo histórico; no mide temperatura actual.')
   }
 
   return {

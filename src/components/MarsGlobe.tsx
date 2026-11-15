@@ -6,6 +6,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GALE_CRATER, isFrontFacing, isSurfaceClick, JEZERO_CRATER, surfacePoint } from '../features/globe/globeCoordinates'
 import { MolaElevationLegend } from './MolaElevationLegend'
+import { useLanguage } from '../features/i18n/appI18n'
 
 const MIN_DISTANCE = 2.25
 const MAX_DISTANCE = 5.8
@@ -27,6 +28,8 @@ interface Props {
 }
 
 export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
+  const { language } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   const host = useRef<HTMLDivElement>(null)
   const marker = useRef<HTMLButtonElement>(null)
   const galeMarker = useRef<HTMLButtonElement>(null)
@@ -282,11 +285,11 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
     }
   }, [onFailure])
 
-  return <section className="globe-stage" aria-label="Exploración global de Marte en 3D">
+  return <section className="globe-stage" aria-label={ui('Global 3D Mars exploration', 'Exploración global de Marte en 3D')}>
     <div className="globe-copy">
-      <span className="eyebrow">EXPLORACIÓN PLANETARIA · {activeTexture === 'mola' ? 'MGS MOLA' : 'VIKING MDIM 2.1'}</span>
-      <h2>Marte, antes de<br /><em>dar el primer paso.</em></h2>
-      <p>Girá el planeta y explorá sus regiones. Ingresá a Gale Crater para el relieve 3D con elevaciones reales o a Jezero para el mapa 2D.</p>
+      <span className="eyebrow">{ui('PLANETARY EXPLORATION', 'EXPLORACIÓN PLANETARIA')} · {activeTexture === 'mola' ? 'MGS MOLA' : 'VIKING MDIM 2.1'}</span>
+      <h2>{ui('Mars, before', 'Marte, antes de')}<br /><em>{ui('the first step.', 'dar el primer paso.')}</em></h2>
+      <p>{ui('Rotate Mars to explore its regions. Visit Gale for an approximate educational 3D terrain reconstruction or Jezero for the scientific 2D map.', 'Girá el planeta y explorá sus regiones. Ingresá a Gale para una reconstrucción 3D educativa aproximada o a Jezero para el mapa científico 2D.')}</p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {onGaleTerrain && (
           <button type="button" className="globe-primary" onClick={onGaleTerrain} style={{ background: 'linear-gradient(135deg, #00f0ff, #0284c7)', color: '#04090e', fontWeight: 800 }}>
@@ -297,48 +300,48 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
           [03] JEZERO 2D <span aria-hidden="true">↗</span>
         </button>
       </div>
-      <p className="globe-warning">{activeTexture === 'mola' ? 'Relieve sombreado visual NASA/USGS' :
-        'Mosaico Viking colorizado por NASA Ames / USGS, no color natural exacto'} · no representa pendientes ni seguridad de una ruta.</p>
+      <p className="globe-warning">{activeTexture === 'mola' ? ui('NASA/USGS visual shaded relief', 'Relieve sombreado visual NASA/USGS') :
+        ui('Viking mosaic colorized by NASA Ames / USGS; not exact natural color', 'Mosaico Viking colorizado por NASA Ames / USGS, no color natural exacto')} · {ui('does not establish slope or route safety.', 'no representa pendientes ni seguridad de una ruta.')}</p>
     </div>
     <div className="globe-data">
-      <fieldset className="globe-texture-options" aria-label="Textura del planeta" disabled={status !== 'ready'}>
-        <legend>VISUALIZACIÓN DEL PLANETA</legend>
+      <fieldset className="globe-texture-options" aria-label={ui('Planet texture', 'Textura del planeta')} disabled={status !== 'ready'}>
+        <legend>{ui('PLANET VIEW', 'VISUALIZACIÓN DEL PLANETA')}</legend>
         <button type="button" aria-pressed={activeTexture === 'mola'} className={activeTexture === 'mola' ? 'selected' : ''}
-          onClick={() => selectTexture.current('mola')}>Relieve MOLA</button>
+          onClick={() => selectTexture.current('mola')}>{ui('MOLA relief', 'Relieve MOLA')}</button>
         <button type="button" aria-pressed={activeTexture === 'viking'} className={activeTexture === 'viking' ? 'selected' : ''}
-          onClick={() => selectTexture.current('viking')}>Color de superficie</button>
+          onClick={() => selectTexture.current('viking')}>{ui('Surface color', 'Color de superficie')}</button>
       </fieldset>
-      {vikingLoading && <p className="texture-status" role="status">Cargando mosaico Viking…</p>}
-      {vikingError && <p className="texture-error" role="alert">No se pudo cargar Viking. Sigue visible MOLA; podés reintentar «Color de superficie».</p>}
+      {vikingLoading && <p className="texture-status" role="status">{ui('Loading Viking mosaic…', 'Cargando mosaico Viking…')}</p>}
+      {vikingError && <p className="texture-error" role="alert">{ui('Viking could not load. MOLA remains visible; retry Surface color.', 'No se pudo cargar Viking. Sigue visible MOLA; podés reintentar Color de superficie.')}</p>}
       {activeTexture === 'mola' && <MolaElevationLegend />}
     </div>
     <div className="globe-viewport">
-      <div className="globe-canvas" ref={host} aria-label="Esfera de Marte; arrastrá para girar, usá la rueda para acercar, tocá una región para centrarla." />
-      {status === 'loading' && <span className="globe-loading" role="status">Cargando textura MOLA…</span>}
+      <div className="globe-canvas" ref={host} aria-label={ui('Mars sphere: drag to rotate, scroll to zoom, select a region to center.', 'Esfera de Marte: arrastrá para girar, usá la rueda para acercar, tocá una región para centrarla.')} />
+      {status === 'loading' && <span className="globe-loading" role="status">{ui('Loading MOLA texture…', 'Cargando textura MOLA…')}</span>}
       {status === 'ready' && (
         <>
           <button type="button" className="globe-marker" ref={marker} onClick={onJezero}
-            aria-label="Jezero Crater, 18.41 grados norte, 77.69 grados este. Abrir mapa científico 2D">
+            aria-label={ui('Jezero Crater, 18.41 degrees north, 77.69 degrees east. Open 2D scientific map', 'Jezero Crater, 18.41 grados norte, 77.69 grados este. Abrir mapa científico 2D')}>
             <span className="globe-arrow" aria-hidden="true">⌄</span><span>Jezero Crater</span>
           </button>
           {onGaleTerrain && (
             <button type="button" className="globe-marker gale-marker" ref={galeMarker} onClick={onGaleTerrain}
               style={{ borderColor: '#00f0ff', color: '#00f0ff' }}
-              aria-label="Gale Crater, 5.37 grados sur, 137.44 grados este. Abrir visor 3D de terreno y Mount Sharp">
+              aria-label={ui('Gale Crater, 5.37 degrees south, 137.44 degrees east. Open 3D terrain view of Mount Sharp', 'Gale Crater, 5.37 grados sur, 137.44 grados este. Abrir visor 3D de terreno y Mount Sharp')}>
               <span className="globe-arrow" aria-hidden="true" style={{ color: '#00f0ff' }}>⌄</span><span>Gale Crater (Mount Sharp)</span>
             </button>
           )}
         </>
       )}
     </div>
-    <div className="globe-controls" aria-label="Controles del globo">
-      <button type="button" onClick={() => actions.current?.rotate(-20)} aria-label="Girar Marte a la izquierda">←</button>
-      <button type="button" onClick={() => actions.current?.rotate(20)} aria-label="Girar Marte a la derecha">→</button>
-      <button type="button" onClick={() => actions.current?.zoom(0.82)} aria-label="Acercar Marte">+</button>
-      <button type="button" onClick={() => actions.current?.zoom(1.22)} aria-label="Alejar Marte">−</button>
+    <div className="globe-controls" aria-label={ui('Globe controls', 'Controles del globo')}>
+      <button type="button" onClick={() => actions.current?.rotate(-20)} aria-label={ui('Rotate Mars left', 'Girar Marte a la izquierda')}>←</button>
+      <button type="button" onClick={() => actions.current?.rotate(20)} aria-label={ui('Rotate Mars right', 'Girar Marte a la derecha')}>→</button>
+      <button type="button" onClick={() => actions.current?.zoom(0.82)} aria-label={ui('Zoom in on Mars', 'Acercar Marte')}>+</button>
+      <button type="button" onClick={() => actions.current?.zoom(1.22)} aria-label={ui('Zoom out from Mars', 'Alejar Marte')}>−</button>
     </div>
     <div className="globe-credit"><a href={sourceUrls[activeTexture]} target="_blank" rel="noreferrer">
-      {activeTexture === 'mola' ? 'NASA / USGS · MGS MOLA · relieve sombreado' :
-        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global {activeTexture === 'viking' ? '2048×1024 px' : '1024×512 px'}</div>
+      {activeTexture === 'mola' ? ui('NASA / USGS · MGS MOLA · shaded relief', 'NASA / USGS · MGS MOLA · relieve sombreado') :
+        ui('NASA Ames / USGS · Viking MDIM 2.1 · colorized mosaic', 'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado')} ↗</a> · {ui('Global image', 'Imagen global')} {activeTexture === 'viking' ? '2048×1024 px' : '1024×512 px'}</div>
   </section>
 }
