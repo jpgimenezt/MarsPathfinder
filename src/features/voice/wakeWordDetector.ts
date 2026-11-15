@@ -130,10 +130,14 @@ export class LocalWakeWordDetector {
 
     if (speaking) {
       this.isAssistantSpeaking = true
+      // Período máximo de seguridad de 8s para evitar bloqueos permanentes si onEnd no se dispara
+      this.speakingLockReleaseTimer = setTimeout(() => {
+        this.isAssistantSpeaking = false
+      }, 8000)
     } else {
       this.speakingLockReleaseTimer = setTimeout(() => {
         this.isAssistantSpeaking = false
-      }, 800)
+      }, 600)
     }
   }
 
@@ -203,13 +207,18 @@ export class LocalWakeWordDetector {
 
       this.recognition.onend = () => {
         if (this.isListening && !this.isExplicitlyStopped) {
+          if (this.restartTimeout) clearTimeout(this.restartTimeout)
           this.restartTimeout = setTimeout(() => {
             try {
               if (this.isListening && !this.isExplicitlyStopped) {
                 this.recognition?.start()
               }
-            } catch {}
-          }, 250)
+            } catch (err: any) {
+              if (err?.name !== 'InvalidStateError' && !err?.message?.includes('already started')) {
+                console.debug('[WAKE WORD] Reintento de arranque tras onend:', err?.message)
+              }
+            }
+          }, 200)
         }
       }
     } catch (e) {
@@ -405,9 +414,7 @@ export class LocalWakeWordDetector {
   }
 
   public start(): boolean {
-    if (this.isListening) return true
     this.isExplicitlyStopped = false
-    this.isListening = true
 
     // Activar la captura unificada de audio para que los visualizadores RMS y VAD estén vivos
     try {
@@ -417,10 +424,20 @@ export class LocalWakeWordDetector {
     } catch {}
 
     if (!this.recognition) return false
+    if (this.isListening) return true
+
     try {
+      this.isListening = true
       this.recognition.start()
       return true
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'InvalidStateError' || err?.message?.includes('already started')) {
+        // En Chromium, la instancia previa aún puede estar activa en el hilo de audio
+        this.isListening = true
+        return true
+      }
+      console.warn('[WAKE WORD] Error iniciando SpeechRecognition:', err)
+      this.isListening = false
       return false
     }
   }
@@ -429,7 +446,10 @@ export class LocalWakeWordDetector {
     this.isExplicitlyStopped = true
     this.isListening = false
     this.isCommandListening = false
-    if (this.restartTimeout) clearTimeout(this.restartTimeout)
+    if (this.restartTimeout) {
+      clearTimeout(this.restartTimeout)
+      this.restartTimeout = null
+    }
     try {
       this.recognition?.stop()
     } catch {}

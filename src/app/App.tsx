@@ -1,7 +1,6 @@
 import { lazy, Suspense, useCallback, useReducer, useState, useMemo } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
-import { AresAgentChat } from '../components/AresAgentChat'
 import { AresMissionCommsModal } from '../components/AresMissionCommsModal'
 import { sources, vikingBase, type LayerId } from '../data/sourceManifest'
 import { ROI, insideAnyActiveRoi, insideRoi } from '../features/map/marsProjection'
@@ -52,8 +51,10 @@ export function App() {
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
   const [routeNotice, setRouteNotice] = useState<string | null>(null)
-  const [isAgentOpen, setIsAgentOpen] = useState(false)
   const [isCommsOpen, setIsCommsOpen] = useState(false)
+
+  const handleOpenComms = useCallback(() => setIsCommsOpen(true), [])
+  const handleCloseComms = useCallback(() => setIsCommsOpen(false), [])
 
   // Estados de control remoto para ARES MISSION COMMS sobre el mapa 3D y capas
   const [focusTarget, setFocusTarget] = useState<{ lat: number; lon: number; height?: number } | null>(null)
@@ -850,19 +851,10 @@ export function App() {
         </footer>
       )}
 
-      <AresAgentChat
-        isOpen={isAgentOpen}
-        onOpen={() => setIsAgentOpen(true)}
-        onClose={() => setIsAgentOpen(false)}
-        currentStops={plan.stops}
-        totalDistanceMeters={legs.total}
-        hideFab={true}
-      />
-
       <AresMissionCommsModal
         isOpen={isCommsOpen}
-        onOpen={() => setIsCommsOpen(true)}
-        onClose={() => setIsCommsOpen(false)}
+        onOpen={handleOpenComms}
+        onClose={handleCloseComms}
         appHandlers={appHandlers}
         contextInput={{
           screen,

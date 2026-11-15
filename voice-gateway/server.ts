@@ -203,12 +203,12 @@ wss.on('connection', (ws: WebSocket, req) => {
             send({ type: 'conversation_state', state: 'awaiting_user' })
             resetSessionTimer()
 
-            // Saludo táctico solo si el cliente lo solicita explícitamente (evita colisiones con síntesis local)
+            // Saludo táctico solo si el cliente lo solicita explícitamente (FRASES CORTAS)
             if (message.greet === true) {
               const greetingText =
                 language === 'en'
-                  ? 'Astronaut connected to ARES tactical channel. Acknowledge link established briefly in English and state you are standing by for mission navigation and surface science orders.'
-                  : 'Astronauta enlazado a la frecuencia táctica ARES. Confirma enlace establecido de forma breve en español e indícale al comandante que estás a la escucha para órdenes de navegación y análisis.'
+                  ? 'ARES online. Standing by.'
+                  : 'ARES en línea. A la escucha.'
               session.sendTextMessage(greetingText)
             }
           } catch (initErr: unknown) {

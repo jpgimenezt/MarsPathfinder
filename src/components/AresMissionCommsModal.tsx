@@ -215,6 +215,9 @@ export function AresMissionCommsModal({
   const responseLanguageRef = useRef<SupportedLanguage>(responseLanguage)
   responseLanguageRef.current = responseLanguage
   const executeCommandRef = useRef<((cmd: string) => Promise<void>) | null>(null)
+  const handleInterruptRef = useRef<() => void>(() => {})
+  const handleDisconnectRef = useRef<() => void>(() => {})
+  const showSubtitleRef = useRef<(text: string, role?: 'user' | 'assistant', durationMs?: number) => void>(() => {})
 
   // Sincronizar isOpen de props con el modo de presentación
   useEffect(() => {
@@ -232,6 +235,56 @@ export function AresMissionCommsModal({
       setFloatingSubtitle(null)
     }, durationMs)
   }, [])
+  showSubtitleRef.current = showSubtitle
+
+  // =========================================================================
+  // COMPUERTA DE PRIORIDAD INTELIGENTE (SMART AUDIO PRIORITY GATE)
+  // =========================================================================
+  const isNovaSonicOnline = useCallback(() => {
+    return Boolean(
+      providerRef.current &&
+      connectionState === 'connected' &&
+      voiceState !== 'VOICE_OFFLINE' &&
+      voiceState !== 'ERROR'
+    )
+  }, [connectionState, voiceState])
+
+  /**
+   * Compuerta de Prioridad Inteligente:
+   * Cuando Nova Sonic está en línea y conectado, speakLocalSpeech SE SILENCIA AL 100%.
+   * De esta forma, SOLO la voz natural de Nova Sonic (Carlos/Matthew) habla en la cabina.
+   * speakLocalSpeech queda estrictamente reservada como contingencia offline cuando Bedrock no está disponible.
+   */
+  const dispatchAresSpeech = useCallback(
+    (
+      text: string,
+      lang: SupportedLanguage,
+      callbacks?: {
+        onStart?: () => void
+        onEnd?: () => void
+        onError?: () => void
+      },
+      options?: {
+        sendToNovaSonicIfOnline?: boolean
+      }
+    ) => {
+      const novaOnline = isNovaSonicOnline()
+
+      if (novaOnline) {
+        console.log(`[PRIORITY GATE] Nova Sonic activo. Síntesis local silenciada para: "${text.slice(0, 35)}..."`)
+        if (options?.sendToNovaSonicIfOnline && providerRef.current) {
+          providerRef.current.sendTextMessage(text).catch(() => {})
+        }
+        callbacks?.onStart?.()
+        callbacks?.onEnd?.()
+        return
+      }
+
+      // Modo Contingencia Offline: solo cuando Bedrock/Gateway están desconectados
+      speakLocalSpeech(text, lang, callbacks)
+    },
+    [isNovaSonicOnline]
+  )
 
   // Inicializar motor de herramientas con los handlers reales de la aplicación
   useEffect(() => {
@@ -251,8 +304,9 @@ export function AresMissionCommsModal({
       wakeWordDetectorRef.current?.setCommandMode(true)
     }, 150)
   }, [])
+  handleInterruptRef.current = handleInterrupt
 
-  // Cierre ordenado de comunicaciones
+  // Cierre ordenado de comunicaciones (FRASES CORTAS)
   const handleDisconnect = useCallback(() => {
     console.log('[ARES COMMS] Cierre ordenado de sesión de comunicaciones')
     handleInterrupt()
@@ -263,13 +317,14 @@ export function AresMissionCommsModal({
     setPresentationMode('orb')
 
     const closeNotice = responseLanguage === 'en'
-      ? 'Communications channel closed. Standing by in passive mode.'
-      : 'Canal de comunicaciones cerrado. Enlace en espera pasiva.'
+      ? 'Comms closed. Standing by.'
+      : 'Enlace cerrado. En espera.'
 
-    showSubtitle(closeNotice, 'assistant', 4000)
-    speakLocalSpeech(closeNotice, responseLanguage)
+    showSubtitle(closeNotice, 'assistant', 3000)
+    dispatchAresSpeech(closeNotice, responseLanguage)
     onClose()
-  }, [handleInterrupt, responseLanguage, showSubtitle, onClose])
+  }, [handleInterrupt, responseLanguage, showSubtitle, dispatchAresSpeech, onClose])
+  handleDisconnectRef.current = handleDisconnect
 
   // ==========================================
   // EJECUCIÓN DIRECTA Y MULTITURNO DE COMANDOS
@@ -308,8 +363,8 @@ export function AresMissionCommsModal({
         providerRef.current?.updateConfig({ language: requestedLang, voiceId: nextVoice })
 
         const switchMsg = requestedLang === 'en'
-          ? 'Switched to English. I will continue answering in English for all upcoming mission operations.'
-          : 'Cambiado a español. Continuaré respondiendo en español para todas las operaciones de la misión.'
+          ? 'Language: English. Ready.'
+          : 'Idioma: Español. Listo.'
 
         setTranscripts(prev => [
           ...prev,
@@ -321,8 +376,8 @@ export function AresMissionCommsModal({
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           },
         ])
-        showSubtitle(switchMsg, 'assistant', 5000)
-        speakLocalSpeech(switchMsg, requestedLang, {
+        showSubtitle(switchMsg, 'assistant', 3500)
+        dispatchAresSpeech(switchMsg, requestedLang, {
           onStart: () => setConversationState('speaking'),
           onEnd: () => setConversationState('awaiting_user'),
         })
@@ -366,11 +421,11 @@ export function AresMissionCommsModal({
           },
         ])
 
-        showSubtitle(actionText, 'assistant', 5000)
+        showSubtitle(actionText, 'assistant', 4000)
 
-        // Síntesis auditiva con protección anti-eco
+        // Síntesis auditiva con compuerta de prioridad (silencia TTS local si Nova Sonic está en línea)
         wakeWordDetectorRef.current?.setSpeakingLock(true)
-        speakLocalSpeech(actionText, responseLanguage, {
+        dispatchAresSpeech(actionText, responseLanguage, {
           onStart: () => {
             setConversationState('speaking')
             wakeWordDetectorRef.current?.setSpeakingLock(true)
@@ -412,11 +467,11 @@ export function AresMissionCommsModal({
         showSubtitle(
           missionScience.spokenSummary.slice(0, 160) + (missionScience.spokenSummary.length > 160 ? '...' : ''),
           'assistant',
-          7000
+          6000
         )
 
         wakeWordDetectorRef.current?.setSpeakingLock(true)
-        speakLocalSpeech(missionScience.spokenSummary, responseLanguageRef.current, {
+        dispatchAresSpeech(missionScience.spokenSummary, responseLanguageRef.current, {
           onStart: () => {
             setConversationState('speaking')
             wakeWordDetectorRef.current?.setSpeakingLock(true)
@@ -467,7 +522,7 @@ export function AresMissionCommsModal({
 
         showSubtitle(cleanReply.slice(0, 160) + (cleanReply.length > 160 ? '...' : ''), 'assistant', 6500)
         wakeWordDetectorRef.current?.setSpeakingLock(true)
-        speakLocalSpeech(cleanReply, responseLanguageRef.current, {
+        dispatchAresSpeech(cleanReply, responseLanguageRef.current, {
           onStart: () => {
             setConversationState('speaking')
             wakeWordDetectorRef.current?.setSpeakingLock(true)
@@ -485,7 +540,7 @@ export function AresMissionCommsModal({
         setConversationState('standby')
       }
     },
-    [responseLanguage, voiceState, showSubtitle]
+    [responseLanguage, voiceState, showSubtitle, dispatchAresSpeech]
   )
 
   // Mantener referencia actualizada de executeTacticalCommand para el detector sin causar remounts
@@ -493,6 +548,7 @@ export function AresMissionCommsModal({
 
   // ==========================================
   // CONFIGURAR DETECTOR DE VOZ CONTINUA (STABLE LIFECYCLE)
+  // Desacoplado de la pantalla para mantener presencia activa en Gale 3D y Globo
   // ==========================================
   useEffect(() => {
     if (!wakeWordDetectorRef.current) {
@@ -510,20 +566,20 @@ export function AresMissionCommsModal({
       setConnectionState('connected')
 
       const curLang = responseLanguageRef.current
-      showSubtitle(
+      showSubtitleRef.current(
         curLang === 'en' ? '● ARES Listening... Ask your question or command.' : '● ARES a la escucha... Di tu orden o pregunta.',
         'assistant',
-        4000
+        3500
       )
 
-      // Si el usuario dijo el comando en la misma frase ("Hola ARES, necesito que analices...")
+      // Si el usuario dijo el comando en la misma frase ("Hola ARES, enfocar Mount Sharp...")
       if (event.trailingCommand && event.trailingCommand.trim().length > 1) {
         executeCommandRef.current?.(event.trailingCommand.trim())
       } else {
-        // Respuesta vocal inmediata de ARES al detectar el saludo de activación
+        // Respuesta vocal inmediata de ARES al detectar el saludo de activación (FRASES CORTAS)
         const ackText = curLang === 'en'
-          ? 'ARES online. Standing by for navigation, mapping, or science analysis.'
-          : 'ARES en línea. A la escucha para órdenes de navegación, cartografía o análisis científico.'
+          ? 'ARES online. Standing by.'
+          : 'ARES en línea. A la escucha.'
 
         setTranscripts(prev => [
           ...prev,
@@ -535,33 +591,38 @@ export function AresMissionCommsModal({
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           },
         ])
-        showSubtitle(ackText, 'assistant', 4500)
+        showSubtitleRef.current(ackText, 'assistant', 3000)
 
-        // Bloqueo anti-eco durante la respuesta vocal para evitar triple auto-activación
+        // Compuerta de prioridad anti-eco: silencia TTS local si Nova Sonic está en línea
         detector.setSpeakingLock(true)
-        speakLocalSpeech(ackText, curLang, {
-          onStart: () => {
-            setConversationState('speaking')
-            detector.setSpeakingLock(true)
+        dispatchAresSpeech(
+          ackText,
+          curLang,
+          {
+            onStart: () => {
+              setConversationState('speaking')
+              detector.setSpeakingLock(true)
+            },
+            onEnd: () => {
+              detector.setSpeakingLock(false)
+              setConversationState('listening')
+              detector.setCommandMode(true)
+            },
+            onError: () => {
+              detector.setSpeakingLock(false)
+              setConversationState('listening')
+              detector.setCommandMode(true)
+            },
           },
-          onEnd: () => {
-            detector.setSpeakingLock(false)
-            setConversationState('listening')
-            detector.setCommandMode(true)
-          },
-          onError: () => {
-            detector.setSpeakingLock(false)
-            setConversationState('listening')
-            detector.setCommandMode(true)
-          },
-        })
+          { sendToNovaSonicIfOnline: true }
+        )
       }
     })
 
     // Interrupción por comando vocal ("detener", "para", "stop", "silencio")
     const unsubscribeInterrupt = detector.subscribeInterrupt(() => {
       console.log('[ARES COMMS] Interrupción vocal recibida (Barge-In)')
-      handleInterrupt()
+      handleInterruptRef.current()
     })
 
     // Escucha continua de comandos
@@ -572,7 +633,7 @@ export function AresMissionCommsModal({
 
     // Desconexión explícita por voz ("Cerrar comunicaciones")
     const unsubscribeDisconnect = detector.subscribeDisconnect(() => {
-      handleDisconnect()
+      handleDisconnectRef.current()
     })
 
     if (isWakeWordActive) {
@@ -588,7 +649,7 @@ export function AresMissionCommsModal({
       unsubscribeDisconnect()
       detector.stop()
     }
-  }, [isWakeWordActive, handleInterrupt, handleDisconnect, showSubtitle])
+  }, [isWakeWordActive, dispatchAresSpeech])
 
   // Inicializar proveedor de voz Nova Sonic (en segundo plano)
   useEffect(() => {
@@ -829,21 +890,21 @@ export function AresMissionCommsModal({
 
     const msg =
       nextLang === 'en'
-        ? '🌐 [ARES INTERNATIONAL DEMO]: System switched to English. International scientific telemetry active.'
-        : '🇦🇷 [MODO ESPAÑOL]: Sistema configurado en español. Copiloto táctico listo.'
+        ? 'ARES online in English.'
+        : 'ARES en línea en español.'
 
     setTranscripts(prev => [
       ...prev,
       {
         id: `demo-${Date.now()}`,
         role: 'assistant',
-        text: msg,
+        text: `[SISTEMA]: ${msg}`,
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       },
     ])
-    showSubtitle(msg, 'assistant', 4500)
-    speakLocalSpeech(msg, nextLang)
+    showSubtitle(msg, 'assistant', 3000)
+    dispatchAresSpeech(msg, nextLang)
   }
 
   const handleOrbClick = () => {
