@@ -164,41 +164,49 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
     const worldZ = centerTerrainPos.z - mod.offsetMeters.north * meterToUnit
     const groundY = getTerrainHeight(worldX, worldZ)
 
-    // Elevación de cimentación ingenieril (+0.85m) para prevenir enterramiento por pendiente o z-fighting
-    const foundationClearance = 0.85 * meterToUnit
-
     const moduleGroup = new Group()
     moduleGroup.name = `colony-module-${mod.id}`
-    moduleGroup.position.set(worldX, groundY + foundationClearance, worldZ)
+    moduleGroup.position.set(worldX, groundY, worldZ)
     moduleGroup.rotation.y = (mod.rotationDeg * Math.PI) / 180
     moduleGroup.userData = { moduleData: mod }
 
-    // Plataforma de nivelación y cimentación geotécnica al regolito
-    const padRadius = Math.max(3.2, (mod.dimensions.widthMeters / 2 + 1.2)) * meterToUnit
-    const foundationPadGeo = new CylinderGeometry(padRadius, padRadius * 1.04, 0.65 * meterToUnit, 12)
-    foundationPadGeo.translate(0, -0.32 * meterToUnit, 0)
-    const foundationPad = new Mesh(foundationPadGeo, matMetalFrame)
-    applyShadows(foundationPad)
-    moduleGroup.add(foundationPad)
+    // Plataforma de nivelación y cimentación geotécnica al regolito (solo para módulos presurizados habitables y de descenso)
+    if (mod.type !== 'energy') {
+      const padRadius = Math.min(5.5 * meterToUnit, Math.max(2.8 * meterToUnit, (mod.dimensions.widthMeters / 2 + 0.6) * meterToUnit))
+      const padThickness = 0.45 * meterToUnit
+      const foundationPadGeo = new CylinderGeometry(padRadius, padRadius * 1.02, padThickness, 16)
+      foundationPadGeo.translate(0, -padThickness / 2, 0)
+      const foundationPad = new Mesh(foundationPadGeo, matMetalFrame)
+      applyShadows(foundationPad)
+      moduleGroup.add(foundationPad)
 
-    // Pilares telescópicos de anclaje hidráulico que compensan pendientes del terreno
-    const stiltCount = mod.type === 'landing' ? 8 : 6
-    for (let p = 0; p < stiltCount; p++) {
-      const pAngle = (p * Math.PI * 2) / stiltCount
-      const px = Math.cos(pAngle) * (padRadius * 0.88)
-      const pz = Math.sin(pAngle) * (padRadius * 0.88)
-      const stiltGeo = new CylinderGeometry(0.14 * meterToUnit, 0.18 * meterToUnit, 1.8 * meterToUnit, 6)
-      stiltGeo.translate(px, -1.0 * meterToUnit, pz)
-      const stiltMesh = new Mesh(stiltGeo, matMetalFrame)
-      applyShadows(stiltMesh)
-      moduleGroup.add(stiltMesh)
+      // Pilares telescópicos de anclaje hidráulico con profundidad adaptativa al terreno
+      const stiltCount = mod.type === 'landing' ? 8 : 6
+      for (let p = 0; p < stiltCount; p++) {
+        const pAngle = (p * Math.PI * 2) / stiltCount
+        const px = Math.cos(pAngle) * (padRadius * 0.88)
+        const pz = Math.sin(pAngle) * (padRadius * 0.88)
 
-      // Zapata pesada de anclaje
-      const footGeo = new CylinderGeometry(0.35 * meterToUnit, 0.42 * meterToUnit, 0.22 * meterToUnit, 8)
-      footGeo.translate(px, -1.8 * meterToUnit, pz)
-      const footMesh = new Mesh(footGeo, matMetalFrame)
-      applyShadows(footMesh)
-      moduleGroup.add(footMesh)
+        // Calcular la altura real del terreno en las coordenadas de este pilar específico
+        const stiltWorldX = worldX + px
+        const stiltWorldZ = worldZ + pz
+        const stiltGroundY = getTerrainHeight(stiltWorldX, stiltWorldZ)
+        // La distancia desde la base de la plataforma hasta el suelo local (+ 0.35m de anclaje seguro)
+        const dropToGround = Math.max(0.4 * meterToUnit, (groundY - stiltGroundY) + 0.55 * meterToUnit)
+
+        const stiltGeo = new CylinderGeometry(0.12 * meterToUnit, 0.16 * meterToUnit, dropToGround, 6)
+        stiltGeo.translate(px, -dropToGround / 2, pz)
+        const stiltMesh = new Mesh(stiltGeo, matMetalFrame)
+        applyShadows(stiltMesh)
+        moduleGroup.add(stiltMesh)
+
+        // Zapata anclada firmemente en el regolito
+        const footGeo = new CylinderGeometry(0.32 * meterToUnit, 0.38 * meterToUnit, 0.22 * meterToUnit, 8)
+        footGeo.translate(px, -dropToGround, pz)
+        const footMesh = new Mesh(footGeo, matMetalFrame)
+        applyShadows(footMesh)
+        moduleGroup.add(footMesh)
+      }
     }
 
     switch (mod.type) {
@@ -602,6 +610,13 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
 
       case 'energy': {
         // --- 6. PLANTA SOLAR FOTOVOLTAICA ARTICULADA Y SUBESTACIÓN ---
+        // Base de cimentación integrada de la subestación
+        const subBaseGeo = new CylinderGeometry(2.8 * meterToUnit, 3.1 * meterToUnit, 0.4 * meterToUnit, 12)
+        subBaseGeo.translate(0, -0.15 * meterToUnit, 0)
+        const subBaseMesh = new Mesh(subBaseGeo, matMetalFrame)
+        applyShadows(subBaseMesh)
+        moduleGroup.add(subBaseMesh)
+
         // Contenedor blindado de la subestación de baterías y conmutadores
         const subStationGeo = new BoxGeometry(4.2 * meterToUnit, 2.5 * meterToUnit, 4.2 * meterToUnit)
         subStationGeo.translate(0, 1.25 * meterToUnit, 0)
@@ -616,12 +631,27 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
           moduleGroup.add(new Mesh(finGeo, matMetalFrame))
         }
 
-        // 6 Grandes alas solares fotovoltaicas con seguimiento del Sol
+        // 6 Grandes alas solares fotovoltaicas ajustadas a la topografía local
         for (let row = -1; row <= 1; row++) {
           for (let col = -1; col <= 1; col++) {
             if (row === 0 && col === 0) continue // Espacio de la subestación
+
+            const wingOffsetX = col * 11.0 * meterToUnit
+            const wingOffsetZ = row * 7.5 * meterToUnit
+            const wingWorldX = worldX + wingOffsetX
+            const wingWorldZ = worldZ + wingOffsetZ
+            const wingGroundY = getTerrainHeight(wingWorldX, wingWorldZ)
+            const wingDeltaY = wingGroundY - groundY
+
             const pGroup = new Group()
-            pGroup.position.set(col * 11.0 * meterToUnit, 0, row * 7.5 * meterToUnit)
+            pGroup.position.set(wingOffsetX, wingDeltaY, wingOffsetZ)
+
+            // Zapata de anclaje de superficie en el regolito
+            const footGeo = new CylinderGeometry(0.85 * meterToUnit, 1.05 * meterToUnit, 0.3 * meterToUnit, 8)
+            footGeo.translate(0, 0.12 * meterToUnit, 0)
+            const footMesh = new Mesh(footGeo, matMetalFrame)
+            applyShadows(footMesh)
+            pGroup.add(footMesh)
 
             // Pylon central de soporte con motor de acimut
             const postGeo = new CylinderGeometry(0.22 * meterToUnit, 0.28 * meterToUnit, 2.4 * meterToUnit, 8)
@@ -769,7 +799,7 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   const meterToUnit = 0.12 * scale
   const habX = centerTerrainPos.x
   const habZ = centerTerrainPos.z
-  const habY = getTerrainHeight(habX, habZ) + 0.85 * meterToUnit
+  const habY = getTerrainHeight(habX, habZ)
 
   const corridorConnections = [
     { targetX: habX + 26 * meterToUnit, targetZ: habZ - (-12) * meterToUnit, label: 'Túnel Habitación-Invernadero' },
@@ -778,9 +808,9 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   ]
 
   corridorConnections.forEach((conn) => {
-    const targetY = getTerrainHeight(conn.targetX, conn.targetZ) + 0.85 * meterToUnit
-    const startPt = new Vector3(habX, habY + 1.5 * meterToUnit, habZ)
-    const endPt = new Vector3(conn.targetX, targetY + 1.5 * meterToUnit, conn.targetZ)
+    const targetY = getTerrainHeight(conn.targetX, conn.targetZ)
+    const startPt = new Vector3(habX, habY + 1.2 * meterToUnit, habZ)
+    const endPt = new Vector3(conn.targetX, targetY + 1.2 * meterToUnit, conn.targetZ)
     const midPt = startPt.clone().add(endPt).multiplyScalar(0.5)
     const dist = startPt.distanceTo(endPt)
     const dir = endPt.clone().sub(startPt).normalize()

@@ -423,21 +423,22 @@ export function MarsTerrain3D({
 
     GALE_DISCOVERIES.forEach((disc) => {
       const { x, z } = geoToTerrainPosition(disc.coordinates.lon, disc.coordinates.lat)
-      const y = (disc.elevationMeters + 4500) * ELEVATION_SCALE
+      const elev = getGaleElevation(disc.coordinates.lon, disc.coordinates.lat)
+      const y = (elev + 4500) * ELEVATION_SCALE
 
       const pinGroup = new Group()
       pinGroup.position.set(x, y, z)
       pinGroup.name = `discovery-${disc.id}`
       pinGroup.userData = { discoveryData: disc }
 
-      // Trípode de anclaje de titanio al regolito (escala compacta proporcional)
+      // Trípode de anclaje de titanio al regolito (escala compacta proporcional firmemente en el suelo)
       for (let leg = 0; leg < 3; leg++) {
         const legAngle = (leg * Math.PI * 2) / 3
         const legGeo = new CylinderGeometry(0.025, 0.04, 0.55, 6)
         legGeo.rotateZ(Math.PI / 5.2)
         legGeo.translate(0.22, 0.25, 0)
         legGeo.rotateY(legAngle)
-        const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.3 }))
+        const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.35, roughness: 0.55 }))
         legMesh.castShadow = true
         pinGroup.add(legMesh)
       }
@@ -445,44 +446,44 @@ export function MarsTerrain3D({
       // Canister central presurizado de instrumentación analítica (CheMin/SAM)
       const coreGeo = new CylinderGeometry(0.18, 0.22, 0.35, 8)
       coreGeo.translate(0, 0.32, 0)
-      const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.3 }))
+      const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.3, roughness: 0.5 }))
       coreMesh.castShadow = true
       pinGroup.add(coreMesh)
 
       // Tapa con micro-celdas solares fotovoltaicas
       const capGeo = new CylinderGeometry(0.22, 0.22, 0.04, 8)
       capGeo.translate(0, 0.52, 0)
-      const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x172554, metalness: 0.9, roughness: 0.15 }))
+      const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.4, roughness: 0.35 }))
       pinGroup.add(capMesh)
 
       // Mástil sensor vertical con cabezal óptico Mastcam / ChemCam
-      const mastGeo = new CylinderGeometry(0.025, 0.025, 0.45, 6)
-      mastGeo.translate(0, 0.75, 0)
-      const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 }))
+      const mastGeo = new CylinderGeometry(0.025, 0.025, 0.35, 6)
+      mastGeo.translate(0, 0.7, 0)
+      const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.35, roughness: 0.55 }))
       mastMesh.castShadow = true
       pinGroup.add(mastMesh)
 
       const sensorHeadGeo = new BoxGeometry(0.16, 0.12, 0.16)
-      sensorHeadGeo.translate(0, 1.0, 0)
-      const sensorHeadMesh = new Mesh(sensorHeadGeo, new MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.7, roughness: 0.3 }))
+      sensorHeadGeo.translate(0, 0.88, 0)
+      const sensorHeadMesh = new Mesh(sensorHeadGeo, new MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.2, roughness: 0.45 }))
       sensorHeadMesh.castShadow = true
       pinGroup.add(sensorHeadMesh)
 
-      // Retícula táctica holográfica FUI flotante sobre la estación de superficie (y = 1.25 m)
+      // Retícula táctica compacta integrada en el mástil (y = 0.95 m)
       const reticleGroup = new Group()
-      reticleGroup.position.set(0, 1.25, 0)
+      reticleGroup.position.set(0, 0.95, 0)
       reticleGroup.name = 'holographic-reticle'
 
       // Anillo exterior con muescas de adquisición de objetivo
-      const outerRingGeo = new RingGeometry(0.35, 0.45, 24)
+      const outerRingGeo = new RingGeometry(0.28, 0.36, 24)
       outerRingGeo.rotateX(-Math.PI / 2)
-      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide })))
+      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85, side: DoubleSide })))
 
       // Rombo de telemetría interior
-      const diamondRingGeo = new RingGeometry(0.14, 0.22, 4)
+      const diamondRingGeo = new RingGeometry(0.1, 0.16, 4)
       diamondRingGeo.rotateX(-Math.PI / 2)
       diamondRingGeo.rotateZ(Math.PI / 4)
-      reticleGroup.add(new Mesh(diamondRingGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: DoubleSide })))
+      reticleGroup.add(new Mesh(diamondRingGeo, new MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.9, side: DoubleSide })))
 
       pinGroup.add(reticleGroup)
       beaconsGroup.add(pinGroup)
@@ -576,22 +577,28 @@ export function MarsTerrain3D({
       wpGroup.userData = { curiosityPoint: wp }
       wpGroup.position.set(x, y, z)
 
-      const ringGeo = new RingGeometry(0.35, 0.55, 24)
+      // Marcador geológico de superficie Curiosity (anclado directamente al regolito, sin postes flotantes)
+      const ringGeo = new RingGeometry(0.24, 0.42, 16)
       ringGeo.rotateX(-Math.PI / 2)
-      const ringMesh = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xf59e0b, side: DoubleSide, transparent: true, opacity: 0.85 }))
-      ringMesh.position.y = 0.06
+      const ringMesh = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xd97706, side: DoubleSide, transparent: true, opacity: 0.75 }))
+      ringMesh.position.y = 0.04
       wpGroup.add(ringMesh)
 
-      const pinGeo = new CylinderGeometry(0.03, 0.03, 0.6, 6)
-      const pinMat = new MeshBasicMaterial({ color: 0xf59e0b })
+      const baseGeo = new CylinderGeometry(0.08, 0.12, 0.08, 8)
+      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.25, roughness: 0.55 }))
+      baseMesh.position.y = 0.04
+      wpGroup.add(baseMesh)
+
+      const pinGeo = new CylinderGeometry(0.02, 0.02, 0.2, 6)
+      const pinMat = new MeshBasicMaterial({ color: 0xd97706 })
       const pinMesh = new Mesh(pinGeo, pinMat)
-      pinMesh.position.y = 0.3
+      pinMesh.position.y = 0.14
       wpGroup.add(pinMesh)
 
-      const topGeo = new OctahedronGeometry(0.18)
-      const topMat = new MeshBasicMaterial({ color: 0xffffff })
+      const topGeo = new OctahedronGeometry(0.08)
+      const topMat = new MeshBasicMaterial({ color: 0xf8fafc })
       const topMesh = new Mesh(topGeo, topMat)
-      topMesh.position.y = 0.72
+      topMesh.position.y = 0.26
       wpGroup.add(topMesh)
 
       curiosityGroup.add(wpGroup)
@@ -1439,17 +1446,19 @@ export function MarsTerrain3D({
             <span className="top-telemetry-sub">Referencia 6.1 mbar</span>
           </div>
 
-          {hoveredInfo && (
-            <div className="top-telemetry-block cursor-block">
-              <span className="top-telemetry-tag">COORDENADAS BAJO CURSOR</span>
-              <strong className="top-telemetry-val">
-                {hoveredInfo.lat >= 0 ? `${hoveredInfo.lat.toFixed(3)}°N` : `${Math.abs(hoveredInfo.lat).toFixed(3)}°S`} · {hoveredInfo.lon.toFixed(3)}°E
-              </strong>
-              <span className="top-telemetry-sub">
-                Cota: {hoveredInfo.elev} m · Pendiente: {hoveredInfo.slope}° ({evaluateSlope(hoveredInfo.slope).riskLevel})
-              </span>
-            </div>
-          )}
+          <div className="top-telemetry-block cursor-block">
+            <span className="top-telemetry-tag">COORDENADAS BAJO CURSOR</span>
+            <strong className="top-telemetry-val">
+              {hoveredInfo
+                ? `${hoveredInfo.lat >= 0 ? `${hoveredInfo.lat.toFixed(3)}°N` : `${Math.abs(hoveredInfo.lat).toFixed(3)}°S`} · ${hoveredInfo.lon.toFixed(3)}°E`
+                : 'EXPLORACIÓN EN SUPERFICIE'}
+            </strong>
+            <span className="top-telemetry-sub">
+              {hoveredInfo
+                ? `Cota: ${hoveredInfo.elev} m · Pendiente: ${hoveredInfo.slope}° (${evaluateSlope(hoveredInfo.slope).riskLevel})`
+                : 'Mover cursor para inspección'}
+            </span>
+          </div>
         </div>
 
         <div className="hud-top-actions">
@@ -1459,7 +1468,7 @@ export function MarsTerrain3D({
             onClick={() => setIsGuidedTourOpen(true)}
             title="Iniciar recorrido guiado interactivo por todas las funciones de ARES"
           >
-            [TUTORIAL]
+            [GUÍA]
           </button>
           <button
             type="button"
@@ -1473,7 +1482,7 @@ export function MarsTerrain3D({
             }}
             title="Iniciar sobrevuelo cinematográfico 3D por los 7 hitos científicos de Gale Crater"
           >
-            [SOBREVUELO 3D]
+            [SOBREVUELO]
           </button>
           <button
             type="button"
@@ -1481,7 +1490,7 @@ export function MarsTerrain3D({
             onClick={playGoogleEarthDive}
             title="Iniciar descenso orbital continuo estilo Google Earth hacia LZ-1 Bradbury Base"
           >
-            [DESCENSO CONTINUO]
+            [DESCENSO EDL]
           </button>
           <button
             type="button"
@@ -1489,7 +1498,7 @@ export function MarsTerrain3D({
             onClick={playGoogleEarthAscent}
             title="Ascender a órbita espacial alta de Marte"
           >
-            [ASCENSO ORBITAL]
+            [ÓRBITA]
           </button>
           <button
             type="button"
@@ -1497,7 +1506,7 @@ export function MarsTerrain3D({
             onClick={focusOnLandingSite}
             title="Enfocar cámara en el Sitio Candidato Principal LZ-1"
           >
-            [FOCO LZ-1 BASE]
+            [LZ-1 BASE]
           </button>
           <button
             type="button"
@@ -1505,7 +1514,7 @@ export function MarsTerrain3D({
             onClick={tourColony}
             title="Recorrido panorámico de la Colonia Marciana Base Alfa"
           >
-            [RECORRIDO BASE]
+            [PANORAMA]
           </button>
           <button
             type="button"
@@ -1537,16 +1546,15 @@ export function MarsTerrain3D({
             onClick={onSwitchToJezero2D}
             title="Abrir mapa científico 2D de Jezero Crater"
           >
-            [MAPA 2D JEZERO]
+            [JEZERO 2D]
           </button>
           <button
             type="button"
             className="hud-btn"
-            style={{ borderColor: 'rgba(0, 240, 255, 0.4)', color: '#00f0ff' }}
             onClick={() => setIsCleanViewMode(true)}
             title="Modo pantalla completa limpia sin paneles distractores (Esc para restaurar)"
           >
-            [PANTALLA LIMPIA]
+            [LIMPIAR]
           </button>
         </div>
       </header>
