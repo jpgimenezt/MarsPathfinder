@@ -346,6 +346,49 @@
 }
 
 /* --------------------------------------------------------------------------
+   BANNER DE TRANSPARENCIA CIENTÍFICA GALE 3D
+   -------------------------------------------------------------------------- */
+.ares-science-disclaimer-bar {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: min(860px, calc(100% - 32px));
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 18, 24, 0.92);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 4px;
+  padding: 4px 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.disclaimer-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.disclaimer-text {
+  font-size: 0.64rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
    ZONA 2: PANEL DE CONTROL TÁCTICO IZQUIERDO (Acoplado y Colapsable)
    -------------------------------------------------------------------------- */
 .ares-tactical-dock {
@@ -1134,7 +1177,31 @@
     padding: 6px 10px;
   }
   .ares-inspector-drawer {
-    width: 320px;
+    top: 54px;
+    bottom: 60px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    z-index: 30;
+  }
+  .ares-science-disclaimer-bar {
+    top: auto;
+    bottom: 58px;
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 10px;
+  }
+  .disclaimer-badge {
+    font-size: 0.56rem;
+  }
+  .disclaimer-text {
+    font-size: 0.58rem;
   }
 }
 
@@ -2503,7 +2570,8 @@
 body.is-clean-view .ares-hud-top,
 body.is-clean-view .ares-hud-bottom,
 body.is-clean-view .ares-left-dock,
-body.is-clean-view .ares-inspector-drawer {
+body.is-clean-view .ares-inspector-drawer,
+body.is-clean-view .ares-science-disclaimer-bar {
   display: none !important;
 }
 

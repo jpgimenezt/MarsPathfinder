@@ -445,7 +445,7 @@ export function MarsTerrain3D({
     skyFillLight.position.set(-100, 60, -80)
     scene.add(skyFillLight)
 
-    // 7. Malla del Terreno de Gale Crater con Vértices Hipsométricos MOLA
+    // 7. Malla del Terreno de Gale Crater con Vértices Hipsométricos (Reconstrucción Procedural)
     const terrainGeo = new PlaneGeometry(
       TERRAIN_WIDTH,
       TERRAIN_HEIGHT,
@@ -1640,7 +1640,7 @@ export function MarsTerrain3D({
           <div className="edl-center-hud">
             <div className="edl-phase-tag">[MANIOBRA GOOGLE EARTH // EDL ENTRY]</div>
             <h2 className="edl-target-title">DESCENSO A BRADBURY BASE (GALE CRATER)</h2>
-            <p className="edl-target-coords">4.590°S · 137.442°E // COTA: -4,520 M // ELIPSE: 7.0 × 4.5 KM</p>
+            <p className="edl-target-coords">4.590°S · 137.442°E // ELEV. EST.: -4,520 M // ELIPSE: 7.0 × 4.5 KM</p>
             <div className="edl-phase-bar">
               <span className="phase-text">{flightTelemetry.phaseName}</span>
               <div className="phase-track">
@@ -1670,9 +1670,11 @@ export function MarsTerrain3D({
           </div>
 
           <div className="top-telemetry-block">
-            <span className="top-telemetry-tag">DATUM AREOIDE MOLA</span>
-            <strong className="top-telemetry-val">5.37°S · 137.44°E</strong>
-            <span className="top-telemetry-sub">Referencia 6.1 mbar</span>
+            <span className="top-telemetry-tag">SUPERFICIE 3D</span>
+            <strong className="top-telemetry-val" style={{ color: '#f59e0b', fontSize: '0.74rem' }}>
+              RECONSTRUCCIÓN APROXIMADA
+            </strong>
+            <span className="top-telemetry-sub">Modelo educativo procedural</span>
           </div>
 
           <div className="top-telemetry-block cursor-block">
@@ -1684,7 +1686,7 @@ export function MarsTerrain3D({
             </strong>
             <span className="top-telemetry-sub">
               {hoveredInfo
-                ? `Cota: ${hoveredInfo.elev} m · Pendiente: ${hoveredInfo.slope}° (${evaluateSlope(hoveredInfo.slope).riskLevel})`
+                ? `Elev. estimada: ${hoveredInfo.elev} m · Pendiente est.: ${hoveredInfo.slope}° (${evaluateSlope(hoveredInfo.slope).riskLevel})`
                 : 'Mover cursor para inspección'}
             </span>
           </div>
@@ -1791,6 +1793,14 @@ export function MarsTerrain3D({
           </button>
         </div>
       </header>
+
+      {/* Banner de Transparencia Científica Gale 3D */}
+      <div className="ares-science-disclaimer-bar" role="note" aria-label="Aviso científico">
+        <span className="disclaimer-badge">RECONSTRUCCIÓN TOPOGRÁFICA APROXIMADA · MODELO EDUCATIVO</span>
+        <span className="disclaimer-text">
+          El relieve de Gale es una reconstrucción procedural con fines educativos. Las alturas, pendientes y rutas simuladas no constituyen mediciones topográficas verificadas ni evaluaciones de seguridad operacional.
+        </span>
+      </div>
 
       {/* ZONA 2: PANEL DE CONTROL TÁCTICO IZQUIERDO (Acoplado y Colapsable) */}
       <aside className={`ares-tactical-dock ${isLeftDockCollapsed ? 'collapsed' : ''}`} aria-label="Panel Táctico">
@@ -2229,7 +2239,7 @@ export function MarsTerrain3D({
                     <span>4.5895°S · 137.4417°E</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>COTA AREOIDE MOLA</label>
+                    <label>ELEVACIÓN ESTIMADA DEL MODELO</label>
                     <span>-4,520 m (Presión ~8.5 hPa)</span>
                   </div>
                   <div className="drawer-meta-item">
@@ -2291,7 +2301,7 @@ export function MarsTerrain3D({
                     <span>{selectedCuriosityWaypoint.targetType}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>COTA AREOIDE MOLA</label>
+                    <label>ELEVACIÓN ESTIMADA DEL MODELO</label>
                     <span>{selectedCuriosityWaypoint.elevationMeters} m</span>
                   </div>
                   <div className="drawer-meta-item">
@@ -2343,7 +2353,7 @@ export function MarsTerrain3D({
               <>
                 <h3 className="drawer-title">PERFIL CIENTÍFICO MULTIMISIÓN</h3>
                 <p className="drawer-sub">
-                  {Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(4)}°S · {selectedObservationProfile.targetCoordinates.lon.toFixed(4)}°E · Cota {Math.round(selectedObservationProfile.targetCoordinates.elevationMeters)} m
+                  {Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(4)}°S · {selectedObservationProfile.targetCoordinates.lon.toFixed(4)}°E · Elev. est. {Math.round(selectedObservationProfile.targetCoordinates.elevationMeters)} m
                 </p>
 
                 <div className="drawer-text-block">
@@ -2352,7 +2362,7 @@ export function MarsTerrain3D({
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong style={{ color: '#f59e0b' }}>Análisis Topográfico y de Seguridad:</strong>
+                  <strong style={{ color: '#f59e0b' }}>Análisis Topográfico Estimado y Riesgos Detectados:</strong>
                   <p>{selectedObservationProfile.terrainSummary}</p>
                 </div>
 
@@ -2422,7 +2432,7 @@ export function MarsTerrain3D({
             <div className="trace-title">
               <span>[TRAZABILIDAD GEODÉSICA DE DISTANCIAS]</span>
               <small style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
-                DATUM AREOIDE MOLA // RM = 3,389,500 M
+                MODELO APROXIMADO GALE // ESFERA R_M = 3,389,500 M
               </small>
             </div>
             <button
@@ -2450,7 +2460,7 @@ export function MarsTerrain3D({
               <strong style={{ color: '#ff9d00' }}>
                 +{Math.round(routeTelemetry.totalGainMeters)} m / -{Math.round(routeTelemetry.totalLossMeters)} m
               </strong>
-              <small>Perfil hipsométrico MOLA</small>
+              <small>Elevación estimada del modelo</small>
             </div>
             <div className="trace-card">
               <label>LÍMITE DE RETORNO (WALKBACK)</label>
@@ -2469,7 +2479,7 @@ export function MarsTerrain3D({
                   <th>DESCRIPCIÓN</th>
                   <th>DIST. HORIZ.</th>
                   <th>DIST. 3D</th>
-                  <th>COTA INI / FIN</th>
+                  <th>ELEV. INI / FIN</th>
                   <th>DESNIVEL Δz</th>
                   <th>PEND. MEDIA</th>
                   <th>TIEMPO MARCHA</th>
@@ -2497,7 +2507,7 @@ export function MarsTerrain3D({
           </div>
 
           <p className="trace-footnote">
-            <strong>Metodología de Validación:</strong> Distancias calculadas sobre la esfera marciana utilizando el radio medio canónico R_M = 3,389,500 m. La distancia tridimensional integra la componente vertical euclidiana sobre la malla de elevación hipsométrica de Gale Crater. No apto para navegación humana en vuelo real; uso exploratorio y educativo.
+            <strong>Metodología de Validación:</strong> Distancias calculadas sobre la esfera marciana utilizando el radio medio canónico R_M = 3,389,500 m. La distancia tridimensional integra la componente vertical estimada sobre la malla procedural de Gale Crater. Las alturas y pendientes simuladas no constituyen mediciones topográficas verificadas de NASA ni evaluaciones de seguridad operacional; uso exploratorio y educativo.
           </p>
         </aside>
       )}

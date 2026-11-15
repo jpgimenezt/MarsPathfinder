@@ -156,23 +156,23 @@ export const ARES_SCIENTIFIC_REGISTRY: AresDatasetMetadata[] = [
   },
   {
     datasetId: 'ares-topographic-dem',
-    name: 'Modelo Digital de Elevación Numérico Local ARES (MOLA + HRSC)',
-    description: 'Malla topográfica de elevación georreferenciada para cálculo de gradientes vectoriales de pendiente, perfil altimétrico y análisis de tracción EVA.',
-    organization: 'ARES Geospatial Systems (Derivado científico)',
-    mission: 'Derivado multisinóptico ARES de MOLA/HRSC',
-    instrument: 'Interpolación bilineal de cuadrícula topográfica en Areoide marciano',
+    name: 'Modelo Topográfico Hipsométrico ARES (Reconstrucción Procedural Educativa)',
+    description: 'Malla topográfica hipsométrica basada en perfiles de MOLA y HRSC para visualización 3D y análisis exploratorio de gradientes. Reconstrucción matemática continua, no DEM oficial georreferenciado.',
+    organization: 'ARES Geospatial Systems (Modelo Educativo)',
+    mission: 'Modelo conceptual derivado de perfiles de MGS MOLA y Mars Express HRSC',
+    instrument: 'Interpolación matemática de superficie hipsométrica en Areoide marciano',
     originUrl: 'https://pds-geosciences.wustl.edu/missions/mgs/mola.html',
-    acquisitionDate: 'Datos fuente: 1999 - 2020',
+    acquisitionDate: 'Datos de referencia: 1999 - 2020',
     publicationDate: '2026-11-15',
-    dataType: 'DERIVED',
-    resolution: '50 metros / celda de cálculo local',
+    dataType: 'MODELED',
+    resolution: 'Malla procedural (~50 metros / vértice)',
     crs: 'Areoide de referencia gravitacional marciano (Radio ecuatorial 3,389.5 km)',
     geographicExtent: 'Región de operaciones de Gale: 136.75°E a 138.15°E; 5.75°S a 4.45°S',
-    unitOfMeasure: 'Metros sobre el nivel de referencia cero marciano (6.1 mbar)',
-    license: 'Derivado Científico ARES para NASA Space Apps Challenge 2026',
-    credits: 'Equipo ARES · Basado en datos abiertos de NASA PDS y ESA PSA',
+    unitOfMeasure: 'Metros estimados sobre el nivel de referencia cero marciano (6.1 mbar)',
+    license: 'Derivado Educativo ARES para NASA Space Apps Challenge 2026',
+    credits: 'Equipo ARES · Reconstrucción geométrica continua',
     availabilityStatus: 'AVAILABLE',
-    limitations: 'Modelo derivado para análisis exploratorio. No detecta zanjas estrechas de arena suelta ni rocas menores a 1 metro.',
+    limitations: 'El relieve de Gale es una reconstrucción procedural con fines educativos. Las alturas, pendientes y rutas simuladas no constituyen mediciones topográficas verificadas ni evaluaciones de seguridad operacional.',
     category: 'TERRAIN_ANALYSIS',
   },
 ]
@@ -205,11 +205,11 @@ export function queryScientificObservationProfile(
   })
 
   const geologySummary = isInsideGale
-    ? `Sector geológico de Gale Crater a ${Math.round(elevationMeters)} m sobre el Areoide. Evidencia de sedimentación lacustre estratificada y capas ricas en arcillas o sulfatos.`
+    ? `Sector geológico de Gale Crater con elevación estimada de ${Math.round(elevationMeters)} m sobre el Areoide. Evidencia de sedimentación lacustre estratificada y capas ricas en arcillas o sulfatos.`
     : 'Ubicación fuera del cuadrante de alta resolución de Gale Crater. Contexto geológico global de baja resolución.'
 
   const terrainSummary = isInsideGale
-    ? 'Modelo topográfico DEM 3D disponible con resolución de 50 m/celda. Cálculo de pendientes y seguridad de locomoción activo.'
+    ? 'Modelo topográfico conceptual 3D disponible (~50 m/vértice interpolado). Estimación de pendientes y análisis exploratorio de transitabilidad.'
     : 'Datos topográficos locales no resueltos para esta coordenada.'
 
   const missionHeritageNearby: string[] = []

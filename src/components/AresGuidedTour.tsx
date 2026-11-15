@@ -16,7 +16,7 @@ export const GUIDED_TOUR_STEPS: GuidedTourStep[] = [
     stageNumber: 1,
     title: 'ETAPA 1 — VISTA PLANETARIA Y VISOR 3D',
     subtitle: 'Navegación Espacial en Tres Dimensiones',
-    description: 'El visor 3D renderiza el terreno de Gale Crater con altimetría MOLA respecto al Areoide marciano (radio medio RM = 3,389,500 m). Podés rotar la cámara manteniendo presionado el botón izquierdo del ratón, desplazarte con el botón derecho y acercarte con la rueda de desplazamiento.',
+    description: 'El visor 3D renderiza una reconstrucción topográfica de Gale Crater referenciada al Areoide marciano de MGS MOLA (radio medio RM = 3,389,500 m). Podés rotar la cámara manteniendo presionado el botón izquierdo del ratón, desplazarte con el botón derecho y acercarte con la rueda de desplazamiento.',
     actionHint: 'Rotá libremente para observar los flancos sedimentarios de Mount Sharp y las murallas de impacto.',
   },
   {
@@ -32,8 +32,8 @@ export const GUIDED_TOUR_STEPS: GuidedTourStep[] = [
     id: 'stage-scientific-layers',
     stageNumber: 3,
     title: 'ETAPA 3 — CAPAS CIENTÍFICAS MULTIMISIÓN',
-    subtitle: 'Cartografía Oficial, Geología USGS y Topografía MOLA',
-    description: 'Accedé a imágenes orbitales ópticas MRO CTX a 6 m/píxel (mosaico controlado Gale_CTX_BlockAdj_dd), el mapa geológico unificado USGS SIM 3292 con unidades estratigráficas, inercia térmica THEMIS y análisis de pendientes para locomoción segura.',
+    subtitle: 'Cartografía Oficial, Geología USGS y Topografía Hipsométrica',
+    description: 'Accedé a imágenes orbitales ópticas MRO CTX a 6 m/píxel (mosaico controlado Gale_CTX_BlockAdj_dd), el mapa geológico unificado USGS SIM 3292 con unidades estratigráficas, inercia térmica THEMIS y análisis de pendientes estimadas del modelo.',
     targetSelector: '.layer-selection-list',
     actionHint: 'Alterná entre el Mosaico CTX y la Geología USGS para ver los estratos enriquecidos.',
   },
@@ -122,7 +122,7 @@ export function AresGuidedTour({ isOpen, onClose, onComplete }: Props) {
           <div className="welcome-feature-list">
             <div className="welcome-feature-item">
               <strong>CARTOGRAFÍA OFICIAL NASA / USGS:</strong>
-              <span>Mosaico orbital CTX a 6 m/px, mapas geológicos SIM 3292 y altimetría MOLA.</span>
+              <span>Mosaico orbital CTX a 6 m/px, mapas geológicos SIM 3292 y modelo hipsométrico.</span>
             </div>
             <div className="welcome-feature-item">
               <strong>HERENCIA DE EXPLORACIÓN CURIOSITY:</strong>
