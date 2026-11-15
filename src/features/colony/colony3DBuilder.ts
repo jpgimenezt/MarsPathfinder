@@ -20,9 +20,11 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Quaternion,
   RingGeometry,
   SphereGeometry,
   TorusGeometry,
+  Vector3,
 } from 'three'
 import {
   createCarbonFiberTexture,
@@ -162,11 +164,42 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
     const worldZ = centerTerrainPos.z - mod.offsetMeters.north * meterToUnit
     const groundY = getTerrainHeight(worldX, worldZ)
 
+    // Elevación de cimentación ingenieril (+0.85m) para prevenir enterramiento por pendiente o z-fighting
+    const foundationClearance = 0.85 * meterToUnit
+
     const moduleGroup = new Group()
     moduleGroup.name = `colony-module-${mod.id}`
-    moduleGroup.position.set(worldX, groundY, worldZ)
+    moduleGroup.position.set(worldX, groundY + foundationClearance, worldZ)
     moduleGroup.rotation.y = (mod.rotationDeg * Math.PI) / 180
     moduleGroup.userData = { moduleData: mod }
+
+    // Plataforma de nivelación y cimentación geotécnica al regolito
+    const padRadius = Math.max(3.2, (mod.dimensions.widthMeters / 2 + 1.2)) * meterToUnit
+    const foundationPadGeo = new CylinderGeometry(padRadius, padRadius * 1.04, 0.65 * meterToUnit, 12)
+    foundationPadGeo.translate(0, -0.32 * meterToUnit, 0)
+    const foundationPad = new Mesh(foundationPadGeo, matMetalFrame)
+    applyShadows(foundationPad)
+    moduleGroup.add(foundationPad)
+
+    // Pilares telescópicos de anclaje hidráulico que compensan pendientes del terreno
+    const stiltCount = mod.type === 'landing' ? 8 : 6
+    for (let p = 0; p < stiltCount; p++) {
+      const pAngle = (p * Math.PI * 2) / stiltCount
+      const px = Math.cos(pAngle) * (padRadius * 0.88)
+      const pz = Math.sin(pAngle) * (padRadius * 0.88)
+      const stiltGeo = new CylinderGeometry(0.14 * meterToUnit, 0.18 * meterToUnit, 1.8 * meterToUnit, 6)
+      stiltGeo.translate(px, -1.0 * meterToUnit, pz)
+      const stiltMesh = new Mesh(stiltGeo, matMetalFrame)
+      applyShadows(stiltMesh)
+      moduleGroup.add(stiltMesh)
+
+      // Zapata pesada de anclaje
+      const footGeo = new CylinderGeometry(0.35 * meterToUnit, 0.42 * meterToUnit, 0.22 * meterToUnit, 8)
+      footGeo.translate(px, -1.8 * meterToUnit, pz)
+      const footMesh = new Mesh(footGeo, matMetalFrame)
+      applyShadows(footMesh)
+      moduleGroup.add(footMesh)
+    }
 
     switch (mod.type) {
       case 'landing': {
@@ -736,7 +769,7 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   const meterToUnit = 0.12 * scale
   const habX = centerTerrainPos.x
   const habZ = centerTerrainPos.z
-  const habY = getTerrainHeight(habX, habZ)
+  const habY = getTerrainHeight(habX, habZ) + 0.85 * meterToUnit
 
   const corridorConnections = [
     { targetX: habX + 26 * meterToUnit, targetZ: habZ - (-12) * meterToUnit, label: 'Túnel Habitación-Invernadero' },
@@ -745,27 +778,39 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   ]
 
   corridorConnections.forEach((conn) => {
-    const dx = conn.targetX - habX
-    const dz = conn.targetZ - habZ
-    const dist = Math.sqrt(dx * dx + dz * dz)
-    const angle = Math.atan2(dx, dz)
+    const targetY = getTerrainHeight(conn.targetX, conn.targetZ) + 0.85 * meterToUnit
+    const startPt = new Vector3(habX, habY + 1.5 * meterToUnit, habZ)
+    const endPt = new Vector3(conn.targetX, targetY + 1.5 * meterToUnit, conn.targetZ)
+    const midPt = startPt.clone().add(endPt).multiplyScalar(0.5)
+    const dist = startPt.distanceTo(endPt)
+    const dir = endPt.clone().sub(startPt).normalize()
 
-    // Tubo principal del túnel presurizado
-    const tunnelGeo = new CylinderGeometry(1.3 * meterToUnit, 1.3 * meterToUnit, dist, 16)
-    tunnelGeo.rotateX(Math.PI / 2)
-    tunnelGeo.rotateY(angle)
-    tunnelGeo.translate(habX + dx / 2, habY + 1.3 * meterToUnit, habZ + dz / 2)
+    // Tubo principal del túnel presurizado orientado exactamente entre módulos en 3D
+    const tunnelGeo = new CylinderGeometry(1.2 * meterToUnit, 1.2 * meterToUnit, dist, 16)
+    const orientation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir)
+    tunnelGeo.applyQuaternion(orientation)
+    tunnelGeo.translate(midPt.x, midPt.y, midPt.z)
     const tunnelMesh = new Mesh(tunnelGeo, matWhiteHull)
     applyShadows(tunnelMesh)
     colonyRoot.add(tunnelMesh)
 
-    // Aros de fuelle de expansión térmica (compensación de ciclos -80°C a +20°C)
+    // Pilar telescópico intermedio de soporte al suelo
+    const midGroundY = getTerrainHeight(midPt.x, midPt.z)
+    const pylonHeight = Math.max(0.4 * meterToUnit, midPt.y - midGroundY)
+    const pylonGeo = new CylinderGeometry(0.14 * meterToUnit, 0.18 * meterToUnit, pylonHeight, 8)
+    pylonGeo.translate(midPt.x, midGroundY + pylonHeight / 2, midPt.z)
+    const pylonMesh = new Mesh(pylonGeo, matMetalFrame)
+    applyShadows(pylonMesh)
+    colonyRoot.add(pylonMesh)
+
+    // Aros de fuelle de expansión térmica
     const ringsCount = Math.floor(dist / (2.5 * meterToUnit))
     for (let r = 1; r < ringsCount; r++) {
       const frac = r / ringsCount
-      const ringTorus = new TorusGeometry(1.38 * meterToUnit, 0.08 * meterToUnit, 6, 16)
-      ringTorus.rotateY(angle)
-      ringTorus.translate(habX + dx * frac, habY + 1.3 * meterToUnit, habZ + dz * frac)
+      const ringPt = startPt.clone().lerp(endPt, frac)
+      const ringTorus = new TorusGeometry(1.28 * meterToUnit, 0.08 * meterToUnit, 6, 16)
+      ringTorus.applyQuaternion(orientation)
+      ringTorus.translate(ringPt.x, ringPt.y, ringPt.z)
       const ringMesh = new Mesh(ringTorus, matMetalFrame)
       applyShadows(ringMesh)
       colonyRoot.add(ringMesh)
@@ -778,7 +823,7 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
     astroGroup.name = `colony-astronaut-${a + 1}`
     const posX = habX + (a === 0 ? 5.5 : -7.5) * meterToUnit
     const posZ = habZ + (a === 0 ? -16.0 : -18.5) * meterToUnit
-    const posY = getTerrainHeight(posX, posZ)
+    const posY = getTerrainHeight(posX, posZ) + 0.35 * meterToUnit
     astroGroup.position.set(posX, posY, posZ)
     astroGroup.rotation.y = a === 0 ? Math.PI / 3 : -Math.PI / 4
 

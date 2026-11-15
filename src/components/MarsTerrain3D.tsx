@@ -24,7 +24,6 @@ import {
   Raycaster,
   RingGeometry,
   Scene,
-  SphereGeometry,
   SRGBColorSpace,
   Texture,
   TextureLoader,
@@ -98,10 +97,10 @@ interface EdlFlightTelemetry {
 }
 
 const REGION_BOUNDS = {
-  minLon: 136.75,
-  maxLon: 138.15,
-  minLat: -5.75,
-  maxLat: -4.45,
+  minLon: 136.25,
+  maxLon: 138.63,
+  minLat: -6.55,
+  maxLat: -4.19,
 }
 
 const TERRAIN_WIDTH = 280
@@ -143,7 +142,7 @@ export function MarsTerrain3D({
   const [isDataCenterOpen, setIsDataCenterOpen] = useState(false)
   const [isSurfaceIntelligenceOpen, setIsSurfaceIntelligenceOpen] = useState(false)
   const [isMissionComparisonOpen, setIsMissionComparisonOpen] = useState(false)
-  const [showCuriosityRoute, setShowCuriosityRoute] = useState(true)
+  const [routeViewMode, setRouteViewMode] = useState<'both' | 'eva' | 'curiosity'>('both')
 
   const [hoveredInfo, setHoveredInfo] = useState<{ lon: number; lat: number; elev: number; slope: number } | null>(null)
   const [isCinematicPlaying, setIsCinematicPlaying] = useState(false)
@@ -388,11 +387,7 @@ export function MarsTerrain3D({
       const lat = REGION_BOUNDS.maxLat - v * (REGION_BOUNDS.maxLat - REGION_BOUNDS.minLat)
 
       const elevation = getGaleElevation(lon, lat)
-      // Transición suave en el perímetro exterior (4%) para fundir con la niebla atmosférica
-      const edgeDist = Math.min(u, 1 - u, v, 1 - v)
-      const edgeSkirt = Math.min(1.0, edgeDist / 0.04)
-      const blendedElev = elevation * edgeSkirt + (-5200) * (1.0 - edgeSkirt)
-      const y = (blendedElev + 4500) * ELEVATION_SCALE
+      const y = (elevation + 4500) * ELEVATION_SCALE
       posAttr.setY(i, y)
     }
 
@@ -433,9 +428,9 @@ export function MarsTerrain3D({
       // Trípode de anclaje de titanio al regolito (escala compacta proporcional)
       for (let leg = 0; leg < 3; leg++) {
         const legAngle = (leg * Math.PI * 2) / 3
-        const legGeo = new CylinderGeometry(0.04, 0.06, 1.1, 6)
+        const legGeo = new CylinderGeometry(0.025, 0.04, 0.55, 6)
         legGeo.rotateZ(Math.PI / 5.2)
-        legGeo.translate(0.4, 0.5, 0)
+        legGeo.translate(0.22, 0.25, 0)
         legGeo.rotateY(legAngle)
         const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.3 }))
         legMesh.castShadow = true
@@ -443,151 +438,66 @@ export function MarsTerrain3D({
       }
 
       // Canister central presurizado de instrumentación analítica (CheMin/SAM)
-      const coreGeo = new CylinderGeometry(0.3, 0.35, 0.6, 8)
-      coreGeo.translate(0, 0.65, 0)
+      const coreGeo = new CylinderGeometry(0.18, 0.22, 0.35, 8)
+      coreGeo.translate(0, 0.32, 0)
       const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.3 }))
       coreMesh.castShadow = true
       pinGroup.add(coreMesh)
 
       // Tapa con micro-celdas solares fotovoltaicas
-      const capGeo = new CylinderGeometry(0.35, 0.35, 0.05, 8)
-      capGeo.translate(0, 0.98, 0)
+      const capGeo = new CylinderGeometry(0.22, 0.22, 0.04, 8)
+      capGeo.translate(0, 0.52, 0)
       const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x172554, metalness: 0.9, roughness: 0.15 }))
       pinGroup.add(capMesh)
 
       // Mástil sensor vertical con cabezal óptico Mastcam / ChemCam
-      const mastGeo = new CylinderGeometry(0.04, 0.04, 0.9, 8)
-      mastGeo.translate(0, 1.45, 0)
+      const mastGeo = new CylinderGeometry(0.025, 0.025, 0.45, 6)
+      mastGeo.translate(0, 0.75, 0)
       const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 }))
       mastMesh.castShadow = true
       pinGroup.add(mastMesh)
 
-      const sensorHeadGeo = new BoxGeometry(0.28, 0.18, 0.28)
-      sensorHeadGeo.translate(0, 1.95, 0)
+      const sensorHeadGeo = new BoxGeometry(0.16, 0.12, 0.16)
+      sensorHeadGeo.translate(0, 1.0, 0)
       const sensorHeadMesh = new Mesh(sensorHeadGeo, new MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.7, roughness: 0.3 }))
       sensorHeadMesh.castShadow = true
       pinGroup.add(sensorHeadMesh)
 
-      // Lente óptica del espectrómetro láser
-      const lensGeo = new CylinderGeometry(0.08, 0.08, 0.05, 12)
-      lensGeo.rotateX(Math.PI / 2)
-      lensGeo.translate(0, 1.95, 0.15)
-      pinGroup.add(new Mesh(lensGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
-
-      // Retícula táctica holográfica FUI flotante sobre la estación de superficie (y = 2.4 m)
+      // Retícula táctica holográfica FUI flotante sobre la estación de superficie (y = 1.25 m)
       const reticleGroup = new Group()
-      reticleGroup.position.set(0, 2.4, 0)
+      reticleGroup.position.set(0, 1.25, 0)
       reticleGroup.name = 'holographic-reticle'
 
       // Anillo exterior con muescas de adquisición de objetivo
-      const outerRingGeo = new RingGeometry(0.65, 0.75, 24)
+      const outerRingGeo = new RingGeometry(0.35, 0.45, 24)
       outerRingGeo.rotateX(-Math.PI / 2)
-      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8, side: DoubleSide })))
+      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide })))
 
       // Rombo de telemetría interior
-      const diamondRingGeo = new RingGeometry(0.25, 0.35, 4)
+      const diamondRingGeo = new RingGeometry(0.14, 0.22, 4)
       diamondRingGeo.rotateX(-Math.PI / 2)
       diamondRingGeo.rotateZ(Math.PI / 4)
       reticleGroup.add(new Mesh(diamondRingGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: DoubleSide })))
-
-      // Rayo guía láser vertical hacia el suelo
-      const guideLaserGeo = new CylinderGeometry(0.015, 0.015, 2.4, 6)
-      guideLaserGeo.translate(0, -1.2, 0)
-      reticleGroup.add(new Mesh(guideLaserGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.35 })))
 
       pinGroup.add(reticleGroup)
       beaconsGroup.add(pinGroup)
     })
 
-    // 9. Baliza y Elipse de Seguridad del Sitio Candidato Principal LZ-1 (Bradbury Base)
+    // 9. Elipse de seguridad NASA EDL (7.0 x 4.5 km, azimut 78°) proyectada en el regolito
     const { x: landingX, z: landingZ } = geoToTerrainPosition(
       PRIMARY_LANDING_SITE.coordinates.lon,
       PRIMARY_LANDING_SITE.coordinates.lat
     )
     const landingY = (PRIMARY_LANDING_SITE.elevationMeters + 4500) * ELEVATION_SCALE
 
-    const landingGroup = new Group()
-    landingGroup.position.set(landingX, landingY, landingZ)
-    landingGroup.name = `landing-${PRIMARY_LANDING_SITE.id}`
-    landingGroupRef.current = landingGroup
-    scene.add(landingGroup)
-
-    // Mástil de comunicaciones aeroespaciales LZ-1 compacto (altura realista: 2.6 m en lugar de columna de 14 m)
-    const uplinkNeedleGroup = new Group()
-    uplinkNeedleGroup.name = 'landing-uplink-needle'
-    landingGroup.add(uplinkNeedleGroup)
-
-    const commMastGeo = new CylinderGeometry(0.04, 0.06, 2.4, 8)
-    commMastGeo.translate(0, 1.2, 0)
-    uplinkNeedleGroup.add(new Mesh(commMastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.25 })))
-
-    const strobeGeo = new SphereGeometry(0.09, 8, 8)
-    strobeGeo.translate(0, 2.45, 0)
-    uplinkNeedleGroup.add(new Mesh(strobeGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
-
-    const apexDiamondGeo = new OctahedronGeometry(0.25, 0)
-    apexDiamondGeo.translate(0, 2.7, 0)
-    uplinkNeedleGroup.add(new Mesh(apexDiamondGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
-
-    // Anillo de Seguridad Perimetral Táctico en el Suelo (R = 14.5 m)
-    const perimeterRingGeo = new RingGeometry(14.2, 14.6, 48)
-    perimeterRingGeo.rotateX(-Math.PI / 2)
-    const perimeterRing = new Mesh(
-      perimeterRingGeo,
-      new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.65, side: DoubleSide })
-    )
-    perimeterRing.position.y = 0.08
-    landingGroup.add(perimeterRing)
-
-    // 4 Pylones de balizamiento perimetral en las 4 esquinas (altura realista 1.2 m en lugar de 2.2 m)
-    const cornerOffsets = [
-      { x: 11, z: 11 },
-      { x: -11, z: 11 },
-      { x: 11, z: -11 },
-      { x: -11, z: -11 },
-    ]
-    cornerOffsets.forEach((pos, idx) => {
-      const pylonGroup = new Group()
-      pylonGroup.position.set(pos.x, 0, pos.z)
-
-      const pylonGeo = new CylinderGeometry(0.08, 0.1, 1.1, 6)
-      pylonGeo.translate(0, 0.55, 0)
-      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.3 }))
-      pylonGroup.add(pylonMesh)
-
-      const pylonStrobeGeo = new SphereGeometry(0.08, 6, 6)
-      pylonStrobeGeo.translate(0, 1.15, 0)
-      const pylonStrobeMesh = new Mesh(
-        pylonStrobeGeo,
-        idx % 2 === 0 ? new MeshBasicMaterial({ color: 0x00f0ff }) : new MeshBasicMaterial({ color: 0xf59e0b })
-      )
-      pylonGroup.add(pylonStrobeMesh)
-      landingGroup.add(pylonGroup)
-    })
-
-    // 3. Anillos concéntricos de touchdown
-    const landingRings = new Group()
-    landingRingsRef.current = landingRings
-    landingGroup.add(landingRings)
-
-    const ringInnerGeo = new RingGeometry(2.0, 2.6, 32)
-    ringInnerGeo.rotateX(-Math.PI / 2)
-    const ringInner = new Mesh(ringInnerGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.75, side: DoubleSide }))
-    ringInner.position.y = 0.1
-    landingRings.add(ringInner)
-
-    const ringOuterGeo = new RingGeometry(4.5, 5.1, 32)
-    ringOuterGeo.rotateX(-Math.PI / 2)
-    const ringOuter = new Mesh(ringOuterGeo, new MeshBasicMaterial({ color: 0xff9d00, transparent: true, opacity: 0.65, side: DoubleSide }))
-    ringOuter.position.y = 0.09
-    landingRings.add(ringOuter)
-
-    // 4. Elipse de seguridad NASA (7.0 x 4.5 km, azimut 78°)
     const ellipseCurve = new EllipseCurve(0, 0, 20.65, 13.28, 0, 2 * Math.PI, false, (78 * Math.PI) / 180)
-    const ellipsePoints3D = ellipseCurve.getPoints(64).map(p => new Vector3(p.x, 0.12, p.y))
+    const ellipsePoints3D = ellipseCurve.getPoints(64).map(p => new Vector3(p.x, 0.08, p.y))
     const ellipseGeo = new BufferGeometry().setFromPoints(ellipsePoints3D)
     const ellipseMat = new LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.75 })
-    landingGroup.add(new LineLoop(ellipseGeo, ellipseMat))
+    const landingEllipse = new LineLoop(ellipseGeo, ellipseMat)
+    landingEllipse.position.set(landingX, landingY, landingZ)
+    landingEllipse.name = `landing-ellipse-${PRIMARY_LANDING_SITE.id}`
+    scene.add(landingEllipse)
 
     // 10. MÓDULO DE COLONIA Y HÁBITAT MARCIANO 3D (BASE ALFA)
     const colonyGroup = buildColony3DGroup({
@@ -637,17 +547,17 @@ export function MarsTerrain3D({
 
     const conformingSpline = new CatmullRomCurve3(terrainConformingPoints)
 
-    // Núcleo luminoso fino blanco (radio 0.055)
-    const tubeCoreGeo = new TubeGeometry(conformingSpline, denseSampleCount, 0.055, 6, false)
+    // Núcleo fino blanco nítido estilo NASA (radio 0.038)
+    const tubeCoreGeo = new TubeGeometry(conformingSpline, denseSampleCount, 0.038, 6, false)
     const tubeCoreMat = new MeshBasicMaterial({ color: 0xffffff })
     curiosityGroup.add(new Mesh(tubeCoreGeo, tubeCoreMat))
 
-    // Halo exterior ámbar
-    const tubeHaloGeo = new TubeGeometry(conformingSpline, denseSampleCount, 0.11, 6, false)
+    // Sutil halo exterior técnico (radio 0.065)
+    const tubeHaloGeo = new TubeGeometry(conformingSpline, denseSampleCount, 0.065, 6, false)
     const tubeHaloMat = new MeshBasicMaterial({
       color: 0xf59e0b,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.25,
     })
     curiosityGroup.add(new Mesh(tubeHaloGeo, tubeHaloMat))
 
@@ -941,14 +851,17 @@ export function MarsTerrain3D({
     mat.needsUpdate = true
   }, [activeLayer])
 
-  // Sincronizar visibilidad de la ruta histórica de Curiosity
+  // Sincronizar visibilidad de los dos sistemas de rutas (EVA y Curiosity)
   useEffect(() => {
     if (curiosityGroupRef.current) {
-      curiosityGroupRef.current.visible = showCuriosityRoute
+      curiosityGroupRef.current.visible = routeViewMode === 'both' || routeViewMode === 'curiosity'
     }
-  }, [showCuriosityRoute])
+    if (routeGroupRef.current) {
+      routeGroupRef.current.visible = routeViewMode === 'both' || routeViewMode === 'eva'
+    }
+  }, [routeViewMode])
 
-  // Actualización de ruta 3D
+  // Actualización de ruta EVA 3D (filamento holográfico fino que abraza el relieve sin atravesar la base)
   useEffect(() => {
     if (!routeGroupRef.current) return
     const group = routeGroupRef.current
@@ -964,7 +877,7 @@ export function MarsTerrain3D({
     for (let i = 0; i < routePointsList.length - 1; i++) {
       const p1 = routePointsList[i].point
       const p2 = routePointsList[i + 1].point
-      const steps = 14
+      const steps = 30
 
       for (let s = 0; s <= steps; s++) {
         const t = s / steps
@@ -972,28 +885,29 @@ export function MarsTerrain3D({
         const lat = p1[1] + t * (p2[1] - p1[1])
         const { x, z } = geoToTerrainPosition(lon, lat)
         const elev = getGaleElevation(lon, lat)
-        const y = (elev + 4500) * ELEVATION_SCALE + 0.4
+        // Abraza estrechamente la superficie del relieve con 0.12 unidades de tolerancia
+        const y = (elev + 4500) * ELEVATION_SCALE + 0.12
         sampled3DPoints.push(new Vector3(x, y, z))
       }
     }
 
     if (sampled3DPoints.length >= 2) {
       const curve = new CatmullRomCurve3(sampled3DPoints)
-      // Núcleo central luminoso blanco
-      const coreTubeGeo = new TubeGeometry(curve, sampled3DPoints.length * 2, 0.22, 8, false)
+      // Núcleo central luminoso blanco fino (radio 0.045)
+      const coreTubeGeo = new TubeGeometry(curve, sampled3DPoints.length, 0.045, 6, false)
       const coreMat = new MeshBasicMaterial({ color: 0xffffff })
       group.add(new Mesh(coreTubeGeo, coreMat))
 
-      // Envoltura táctica holográfica coloreada
-      const haloTubeGeo = new TubeGeometry(curve, sampled3DPoints.length * 2, 0.52, 8, false)
+      // Envoltura táctica holográfica coloreada delgada (radio 0.09)
+      const haloTubeGeo = new TubeGeometry(curve, sampled3DPoints.length, 0.09, 6, false)
       const haloMat = new MeshBasicMaterial({
         color: walkbackAssessment.status === 'CRÍTICO' ? 0xef4444 : 0x00f0ff,
         transparent: true,
-        opacity: 0.65,
+        opacity: 0.45,
       })
       group.add(new Mesh(haloTubeGeo, haloMat))
 
-      // Balizas de Trazabilidad Kilométrica a lo largo de la ruta (Hitos cada 1.0 km)
+      // Balizas de Trazabilidad Kilométrica sutiles en el suelo cada 1.0 km
       let accumMeters = 0
       let nextMilestoneKm = 1
       for (let s = 1; s < sampled3DPoints.length; s++) {
@@ -1016,21 +930,15 @@ export function MarsTerrain3D({
           mGroup.position.copy(pB)
           mGroup.name = `route-milestone-${nextMilestoneKm}km`
 
-          // Anillo concéntrico en el suelo
-          const mRingGeo = new RingGeometry(1.2, 1.45, 24)
+          // Anillo sutil rasante en el suelo
+          const mRingGeo = new RingGeometry(0.35, 0.5, 16)
           mRingGeo.rotateX(-Math.PI / 2)
-          mRingGeo.translate(0, 0.05, 0)
+          mRingGeo.translate(0, 0.04, 0)
           mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide })))
 
-          // Baliza táctica de cota métrica
-          const mPostGeo = new CylinderGeometry(0.12, 0.14, 1.6, 6)
-          mPostGeo.translate(0, 0.8, 0)
-          const mPost = new Mesh(mPostGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 }))
-          mPost.castShadow = true
-          mGroup.add(mPost)
-
-          const mPrismGeo = new OctahedronGeometry(0.32, 0)
-          mPrismGeo.translate(0, 1.8, 0)
+          // Marcador holográfico compacto (0.35 m en lugar de poste de 1.8 m)
+          const mPrismGeo = new OctahedronGeometry(0.12, 0)
+          mPrismGeo.translate(0, 0.35, 0)
           mGroup.add(new Mesh(mPrismGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
 
           group.add(mGroup)
@@ -1054,35 +962,35 @@ export function MarsTerrain3D({
 
       const colorHex = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xef4444
 
-      // Base octogonal de titanio anclada al suelo
-      const baseGeo = new CylinderGeometry(1.3, 1.5, 0.28, 8)
+      // Base táctica compacta en el regolito (escala científica proporcionada)
+      const baseGeo = new CylinderGeometry(0.35, 0.42, 0.12, 8)
       const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 }))
       baseMesh.castShadow = true
       baseMesh.receiveShadow = true
+      baseMesh.position.y = 0.06
       waypointGroup.add(baseMesh)
 
-      // Anillo de distancia de seguridad en el regolito
-      const distRingGeo = new RingGeometry(2.5, 2.8, 32)
+      // Anillo concéntrico rasante de adquisición de objetivo en el suelo
+      const distRingGeo = new RingGeometry(0.75, 0.95, 24)
       distRingGeo.rotateX(-Math.PI / 2)
-      distRingGeo.translate(0, 0.08, 0)
-      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.8, side: DoubleSide })))
+      distRingGeo.translate(0, 0.04, 0)
+      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85, side: DoubleSide })))
 
-      // Pylón táctico de aleación aeroespacial
-      const pylonGeo = new CylinderGeometry(0.28, 0.38, 2.8, 8)
-      pylonGeo.translate(0, 1.4, 0)
-      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 }))
-      pylonMesh.castShadow = true
+      // Micro-sensor vertical de telemetría (altura compacta 0.55 m en lugar de poste de 3.4 m)
+      const pylonGeo = new CylinderGeometry(0.04, 0.05, 0.55, 6)
+      pylonGeo.translate(0, 0.35, 0)
+      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 }))
       waypointGroup.add(pylonMesh)
 
-      // Collar emisor de baliza de navegación
-      const collarGeo = new CylinderGeometry(0.48, 0.48, 0.45, 8)
-      collarGeo.translate(0, 2.4, 0)
+      // Emisor óptico de baliza compacto
+      const collarGeo = new CylinderGeometry(0.08, 0.08, 0.12, 8)
+      collarGeo.translate(0, 0.65, 0)
       waypointGroup.add(new Mesh(collarGeo, new MeshBasicMaterial({ color: colorHex })))
 
-      // Prisma holográfico en la cima
-      const diamondGeo = new OctahedronGeometry(0.5, 0)
-      diamondGeo.translate(0, 3.4, 0)
-      waypointGroup.add(new Mesh(diamondGeo, new MeshBasicMaterial({ color: 0xffffff })))
+      // Retícula holográfica compacta en la cima (altura total 0.85 m)
+      const diamondGeo = new OctahedronGeometry(0.14, 0)
+      diamondGeo.translate(0, 0.82, 0)
+      waypointGroup.add(new Mesh(diamondGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })))
 
       group.add(waypointGroup)
     })
@@ -1118,6 +1026,7 @@ export function MarsTerrain3D({
 
   // Foco en descubrimiento científico
   const focusOnDiscovery = useCallback((disc: ScientificDiscovery) => {
+    skipCinematic()
     setSelectedDiscovery(disc)
     setSelectedColonyModule(null)
     setShowLandingBriefing(false)
@@ -1137,6 +1046,7 @@ export function MarsTerrain3D({
 
   // Foco en el Sitio Candidato Principal LZ-1
   const focusOnLandingSite = useCallback(() => {
+    skipCinematic()
     setSelectedDiscovery(null)
     setSelectedColonyModule(null)
     setShowLandingBriefing(true)
@@ -1183,6 +1093,7 @@ export function MarsTerrain3D({
 
   // Foco en módulo específico de la colonia
   const focusOnColonyModule = useCallback((mod: HabitatModuleConfig) => {
+    skipCinematic()
     setSelectedColonyModule(mod)
     setSelectedDiscovery(null)
     setShowLandingBriefing(false)
@@ -1750,10 +1661,17 @@ export function MarsTerrain3D({
                 </button>
                 <button
                   type="button"
-                  className={`hud-btn ${showCuriosityRoute ? 'highlight' : ''}`}
-                  onClick={() => setShowCuriosityRoute(prev => !prev)}
+                  className="hud-btn secondary"
+                  style={{
+                    borderColor: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(0, 240, 255, 0.4)',
+                    color: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
+                  }}
+                  onClick={() => {
+                    setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')
+                  }}
+                  title="Alternar entre la Ruta EVA planificada de astronautas y la Travesía histórica de Curiosity"
                 >
-                  {showCuriosityRoute ? '[RUTA CURIOSITY: ON]' : '[RUTA CURIOSITY: OFF]'}
+                  {routeViewMode === 'both' ? '[VISTA: AMBAS RUTAS]' : routeViewMode === 'eva' ? '[VISTA: SOLO RUTA EVA]' : '[VISTA: SOLO CURIOSITY]'}
                 </button>
               </div>
             </div>
@@ -1945,6 +1863,9 @@ export function MarsTerrain3D({
                     src={selectedDiscovery.imageUrl}
                     alt={selectedDiscovery.name}
                     className="drawer-photo"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/data/curiosity/bradbury-landing.jpg'
+                    }}
                   />
                   <span className="drawer-photo-credit">{selectedDiscovery.imageCredit}</span>
                 </div>
@@ -2355,6 +2276,20 @@ export function MarsTerrain3D({
             title="Comparar travesía de 32 km de Curiosity con ruta EVA planificada"
           >
             [COMPARAR CON CURIOSITY]
+          </button>
+          <button
+            type="button"
+            className="waypoint-chip"
+            style={{
+              borderColor: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : 'rgba(0, 240, 255, 0.5)',
+              color: routeViewMode === 'eva' ? '#00f0ff' : routeViewMode === 'curiosity' ? '#f59e0b' : '#ffffff',
+            }}
+            onClick={() => {
+              setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')
+            }}
+            title="Alternar entre la Ruta EVA de astronautas y la Travesía histórica de Curiosity"
+          >
+            {routeViewMode === 'both' ? '[VISTA: AMBAS RUTAS]' : routeViewMode === 'eva' ? '[VISTA: SOLO RUTA EVA]' : '[VISTA: SOLO CURIOSITY]'}
           </button>
           {GALE_DISCOVERIES.map((disc) => (
             <button

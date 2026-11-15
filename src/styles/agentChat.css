@@ -256,57 +256,42 @@
 .ares-fab-trigger {
   position: fixed;
   bottom: 68px;
-  right: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
   z-index: 9999;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 18px 8px 12px;
-  background: linear-gradient(135deg, rgba(10, 24, 32, 0.94), rgba(4, 12, 17, 0.98));
-  border: 1px solid rgba(0, 240, 255, 0.5);
+  padding: 8px 22px 8px 14px;
+  background: linear-gradient(135deg, rgba(10, 24, 32, 0.95), rgba(4, 12, 17, 0.98));
+  border: 1px solid rgba(0, 240, 255, 0.55);
   border-radius: 40px;
   color: #00f0ff;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
   box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.7),
-    0 0 22px rgba(0, 240, 255, 0.28),
+    0 10px 30px rgba(0, 0, 0, 0.75),
+    0 0 25px rgba(0, 240, 255, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   cursor: pointer;
   pointer-events: auto;
   overflow: visible;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease, right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-/* Evitar colisión espacial con el drawer inspector derecho */
-body.has-right-drawer .ares-fab-trigger {
-  right: 392px;
-}
-
-@media (max-width: 900px) {
-  body.has-right-drawer .ares-fab-trigger {
-    right: 344px;
-  }
-}
-
-@media (max-width: 768px) {
-  body.has-right-drawer .ares-fab-trigger {
-    display: none !important;
-  }
+.ares-fab-trigger:hover {
+  transform: translateX(-50%) translateY(-3px) scale(1.03);
+  border-color: #00f0ff;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(0, 240, 255, 0.6),
+    inset 0 0 14px rgba(0, 240, 255, 0.3);
+  color: #ffffff;
 }
 
 /* Ocultar en modo pantalla limpia */
 body.is-clean-view .ares-fab-trigger {
   display: none !important;
-}
-
-.ares-fab-trigger:hover {
-  transform: translateY(-3px) scale(1.02);
-  border-color: #00f0ff;
-  box-shadow:
-    0 14px 38px rgba(0, 0, 0, 0.8),
-    0 0 32px rgba(0, 240, 255, 0.55),
-    inset 0 0 12px rgba(0, 240, 255, 0.25);
-  color: #ffffff;
 }
 
 .ares-fab-trigger:focus-visible {
@@ -1251,10 +1236,12 @@ body.is-clean-view .ares-fab-trigger {
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
   .ares-fab-trigger {
-    bottom: 16px;
-    right: 16px;
-    padding: 10px 16px;
-    font-size: 0.74rem;
+    bottom: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    padding: 8px 16px;
+    font-size: 0.72rem;
   }
 
   .ares-agent-window {

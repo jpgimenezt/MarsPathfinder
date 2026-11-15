@@ -31,27 +31,41 @@ export function getGaleElevation(lon: number, lat: number): number {
   // Distancia horizontal en km respecto a la cumbre de Mount Sharp
   const distFromPeakKm = marsDistance([MOUNT_SHARP_PEAK.lon, MOUNT_SHARP_PEAK.lat], [lon, lat]) / 1000
 
-  // Borde exterior del cráter (R ≈ 77 km): sube hasta -1800 m
-  const craterRimRadiusKm = 77
-  const craterFloorBase = -4480
+  // Borde exterior y murallas del cráter de impacto Gale (R ≈ 77 km)
+  // El foso llano interior (Aeolis Palus) se extiende a cota baja (-4,520 m)
+  const craterFloorBase = -4520
 
-  // Contribución de Mount Sharp (mound central asimétrico)
-  // Ancho característico de la base de Mount Sharp: ~28 km
-  let moundElevation = 0
-  if (distFromPeakKm < 42) {
-    const moundProfile = Math.exp(-Math.pow(distFromPeakKm / 19, 1.8))
-    moundElevation = moundProfile * (MOUNT_SHARP_PEAK.elevationMeters - craterFloorBase)
+  // 1. Murallas y Borde Circular del Cráter de Impacto (Gale Crater Rim Walls):
+  // La llanura aluvial de Bradbury / Yellowknife se ubica en el foso norte (~46 km del centro).
+  // A partir de los 46.5 km hacia las paredes del cráter, el terreno asciende de forma pronunciada
+  // en 360 grados, formando la muralla circular de impacto que culmina en crestas de -1,600 m a -1,450 m.
+  let rimElevation = 0
+  if (distFromCenterKm > 46.5) {
+    const rimProgress = Math.min(1.0, (distFromCenterKm - 46.5) / 22)
+    // Escarpe sigmoidal pronunciado característico de las paredes de un cráter de impacto
+    const rimProfile = Math.pow(rimProgress, 1.45)
+    rimElevation = rimProfile * 3050 // Eleva las murallas hasta aprox -1,470 m
     
-    // Tiers y bancos sedimentarios estratificados característicos de Mount Sharp
-    const strataModulation = Math.sin(distFromPeakKm * 0.45) * 45
-    moundElevation += strataModulation * (distFromPeakKm < 30 ? 1 : 0)
+    // Terrazas y gradas morfológicas de impacto
+    const rimTerrace = Math.sin((distFromCenterKm - 46.5) * 0.4) * 60
+    rimElevation += rimTerrace * rimProgress
+
+    // Fuera de la cresta del cráter (R > 68.5 km), desciende suavemente hacia las tierras altas marcianas
+    if (distFromCenterKm > 68.5) {
+      rimElevation -= Math.min(800, (distFromCenterKm - 68.5) * 35)
+    }
   }
 
-  // Contribución de la pared del cráter (transición piso a murallas a partir de 47 km)
-  let rimElevation = 0
-  if (distFromCenterKm > 47) {
-    const rimFraction = Math.min(1, Math.max(0, (distFromCenterKm - 47) / (craterRimRadiusKm - 47)))
-    rimElevation = Math.pow(rimFraction, 2.0) * 2600 // De -4480 a aprox -1880 m
+  // 2. Montículo Central Sedimentario (Mount Sharp / Aeolis Mons):
+  // Se ubica en el centro-sur de la cuenca y asciende hasta +1,050 m
+  let moundElevation = 0
+  if (distFromPeakKm < 42) {
+    const moundProfile = Math.exp(-Math.pow(distFromPeakKm / 18, 1.85))
+    moundElevation = moundProfile * (MOUNT_SHARP_PEAK.elevationMeters - craterFloorBase)
+    
+    // Tiers y bancos sedimentarios estratificados característicos de Mount Sharp (arcillas y sulfatos)
+    const strataModulation = Math.sin(distFromPeakKm * 0.45) * 55
+    moundElevation += strataModulation * (distFromPeakKm < 28 ? 1.0 : 0.4)
   }
 
   // Micro-relieves específicos de las unidades de Curiosity:
