@@ -48,6 +48,10 @@ export function App() {
     setScope('global')
     setScreen('map')
   }, [])
+  const goHome = useCallback(() => {
+    setScreen('globe')
+    setMode({ type: 'explore' })
+  }, [])
 
   function place(id: StopId, point: MarsPoint) {
     if (scope !== 'jezero' || (mode.type !== 'place' && mode.type !== 'move') || mode.id !== id) return
@@ -89,11 +93,23 @@ export function App() {
   return (
     <div className="app">
       <header className="header">
-        <div className="brand"><span className="brand-mark" aria-hidden="true">⌾</span>
-          <div><span className="eyebrow">ATLAS DE EXPLORACIÓN MARCIANA</span><h1>Ares<span>Route</span></h1></div>
+        <button
+          type="button"
+          className="brand brand-button"
+          onClick={goHome}
+          aria-label="Ir a la página de inicio (Globo 3D)"
+          title="Ir a la página de inicio (Globo 3D)"
+        >
+          <span className="brand-mark" aria-hidden="true">⌾</span>
+          <div>
+            <span className="eyebrow">ATLAS DE EXPLORACIÓN MARCIANA</span>
+            <h1>Ares<span>Route</span></h1>
+          </div>
+        </button>
+        <div className="header-right">
+          <span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
+          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span>
         </div>
-        <div className="header-right"><span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
-          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span></div>
       </header>
 
       {screen === 'globe' ? <main className="globe-main">
