@@ -1,6 +1,7 @@
 /**
  * ARES MISSION COMMS - Backend Tools Specification for Amazon Nova 2.5 Sonic
- * Formato oficial de especificación de herramientas (toolSpec) para Bedrock
+ * Formato oficial para Amazon Bedrock InvokeModelWithBidirectionalStream
+ * Nota: En el protocolo de streaming de Nova Sonic, inputSchema.json debe ser un string JSON serializado.
  */
 
 export interface BedrockToolSpec {
@@ -8,11 +9,7 @@ export interface BedrockToolSpec {
     name: string
     description: string
     inputSchema: {
-      json: {
-        type: 'object'
-        properties: Record<string, unknown>
-        required?: string[]
-      }
+      json: string
     }
   }
 }
@@ -23,10 +20,10 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'getCurrentMissionContext',
       description: 'Obtiene el estado en tiempo real del mapa marciano, región activa, capas y ruta trazada.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {},
-        },
+        }),
       },
     },
   },
@@ -35,7 +32,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'focusGeographicTarget',
       description: 'Mueve la cámara 3D hacia un punto geográfico o hito relevante en Marte.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             lat: { type: 'number', description: 'Latitud planetocéntrica marciana (-90 a 90)' },
@@ -45,7 +42,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             targetName: { type: 'string', description: 'Nombre del hito (ej: Mount Sharp, Delta Jezero)' },
           },
           required: ['lat', 'lon'],
-        },
+        }),
       },
     },
   },
@@ -54,14 +51,14 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'toggleScientificLayer',
       description: 'Activa o desactiva capas orbitales científicas de NASA (ctx, mola, themis, gale_dem, geology).',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             layerId: { type: 'string', description: "Identificador de la capa: 'ctx', 'mola', 'themis', 'gale_dem', 'geology'" },
             enabled: { type: 'boolean', description: 'true para activar, false para desactivar' },
           },
           required: ['layerId', 'enabled'],
-        },
+        }),
       },
     },
   },
@@ -70,12 +67,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'explainSelectedRegion',
       description: 'Consulta explicaciones geológicas y astrobiológicas fundadas en misiones de NASA para una región.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             regionName: { type: 'string', description: "Nombre de región: 'JEZERO', 'GALE', 'MOUNT_SHARP', 'BOXWORK'" },
           },
-        },
+        }),
       },
     },
   },
@@ -84,14 +81,14 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'getMissionObservations',
       description: 'Obtiene observaciones orbitales y de superficie de NASA (Perseverance, Curiosity, CTX, HiRISE).',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             lat: { type: 'number', description: 'Latitud de consulta' },
             lon: { type: 'number', description: 'Longitud de consulta' },
             region: { type: 'string', description: "Región: 'GALE' o 'JEZERO'" },
           },
-        },
+        }),
       },
     },
   },
@@ -100,7 +97,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'createMissionWaypoint',
       description: 'Agrega o modifica un punto de navegación (A, P o B) en la ruta actual de la misión.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             stopId: { type: 'string', enum: ['A', 'P', 'B'], description: "Punto: 'A' (Base), 'P' (Parada), 'B' (Destino)" },
@@ -109,7 +106,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             name: { type: 'string', description: 'Nombre descriptivo del waypoint' },
           },
           required: ['stopId', 'lat', 'lon'],
-        },
+        }),
       },
     },
   },
@@ -118,12 +115,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'previewEVARoute',
       description: 'Genera una previsualización de ruta y evalúa viabilidad según límites de caminata marciana.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             mode: { type: 'string', enum: ['FOOT', 'ROVER'], description: 'Modo de desplazamiento' },
           },
-        },
+        }),
       },
     },
   },
@@ -132,12 +129,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'compareMissionRoutes',
       description: 'Abre el comparador de rutas para evaluar la traza de Curiosity vs la ruta actual.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             showModal: { type: 'boolean', description: 'true para mostrar el modal de comparación' },
           },
-        },
+        }),
       },
     },
   },
@@ -146,12 +143,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'getRouteStatistics',
       description: 'Calcula distancia geodésica con radio de Marte (3,389.5 km), elevaciones y límites de marcha.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             includeElevation: { type: 'boolean', description: 'Incluir perfil altimétrico' },
           },
-        },
+        }),
       },
     },
   },
@@ -160,12 +157,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'startDiscoveryTour',
       description: 'Inicia el recorrido guiado cinematográfico por los descubrimientos científicos en Gale/Mount Sharp.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             startIndex: { type: 'number', description: 'Índice de parada de inicio (0 a 10)' },
           },
-        },
+        }),
       },
     },
   },
@@ -174,10 +171,10 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'pauseDiscoveryTour',
       description: 'Pausa o reanuda el recorrido de descubrimiento científico.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {},
-        },
+        }),
       },
     },
   },
@@ -186,10 +183,10 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'getHabitatStatus',
       description: 'Consulta los sistemas operativos de la Base Ares Alpha (energía solar, reactores, soporte vital).',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {},
-        },
+        }),
       },
     },
   },
@@ -198,7 +195,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'activateMissionSimulation',
       description: 'Activa un escenario de simulación (descenso EDL, travesía o contingencia atmosférica).',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             scenario: {
@@ -208,7 +205,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             },
           },
           required: ['scenario'],
-        },
+        }),
       },
     },
   },
@@ -217,7 +214,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'triggerMissionContingency',
       description: 'Inicia un simulacro de contingencia táctica únicamente en el entorno de simulación.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             contingencyType: {
@@ -227,7 +224,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             },
           },
           required: ['contingencyType'],
-        },
+        }),
       },
     },
   },
@@ -238,7 +235,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'calculate_mars_distance',
       description: 'Calcula distancia de gran círculo usando el radio de Marte Rm = 3,389.5 km.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             lat1: { type: 'number', description: 'Latitud origen' },
@@ -247,7 +244,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             lon2: { type: 'number', description: 'Longitud destino' },
           },
           required: ['lat1', 'lon1', 'lat2', 'lon2'],
-        },
+        }),
       },
     },
   },
@@ -256,13 +253,13 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'lookup_mission_dataset',
       description: 'Consulta especificaciones técnicas de sensores de NASA (CTX, HiRISE, MOLA, THEMIS).',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             instrument_or_mission: { type: 'string', description: 'Nombre o acrónimo del instrumento' },
           },
           required: ['instrument_or_mission'],
-        },
+        }),
       },
     },
   },
@@ -271,13 +268,13 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'get_science_targets',
       description: 'Obtiene puntos de alto valor geológico comprobados en Jezero o Gale/Mount Sharp.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             region: { type: 'string', description: "'JEZERO' o 'GALE_MOUNT_SHARP'" },
           },
           required: ['region'],
-        },
+        }),
       },
     },
   },
@@ -286,7 +283,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
       name: 'evaluate_eva_feasibility',
       description: 'Evalúa viabilidad y seguridad de caminata considerando distancia, pendientes y DEM métrico.',
       inputSchema: {
-        json: {
+        json: JSON.stringify({
           type: 'object',
           properties: {
             total_distance_km: { type: 'number', description: 'Distancia total en km' },
@@ -295,7 +292,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
             has_meter_scale_dem: { type: 'boolean', description: 'Si cuenta con DEM métrico' },
           },
           required: ['total_distance_km', 'eva_mode'],
-        },
+        }),
       },
     },
   },

@@ -21,6 +21,8 @@ import {
   type ToolExecutionRequest,
 } from '../features/agent/toolExecutionEngine'
 import { buildCompactMissionContext, type MissionContextInput } from '../features/agent/missionContext'
+import { JarvisAiCore } from './AresAgentChat'
+import { queryMarsAgent } from '../features/agent/marsAgentService'
 import '../styles/missionComms.css'
 
 interface PendingConfirmationState {
@@ -325,23 +327,32 @@ export function AresMissionCommsModal({
   // ==========================================
   // MANEJADORES DE CONTROLES DE VOZ
   // ==========================================
+  const holdTimerRef = useRef<number | null>(null)
+  const isHoldingRef = useRef(false)
+
   const handleToggleConnect = async () => {
     if (!providerRef.current) return
 
     if (voiceState === 'VOICE_OFFLINE' || voiceState === 'ERROR') {
       try {
         await providerRef.current.connect()
+        // Si estaba en modo manos libres, comenzar a escuchar de inmediato
+        if (interactionMode === 'HANDS_FREE') {
+          setIsListeningNow(true)
+          await providerRef.current.startListening()
+        }
       } catch {
         // Error ya notificado en el provider
       }
     } else {
+      setIsListeningNow(false)
       await providerRef.current.disconnect()
     }
   }
 
   const handleStartSpeaking = async () => {
     if (!providerRef.current) return
-    if (voiceState === 'VOICE_OFFLINE') {
+    if (voiceState === 'VOICE_OFFLINE' || voiceState === 'ERROR') {
       await providerRef.current.connect()
     }
     setIsListeningNow(true)
@@ -352,6 +363,36 @@ export function AresMissionCommsModal({
     if (!providerRef.current) return
     setIsListeningNow(false)
     await providerRef.current.stopListening()
+  }
+
+  const handlePointerDown = () => {
+    isHoldingRef.current = false
+    holdTimerRef.current = window.setTimeout(() => {
+      isHoldingRef.current = true
+      if (!isListeningNow) {
+        handleStartSpeaking()
+      }
+    }, 280)
+  }
+
+  const handlePointerUp = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+
+    if (isHoldingRef.current) {
+      // Hold prolongado (Push-to-Talk)
+      isHoldingRef.current = false
+      handleStopSpeaking()
+    } else {
+      // Click simple: toggle
+      if (isListeningNow) {
+        handleStopSpeaking()
+      } else {
+        handleStartSpeaking()
+      }
+    }
   }
 
   const handleInterrupt = () => {
@@ -386,9 +427,51 @@ export function AresMissionCommsModal({
 
   const handleSendMessage = async () => {
     const text = inputMessage.trim()
-    if (!text || !providerRef.current) return
+    if (!text) return
     setInputMessage('')
-    await providerRef.current.sendTextMessage(text)
+
+    // Registrar mensaje del usuario inmediatamente en la conversación
+    const userEvt: TranscriptEvent = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      text,
+      isFinal: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    }
+    setTranscripts(prev => [...prev, userEvt])
+
+    // Si el provider de voz está conectado a Nova Sonic
+    if (providerRef.current && (voiceState === 'LISTENING' || voiceState === 'SPEAKING' || voiceState === 'PROCESSING')) {
+      try {
+        await providerRef.current.sendTextMessage(text)
+      } catch (err: unknown) {
+        console.warn('[MISSION COMMS] Error enviando por voice provider:', err)
+      }
+    } else {
+      // Fallback al agente Bedrock serverless en AWS (Function URL)
+      setVoiceState('PROCESSING')
+      try {
+        const historyPayload = transcripts
+          .filter(t => t.id !== 'init-msg')
+          .map(t => ({ role: t.role, content: t.text }))
+        const res = await queryMarsAgent(text, historyPayload)
+        const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            role: 'assistant',
+            text: cleanReply,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+        setVoiceState('LISTENING')
+      } catch {
+        setVoiceState('ERROR')
+      }
+    }
   }
 
   const handleResolveConfirmation = async (proceed: boolean) => {
@@ -414,27 +497,27 @@ export function AresMissionCommsModal({
 
   return (
     <>
-      {/* Botón Flotante HUD (FAB) en pantalla */}
+      {/* Botón Flotante HUD (FAB) en pantalla - FUSIONADO: ARES COPILOT */}
       {!isOpen && (
         <button
           type="button"
           className="ares-comms-fab-trigger"
           onClick={onOpen}
-          aria-label="Abrir ARES Mission Comms (Copiloto de voz en tiempo real)"
-          title="ARES Mission Comms // Copiloto de voz con Amazon Nova 2.5 Sonic"
+          aria-label="Abrir Ares Copilot (Asistente de voz y navegación en tiempo real)"
+          title="Ares Copilot // Asistente inteligente con Amazon Nova 2.5 Sonic"
         >
           <div className="ares-comms-fab-core">
             <span className="ares-comms-fab-pulse" aria-hidden="true" />
-            <MicIcon />
+            <JarvisAiCore size={32} withOuterOrbits={true} />
           </div>
           <div className="ares-comms-fab-labels">
-            <span className="ares-comms-fab-badge">NOVA 2.5 SONIC</span>
-            <span className="ares-comms-fab-text">MISSION COMMS</span>
+            <span className="ares-comms-fab-badge">[IA MISSION COPILOT]</span>
+            <span className="ares-comms-fab-text">ARES COPILOT</span>
           </div>
         </button>
       )}
 
-      {/* Ventana Modal ARES MISSION COMMS */}
+      {/* Ventana Modal ARES COPILOT */}
       {isOpen && (
         <div
           className="ares-comms-overlay"
@@ -456,12 +539,12 @@ export function AresMissionCommsModal({
             <header className="ares-comms-header">
               <div className="ares-comms-header-title-block">
                 <div className="ares-comms-logo-ring" aria-hidden="true">
-                  <MicIcon />
+                  <JarvisAiCore size={26} withOuterOrbits={false} />
                 </div>
                 <div>
-                  <div className="ares-comms-eyebrow">NASA SPACE APPS 2026 // REAL-TIME SPEECH COPILOT</div>
+                  <div className="ares-comms-eyebrow">NASA SPACE APPS 2026 // REAL-TIME SPEECH & TACTICAL COPILOT</div>
                   <h2 id="comms-title" className="ares-comms-title">
-                    ARES <span>MISSION COMMS</span>
+                    ARES <span>COPILOT</span>
                   </h2>
                 </div>
               </div>
@@ -498,18 +581,16 @@ export function AresMissionCommsModal({
                   {voiceState === 'VOICE_OFFLINE' ? 'INICIAR ENLACE' : 'DESCONECTAR'}
                 </button>
 
-                {/* Botón Push to Talk / Hablar */}
+                {/* Botón Hablar (Click para alternar o mantener presionado PTT) */}
                 <button
                   type="button"
                   className={`ares-comms-action-btn primary ${isListeningNow ? 'active-listening' : ''}`}
-                  onMouseDown={handleStartSpeaking}
-                  onMouseUp={handleStopSpeaking}
-                  onTouchStart={handleStartSpeaking}
-                  onTouchEnd={handleStopSpeaking}
-                  title="Mantén presionado para hablar (Push-to-Talk) o haz clic para alternar"
+                  onPointerDown={handlePointerDown}
+                  onPointerUp={handlePointerUp}
+                  title="Haz clic para alternar micrófono o mantén presionado para hablar (Push-to-Talk)"
                 >
                   <MicIcon />
-                  <span>{isListeningNow ? 'TRANSMITIENDO...' : 'HABLAR (PTT)'}</span>
+                  <span>{isListeningNow ? '🔴 TRANSMITIENDO... (PULSA PARA ENVIAR)' : '🎤 HABLAR (MIC)'}</span>
                 </button>
 
                 {/* Botón Detener / Interrupción */}
@@ -584,10 +665,14 @@ export function AresMissionCommsModal({
                 <span>
                   {voiceState === 'SPEAKING'
                     ? '● ARES TRANSMITIENDO VOZ'
-                    : voiceState === 'LISTENING'
-                    ? '● MICRÓFONO ESCUCHANDO'
+                    : isListeningNow
+                    ? '🔴 MICRÓFONO TRANSMITIENDO (HABLA AHORA)'
+                    : interactionMode === 'HANDS_FREE' && voiceState === 'LISTENING'
+                    ? '● MODO MANOS LIBRES (A LA ESCUCHA)'
                     : voiceState === 'PROCESSING'
-                    ? '● PROCESANDO TURNO'
+                    ? '● PROCESANDO TURNO...'
+                    : voiceState === 'LISTENING'
+                    ? '○ MICRÓFONO EN ESPERA (PULSA HABLAR)'
                     : '○ CANAL EN ESPERA'}
                 </span>
               </div>

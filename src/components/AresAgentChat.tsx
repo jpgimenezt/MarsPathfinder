@@ -9,6 +9,7 @@ interface AresAgentChatProps {
   isOpen?: boolean
   onClose?: () => void
   onOpen?: () => void
+  hideFab?: boolean
 }
 
 /**
@@ -230,6 +231,7 @@ export function AresAgentChat({
   isOpen: controlledIsOpen,
   onClose: controlledOnClose,
   onOpen: controlledOnOpen,
+  hideFab = false,
 }: AresAgentChatProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const isControlled = controlledIsOpen !== undefined
@@ -361,7 +363,7 @@ export function AresAgentChat({
   return (
     <>
       {/* Botón Flotante HUD (FAB) en la esquina inferior */}
-      {!isModalOpen && (
+      {!isModalOpen && !hideFab && (
         <button
           type="button"
           className="ares-fab-trigger"

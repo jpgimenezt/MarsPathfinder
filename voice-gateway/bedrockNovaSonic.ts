@@ -31,6 +31,8 @@ export class BedrockNovaSonicSession {
   private inputQueue: Uint8Array[] = []
   private queueResolver: (() => void) | null = null
   private isStreamClosed = false
+  private lastActivityTimestamp = Date.now()
+  private keepaliveTimer: NodeJS.Timeout | null = null
 
   constructor(voiceId: string, callbacks: NovaSonicCallbacks) {
     this.voiceId = voiceId || GATEWAY_CONFIG.defaultVoice
@@ -212,6 +214,7 @@ export class BedrockNovaSonicSession {
 
     try {
       const response = await this.client.send(command)
+      this.startKeepAlive()
       this.consumeOutputEvents(response.body)
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
@@ -384,6 +387,46 @@ export class BedrockNovaSonicSession {
         },
       },
     })
+
+    // Suministrar un bloque de audio de trigger para que Nova Sonic sintetice respuesta de voz
+    const audioTriggerName = `c-usr-trig-${Date.now()}`
+    this.enqueueEvent({
+      event: {
+        contentStart: {
+          promptName: this.promptName,
+          contentName: audioTriggerName,
+          type: 'AUDIO',
+          role: 'USER',
+          interactive: true,
+          audioInputConfiguration: {
+            mediaType: 'audio/lpcm',
+            sampleRateHertz: GATEWAY_CONFIG.sampleRateInput,
+            sampleSizeBits: 16,
+            channelCount: 1,
+          },
+        },
+      },
+    })
+
+    const silenceFrame = Buffer.alloc(1600 * 2)
+    this.enqueueEvent({
+      event: {
+        audioInput: {
+          promptName: this.promptName,
+          contentName: audioTriggerName,
+          content: silenceFrame.toString('base64'),
+        },
+      },
+    })
+
+    this.enqueueEvent({
+      event: {
+        contentEnd: {
+          promptName: this.promptName,
+          contentName: audioTriggerName,
+        },
+      },
+    })
   }
 
   /**
@@ -438,13 +481,76 @@ export class BedrockNovaSonicSession {
     this.active = false
     this.isStreamClosed = true
 
+    if (this.keepaliveTimer) {
+      clearInterval(this.keepaliveTimer)
+      this.keepaliveTimer = null
+    }
+
     if (this.queueResolver) {
       this.queueResolver()
       this.queueResolver = null
     }
   }
 
+  private startKeepAlive(): void {
+    if (this.keepaliveTimer) clearInterval(this.keepaliveTimer)
+    this.keepaliveTimer = setInterval(() => {
+      if (!this.active || this.isStreamClosed) {
+        if (this.keepaliveTimer) clearInterval(this.keepaliveTimer)
+        return
+      }
+      const idleMs = Date.now() - this.lastActivityTimestamp
+      // Si han pasado más de 20 segundos sin actividad, inyectar silencio keepalive para evitar el timeout de 55s de Bedrock
+      if (idleMs >= 20000) {
+        this.sendKeepAliveSilence()
+      }
+    }, 15000)
+  }
+
+  private sendKeepAliveSilence(): void {
+    if (!this.active || this.isStreamClosed) return
+    const silenceContentName = `c-ka-${Date.now()}`
+    this.enqueueEvent({
+      event: {
+        contentStart: {
+          promptName: this.promptName,
+          contentName: silenceContentName,
+          type: 'AUDIO',
+          role: 'USER',
+          interactive: false,
+          audioInputConfiguration: {
+            mediaType: 'audio/lpcm',
+            sampleRateHertz: GATEWAY_CONFIG.sampleRateInput,
+            sampleSizeBits: 16,
+            channelCount: 1,
+          },
+        },
+      },
+    })
+
+    const silenceBytes = Buffer.alloc(1600 * 2) // 100ms de silencio PCM
+    this.enqueueEvent({
+      event: {
+        audioInput: {
+          promptName: this.promptName,
+          contentName: silenceContentName,
+          content: silenceBytes.toString('base64'),
+        },
+      },
+    })
+
+    this.enqueueEvent({
+      event: {
+        contentEnd: {
+          promptName: this.promptName,
+          contentName: silenceContentName,
+        },
+      },
+    })
+  }
+
   private enqueueEvent(eventObj: any) {
+    this.lastActivityTimestamp = Date.now()
     const bytes = new TextEncoder().encode(JSON.stringify(eventObj))
     this.inputQueue.push(bytes)
     if (this.queueResolver) {

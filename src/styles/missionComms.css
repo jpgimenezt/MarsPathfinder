@@ -368,10 +368,17 @@
 }
 
 .ares-comms-action-btn.active-listening {
-  background: var(--color-telemetry-cyan);
-  color: var(--color-space-black);
-  border-color: #ffffff;
-  box-shadow: 0 0 15px rgba(99, 212, 229, 0.6);
+  background: rgba(255, 68, 68, 0.28);
+  color: #ffffff;
+  border-color: #ff4444;
+  box-shadow: 0 0 18px rgba(255, 68, 68, 0.7);
+  animation: pulse-mic-active 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-mic-active {
+  0% { box-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 22px rgba(255, 68, 68, 0.95); }
+  100% { box-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
 }
 
 .ares-comms-action-btn.stop {

@@ -104,6 +104,23 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     this.manualDisconnect = false
     this.setState('CONNECTING')
 
+    // Desbloquear AudioContext dentro del gesto del usuario (política de autoplay de navegadores)
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!this.playbackCtx) {
+        this.playbackCtx = new AudioCtxClass({ sampleRate: 24000 })
+        this.analyserAssistant = this.playbackCtx.createAnalyser()
+        this.analyserAssistant.fftSize = 64
+        this.analyserAssistant.connect(this.playbackCtx.destination)
+        this.startVisualizerPump()
+      }
+      if (this.playbackCtx.state === 'suspended') {
+        await this.playbackCtx.resume()
+      }
+    } catch (e) {
+      console.warn('[NOVA SONIC] Advertencia inicializando AudioContext de reproducción:', e)
+    }
+
     return new Promise((resolve, reject) => {
       try {
         console.log(`[NOVA SONIC PROVIDER] Conectando a ${this.config.endpointUrl}...`)
@@ -296,7 +313,12 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
       this.analyserUser.fftSize = 64
       this.sourceNode.connect(this.analyserUser)
       this.sourceNode.connect(this.workletNode)
-      this.workletNode.connect(this.audioCtx.destination)
+
+      // Conectar a sumidero mudo (gain=0) para mantener activo el AudioWorklet sin acoplar audio a altavoces
+      const muteSink = this.audioCtx.createGain()
+      muteSink.gain.value = 0
+      this.workletNode.connect(muteSink)
+      muteSink.connect(this.audioCtx.destination)
 
       this.workletNode.port.onmessage = event => {
         if (this.config.isMuted) return
@@ -380,11 +402,17 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
       }
 
       const pcmBytes = this.base64ToArrayBuffer(pcmBase64)
-      const int16Array = new Int16Array(pcmBytes)
-      const float32Array = new Float32Array(int16Array.length)
+      const validBytes = pcmBytes.byteLength - (pcmBytes.byteLength % 2)
+      if (validBytes <= 0) return
 
-      for (let i = 0; i < int16Array.length; i++) {
-        float32Array[i] = int16Array[i] / (int16Array[i] < 0 ? 0x8000 : 0x7fff)
+      const dataView = new DataView(pcmBytes, 0, validBytes)
+      const numSamples = validBytes / 2
+      const float32Array = new Float32Array(numSamples)
+
+      for (let i = 0; i < numSamples; i++) {
+        // Little-endian Linear PCM 16-bit
+        const sample = dataView.getInt16(i * 2, true)
+        float32Array[i] = sample < 0 ? sample / 0x8000 : sample / 0x7fff
       }
 
       const audioBuffer = this.playbackCtx.createBuffer(1, float32Array.length, 24000)

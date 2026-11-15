@@ -181,6 +181,13 @@ wss.on('connection', (ws: WebSocket, req) => {
             await session.startSession(message.initialContext)
             send({ type: 'state_change', state: 'LISTENING' })
             resetSessionTimer()
+
+            // Saludo táctico inicial de ARES Copilot con síntesis de voz inmediata
+            if (message.greet !== false) {
+              session.sendTextMessage(
+                'Astronauta enlazado a la frecuencia táctica ARES. Confirma enlace establecido de forma breve e indícale al comandante que estás a la escucha para órdenes de navegación y análisis.'
+              )
+            }
           } catch (initErr: unknown) {
             const err = initErr instanceof Error ? initErr : new Error(String(initErr))
             send({

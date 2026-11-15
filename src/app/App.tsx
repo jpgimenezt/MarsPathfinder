@@ -218,23 +218,13 @@ export function App() {
           </button>
           <button
             type="button"
-            className={`nav-mode-btn nav-mode-comms ${isCommsOpen ? 'active' : ''}`}
+            className={`nav-mode-btn nav-mode-copilot ${isCommsOpen ? 'active' : ''}`}
             onClick={() => setIsCommsOpen(prev => !prev)}
-            title="ARES MISSION COMMS (Copiloto de voz en tiempo real con Amazon Nova 2.5 Sonic)"
-          >
-            <span className="nav-mode-pulse" aria-hidden="true" />
-            <span className="nav-btn-code">VOZ</span>
-            <span className="nav-btn-text">MISSION COMMS</span>
-          </button>
-          <button
-            type="button"
-            className={`nav-mode-btn nav-mode-agent ${isAgentOpen ? 'active' : ''}`}
-            onClick={() => setIsAgentOpen(prev => !prev)}
-            title="Consola Táctica Copiloto ARES-NAV (IA con verificación geodésica)"
+            title="Ares Copilot // Asistente inteligente de voz y navegación con Amazon Nova 2.5 Sonic"
           >
             <span className="nav-mode-pulse" aria-hidden="true" />
             <span className="nav-btn-code">AI</span>
-            <span className="nav-btn-text">COPILOTO</span>
+            <span className="nav-btn-text">ARES COPILOT</span>
           </button>
         </nav>
 
@@ -331,13 +321,13 @@ export function App() {
               {panelButton('science', 'Ciencia y riesgos')}
               <button
                 type="button"
-                className={`tab tab-agent ${isAgentOpen ? 'active' : ''}`}
-                aria-pressed={isAgentOpen}
-                onClick={() => setIsAgentOpen(prev => !prev)}
-                title="Copiloto Táctico ARES-NAV (IA)"
+                className={`tab tab-agent ${isCommsOpen ? 'active' : ''}`}
+                aria-pressed={isCommsOpen}
+                onClick={() => setIsCommsOpen(prev => !prev)}
+                title="Ares Copilot // Asistente táctico y de voz con Amazon Nova 2.5 Sonic"
               >
                 <span className="tab-agent-indicator" aria-hidden="true" />
-                Copiloto táctico
+                Ares Copilot
               </button>
             </nav>
             <button
@@ -665,6 +655,7 @@ export function App() {
         onClose={() => setIsAgentOpen(false)}
         currentStops={plan.stops}
         totalDistanceMeters={legs.total}
+        hideFab={true}
       />
 
       <AresMissionCommsModal
