@@ -86,6 +86,7 @@ Resources:
         AuthType: NONE
         Cors:
           AllowOrigins:
+            - "https://aresroute.vercel.app"
             - "https://ares-route.vercel.app"
             - "https://mars-pathfinder.vercel.app"
             - "https://jpgimenezt.github.io"

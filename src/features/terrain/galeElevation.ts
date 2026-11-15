@@ -1,6 +1,12 @@
 /**
- * Modelo de Elevación y Gradientes Topográficos de Gale Crater y Mount Sharp (Aeolis Mons).
- * Basado en los perfiles hipsométricos de MGS MOLA y Mars Express HRSC.
+ * Modelo Conceptual de Elevación y Gradientes Topográficos de Gale Crater y Mount Sharp (Aeolis Mons).
+ * PROVENIENCIA: [SIMULATED / RECONSTRUCCIÓN PROCEDURAL]
+ * 
+ * NOTA CIENTÍFICA METODOLÓGICA (NASA Space Apps Challenge 2026):
+ * Este modelo constituye una reconstrucción continua matemática basada en perfiles hipsométricos
+ * de MGS MOLA y Mars Express HRSC. No constituye un Modelo Digital de Elevación (DEM) numérico
+ * oficial georreferenciado celda a celda (como el DEM USGS de Jezero). Las pendientes calculadas
+ * son aproximaciones derivadas del modelo geométrico procedural para el entorno educativo.
  * 
  * Parámetros geodésicos:
  * - Centro de Gale Crater: -5.37°N, 137.44°E (Areoide MOLA z ≈ -4,450 m)
@@ -110,11 +116,11 @@ export function getGaleSlopeDegrees(lon: number, lat: number): number {
 }
 
 /**
- * Evalúa la pendiente según los criterios de seguridad de locomoción de NASA para astronautas (EVA)
- * y rovers clase Curiosity/Perseverance:
- * - NOMINAL: < 8° (Tránsito a pie seguro, consumo metabólico normal)
- * - PRECAUCIÓN: 8° - 15° (Esfuerzo moderado, riesgo de deslizamiento de regolito, velocidad reducida)
- * - PELIGROSO: > 15° (Pendiente crítica, riesgo de caída/avalancha de arena, requiere cuerda/ruta alterna)
+ * Evalúa la pendiente según supuestos configurables de locomoción para el prototipo educativo (EVA)
+ * y rovers clase Curiosity/Perseverance (no constituye certificación formal de vuelo humano):
+ * - NOMINAL: < 8° (Tránsito a pie estimado, consumo metabólico modelado)
+ * - PRECAUCIÓN: 8° - 15° (Esfuerzo moderado estimado, riesgo de deslizamiento de regolito, velocidad reducida)
+ * - PELIGROSO: > 15° (Pendiente crítica estimada, requiere ruta alterna)
  */
 export function evaluateSlope(slopeDegrees: number): SlopeEvaluation {
   if (slopeDegrees < 8) {
@@ -144,10 +150,10 @@ export function evaluateSlope(slopeDegrees: number): SlopeEvaluation {
 }
 
 /**
- * Evalúa una distancia de ruta según la Regla de Walkback de la NASA para misiones de superficie:
+ * Evalúa una distancia de ruta según la hipótesis de diseño de Walkback para el prototipo de exploración:
  * - Nominal: <= 5 km de la base o vehículo de retorno
- * - Precaución: 5 a 8 km (aproximación al límite de consumibles PLSS)
- * - Contingencia Crítica: > 8 km (riesgo extremo de no retorno a pie en caso de falla de rover)
+ * - Precaución: 5 a 8 km (aproximación al límite modelado de consumibles PLSS)
+ * - Contingencia Crítica: > 8 km (riesgo elevado de no retorno a pie en caso de falla de rover)
  */
 export function evaluateWalkbackLimit(distanceMeters: number): {
   distanceKm: number

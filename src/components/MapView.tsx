@@ -27,7 +27,7 @@ import { loadWmts } from '../features/map/wmtsSources'
 import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
-import { calculateObstacleAvoidanceRoute, type TerrainMissionRoute, type TerrainRouteResult } from '../features/route/terrainPathfinder'
+import { type TerrainMissionRoute, type TerrainRouteResult } from '../features/route/terrainPathfinder'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
 export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
@@ -174,8 +174,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
         const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
         const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
         if (!first || !last) continue
-        const curvedCoords = calculateObstacleAvoidanceRoute(first, last, 28)
-        const segment = new Feature({ geometry: new LineString(curvedCoords.map(p => [p[0], p[1]])) })
+        const segment = new Feature({ geometry: new LineString([[first[0], first[1]], [last[0], last[1]]]) })
         if (suggestedRouteRef.current) {
           // Conservar trazado manual como referencia visual (baseline)
           segment.setStyle([
@@ -183,7 +182,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
             new Style({ stroke: new Stroke({ color: 'rgba(245, 158, 11, 0.65)', width: 2.5, lineDash: [8, 8] }) }),
           ])
         } else {
-          // Trazado manual activo
+          // Trazado manual activo: conexión directa geodésica seleccionada por el usuario
           segment.setStyle([
             new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
             new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),

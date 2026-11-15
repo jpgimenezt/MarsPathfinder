@@ -377,18 +377,13 @@ def run_agentic_conversation(user_message: str, history: list = None) -> dict:
 def lambda_handler(event, context):
     print(f"Incoming Event: {json.dumps(event)}")
     
-    # Manejo de CORS OPTIONS
+    # Manejo de preflight CORS OPTIONS (si no es interceptado automáticamente por Function URL)
     http_method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method", "")
-    headers = event.get("headers", {}) or {}
-    header_map = {k.lower(): v for k, v in headers.items()}
-
     if http_method == "OPTIONS":
         return {
             "statusCode": 200,
             "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization"
+                "Content-Type": "application/json"
             },
             "body": ""
         }

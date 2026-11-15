@@ -20,19 +20,19 @@ import { AudioCaptureService } from './audioCaptureService'
 export function resolveGatewayEndpoint(explicitUrl?: string): string {
   if (explicitUrl && explicitUrl.trim().length > 0) return explicitUrl.trim()
 
-  // 1. Variable de entorno Vite (prioridad máxima para producción / dominios personalizados)
+  // 1. Variable de entorno Vite (prioridad máxima para producción / dominios dedicados)
   const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_VOICE_GATEWAY_URL
   if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
     return envUrl.trim()
   }
 
-  // 2. Entorno HTTPS o Producción: estrictamente wss:// (nunca ws:// ni localhost)
+  // 2. Entorno HTTPS o Producción sin gateway dedicado:
+  // No inventar hosts ficticios ni asumir soporte WebSocket persistente en Vercel Serverless
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
   const isProd = typeof import.meta !== 'undefined' && Boolean((import.meta as any).env?.PROD)
 
   if (isHttps || isProd) {
-    const host = typeof window !== 'undefined' && window.location.host ? window.location.host : 'gateway.aresroute.space'
-    return `wss://${host}/voice`
+    return ''
   }
 
   // 3. Fallback únicamente para desarrollo local en HTTP
@@ -78,6 +78,15 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   }
 
   public async connect(): Promise<void> {
+    if (!this.config.endpointUrl || this.config.endpointUrl.trim().length === 0) {
+      this.setState('VOICE_OFFLINE')
+      this.notifyError({
+        message: 'ARES Voice Gateway no configurado en este entorno. Las consultas continúan operativas por texto con Amazon Bedrock.',
+        code: 'GATEWAY_NOT_CONFIGURED',
+      })
+      return
+    }
+
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return
     }
