@@ -1,4 +1,4 @@
-import { insideRoi } from '../map/marsProjection'
+import { inRegion, type Region } from '../map/planningRegion'
 import { marsDistance, type MarsPoint } from './marsDistance'
 
 export type StopId = 'A' | 'P' | 'B'
@@ -11,7 +11,7 @@ export interface RoutePlan {
 }
 
 export type RouteAction =
-  | { type: 'set'; id: StopId; point: MarsPoint }
+  | { type: 'set'; id: StopId; point: MarsPoint; region: Region }
   | { type: 'undo' }
   | { type: 'reset' }
 
@@ -26,7 +26,7 @@ export function routePlanReducer(plan: RoutePlan, action: RouteAction): RoutePla
     if (!STOP_ORDER.some(id => plan.stops[id])) return plan
     return { stops: {}, history: [...plan.history, plan.stops] }
   }
-  if (!insideRoi(action.point) || !Number.isFinite(action.point[0]) || !Number.isFinite(action.point[1])) return plan
+  if (!inRegion(action.point, action.region)) return plan
   if (action.id === 'P' && !plan.stops.A) return plan
   if (action.id === 'B' && (!plan.stops.A || !plan.stops.P)) return plan
   return {
