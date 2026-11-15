@@ -30,6 +30,7 @@ export function App() {
   const [mode, setMode] = useState<MapMode>({ type: 'explore' })
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
+  const [routeNotice, setRouteNotice] = useState(false)
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
   const count = STOP_ORDER.filter(id => plan.stops[id]).length
@@ -44,9 +45,17 @@ export function App() {
   }, [])
 
   function place(id: StopId, point: MarsPoint) {
-    if (scope !== 'jezero' || mode.type === 'explore' || mode.id !== id || !insideRoi(point)) return
+    if (scope !== 'jezero' || mode.type === 'explore' || mode.id !== id) return
+    if (!insideRoi(point)) { setRouteNotice(true); return }
     dispatch({ type: 'set', id, point })
+    setRouteNotice(false)
     setMode({ type: 'explore' })
+  }
+  function movePoint(id: StopId, point: MarsPoint) {
+    if (scope !== 'jezero' || !plan.stops[id]) return
+    if (!insideRoi(point)) { setRouteNotice(true); return }
+    dispatch({ type: 'set', id, point })
+    setRouteNotice(false)
   }
 
   function panelButton(id: Panel, label: string) {
@@ -92,7 +101,12 @@ export function App() {
 
         <section className="map-stage" aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
           <MapView scope={scope} enabled={enabled} opacity={opacity} stops={plan.stops} mode={mode} onPlace={place}
+            onMove={movePoint} onInvalid={() => setRouteNotice(true)}
             onLayerState={(id, state) => setStates(current => current[id] === state ? current : { ...current, [id]: state })} />
+          {scope === 'jezero' && routeNotice && <div className="roi-notice" role="alert">
+            Fuera del sector editable: el punto no cambió. Es un límite de cobertura y alcance del prototipo, no una indicación de peligro.
+            <button type="button" onClick={() => setRouteNotice(false)} aria-label="Cerrar aviso">×</button>
+          </div>}
 
           {panel && <aside className="drawer" aria-label={panel === 'route' ? 'Planificador de ruta' : panel === 'layers' ? 'Capas científicas' : 'Ciencia y riesgos'}>
             <div className="drawer-header"><span className="eyebrow">{panel === 'route' ? 'TRAZADO MANUAL' : panel === 'layers' ? 'DATOS ORBITALES' : 'CONTEXTO CIENTÍFICO'}</span>
@@ -102,7 +116,7 @@ export function App() {
               <h2>Tu recorrido <span className="soft">exploratorio</span></h2>
               {scope === 'global' && <div className="notice"><b>OUT_OF_COVERAGE · Planificación desactivada</b><br />
                 El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA regional. Volvé a Jezero para editar la ruta.</div>}
-              <p className="intro">Elegí explícitamente un punto antes de tocar el mapa. En modo explorar, los toques no alteran el plan.</p>
+              <p className="intro">Elegí un punto para colocarlo; para editar A/P/B, arrastrá su marcador o usá «Mover». Fuera del sector delimitado no se admiten rutas.</p>
               <div className="mode-strip">
                 <button type="button" disabled={scope === 'global'} aria-pressed={mode.type === 'explore'} className={mode.type === 'explore' ? 'mode-active' : ''}
                   onClick={() => setMode({ type: 'explore' })}>✥ &nbsp; Explorar mapa</button>
@@ -163,7 +177,9 @@ export function App() {
               <h2>¿Por qué Jezero?</h2><p>NASA describe un antiguo sistema de lago y delta fluvial en Jezero. Sus depósitos podrían preservar indicios del ambiente antiguo. Explorarlos tiene valor científico; <b>no implica haber descubierto vida</b>.</p>
               <a href="https://science.nasa.gov/mission/mars-2020-perseverance/science-objectives/" target="_blank" rel="noreferrer">Objetivos de Perseverance · NASA ↗</a>
               <h3>Riesgos y evidencia</h3>
-              <div className="notice"><b>NO_DATA · Perfil y pendientes</b><br />Sin DEM numérico validado en este ROI. No se calculan alturas ni pendientes.</div>
+              <div className="notice"><b>UNVERIFIED · Perfil y pendientes</b><br />
+                El DEM CTX numérico USGS de 20 m/píxel tiene muestras válidas en el ROI, pero falta confirmar su referencia vertical exacta y su registro respecto de las capas del mapa. No se publican cotas, desniveles ni pendientes.
+                {' '}<a href="https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic" target="_blank" rel="noreferrer">Ficha DEM USGS ↗</a></div>
               <div className="notice"><b>LOW_RESOLUTION · MOLA</b><br />El relieve visual regional no permite detectar rocas o escalones.</div>
               <div className="notice"><b>UNVERIFIED · Ruta</b><br />Transitabilidad, obstáculos pequeños, clima y radiación locales no evaluados. Las paradas elegidas son propuestas del usuario, no sitios de muestreo verificados.</div>
             </>}

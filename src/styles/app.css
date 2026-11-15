@@ -138,6 +138,14 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .map-shell, .map { width: 100%; height: 100%; }
 .map { background: #273b40; }
 .map--placing { cursor: crosshair; }
+.roi-notice {
+  position: absolute; z-index: 5; top: 16px; left: 50%; transform: translateX(-50%);
+  max-width: min(460px, calc(100% - 24px)); background: #283a39; color: #fff2d9;
+  border: 2px solid #ffc784; border-radius: 9px; padding: 10px 44px 10px 12px;
+  font-size: .8rem; line-height: 1.4; box-shadow: 0 8px 24px #000a;
+}
+.roi-notice button { position: absolute; right: 6px; top: 4px; width: 36px; height: 36px;
+  background: transparent; color: white; border: 0; font-size: 1.4rem; }
 .map-shell .ol-attribution { background: #122229d9; font-size: .7rem; }
 .map-shell .ol-attribution ul { color: #e9f0ed; }
 .map-shell .ol-attribution a { color: #ffc982; }
@@ -234,22 +242,38 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .map-counter { bottom: 76px; }
   .map-hint { bottom: 18px; }
 }
-@media (max-width: 680px) {
-  .globe-stage { min-height: max(660px, calc(100dvh - 140px)); }
-  .globe-copy { left: 18px; top: 25px; max-width: calc(100% - 36px); }
-  .globe-copy h2 { font-size: 2rem; margin: 10px 0; }
-  .globe-copy > p { font-size: .78rem; line-height: 1.4; max-width: 340px; }
-  .globe-copy .globe-warning { margin-top: 12px; }
-  .globe-primary { padding: 10px 14px; margin-top: 4px; }
-  .globe-data {
-    top: 302px; left: 12px; right: 12px; width: auto; max-height: min(48dvh, 410px);
-    overflow-y: auto; padding: 10px;
+@media (max-width: 800px) {
+  .globe-main { min-height: 0; }
+  .globe-stage {
+    min-height: 0; display: flex; flex-direction: column;
+    padding: 16px max(12px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    overflow: visible; background-position: center;
   }
-  .globe-texture-options button { padding: 7px 2px; }
-  .mola-legend { margin-top: 7px; padding-top: 7px; }
-  .globe-viewport { inset: 300px 0 47px; }
-  .globe-controls { bottom: 46px; right: 12px; }
-  .globe-credit { bottom: 13px; left: 16px; font-size: .61rem; max-width: 80%; }
+  .globe-copy, .globe-data, .globe-viewport, .globe-controls, .globe-credit {
+    position: relative; inset: auto; left: auto; right: auto; top: auto; bottom: auto;
+    width: 100%; max-width: none; flex: none;
+  }
+  .globe-copy { order: 0; pointer-events: auto; }
+  .globe-viewport {
+    order: 1; height: clamp(270px, 42dvh, 480px); min-height: 270px;
+    touch-action: none; overflow: hidden;
+  }
+  .globe-data { order: 3; max-height: none; overflow: visible; margin-top: 10px; }
+  .globe-controls { order: 2; align-self: center; width: auto; margin: 10px 0 0; }
+  .globe-controls button { width: 44px; height: 44px; }
+  .globe-credit { order: 4; margin-top: 12px; font-size: .72rem; overflow-wrap: anywhere; }
+  .globe-texture-options button { min-height: 44px; }
+  .mola-legend summary { min-height: 44px; display: flex; align-items: center; }
+  .globe-copy h2 { font-size: clamp(1.7rem, 6vw, 2.4rem); margin: 10px 0; }
+  .globe-copy > p { font-size: .84rem; line-height: 1.4; margin: 8px 0; }
+  .globe-copy .globe-warning { margin: 10px 0; }
+  .globe-primary { min-height: 44px; margin-top: 4px; }
+}
+@media (max-width: 680px) {
+  .globe-copy { max-width: none; }
+  .globe-copy h2 { font-size: 2rem; margin: 10px 0; }
+  .globe-copy > p { max-width: 440px; }
+  .globe-texture-options button { padding: 8px 3px; }
   .header { min-height: 62px; padding: 10px 15px; }
   .brand-mark { width: 34px; height: 34px; font-size: 1.5rem; }
   .brand h1 { font-size: 1.25rem; }
@@ -270,6 +294,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .map-counter { left: 10px; right: auto; top: 10px; bottom: auto; width: 158px; padding: 9px 11px; }
   .map-counter strong { font-size: 1.15rem; }
   .map-hint { left: 50%; bottom: auto; top: 112px; width: max-content; max-width: calc(100% - 100px); font-size: .7rem; }
+  .roi-notice { top: 165px; }
   .footer { display: block; padding: 10px 14px; }
   .footer strong { display: block; text-align: left; margin-top: 7px; }
 }

@@ -9,19 +9,25 @@ import type { MapMode, MapScope } from '../src/components/MapView'
 import { App } from '../src/app/App'
 
 let placePoint: ((id: StopId, point: MarsPoint) => void) | undefined
+let dragPoint: ((id: StopId, point: MarsPoint) => void) | undefined
+let rejectPoint: (() => void) | undefined
 let reportLayer: ((id: 'ctx' | 'mola' | 'themis', state: LayerState) => void) | undefined
 let mapMode: MapMode
 let mapStops: Stops
 let mapScope: MapScope
 vi.mock('../src/components/MapView', () => ({
-  MapView: ({ onPlace, onLayerState, mode, stops, scope }: {
+  MapView: ({ onPlace, onMove, onInvalid, onLayerState, mode, stops, scope }: {
     onPlace: typeof placePoint
+    onMove: typeof dragPoint
+    onInvalid: typeof rejectPoint
     onLayerState: typeof reportLayer
     mode: MapMode
     stops: Stops
     scope: MapScope
   }) => {
     placePoint = onPlace
+    dragPoint = onMove
+    rejectPoint = onInvalid
     reportLayer = onLayerState
     mapMode = mode
     mapStops = stops
@@ -57,9 +63,29 @@ afterEach(() => {
   if (root) act(() => root.unmount())
   element?.remove()
   placePoint = undefined
+  dragPoint = undefined
+  rejectPoint = undefined
 })
 
 describe('interacción explícita del recorrido', () => {
+  it('confirma un arrastre, muestra rechazo fuera del ROI y deshace solo el arrastre', async () => {
+    await setup()
+    click('.stop:nth-child(1) button')
+    point('A', [77.40, 18.38])
+    const initialTotal = element.querySelector('.route-total strong')?.textContent
+    act(() => dragPoint!('A', [77.41, 18.39]))
+    expect(mapStops.A).toEqual([77.41, 18.39])
+    expect(element.querySelector('.route-total strong')?.textContent).toBe(initialTotal)
+    act(() => rejectPoint!())
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain('no una indicación de peligro')
+    expect(mapStops.A).toEqual([77.41, 18.39])
+    act(() => dragPoint!('A', [77.60, 18.39]))
+    expect(mapStops.A).toEqual([77.41, 18.39])
+    click('.route-actions button:first-child')
+    expect(mapStops.A).toEqual([77.40, 18.38])
+    click('.route-actions button:first-child')
+    expect(mapStops.A).toBeUndefined()
+  })
   it('abre primero el globo y ofrece mapa 2D global si WebGL falla', async () => {
     element = document.createElement('div')
     document.body.append(element)
@@ -119,7 +145,7 @@ describe('interacción explícita del recorrido', () => {
     expect(element.querySelector('.layer-card .status')?.textContent).toBe('error')
     click('.layer-card input[type="checkbox"]')
     click('.tabs button:nth-child(3)')
-    expect(element.querySelector('.notice')?.textContent).toContain('NO_DATA')
+    expect(element.querySelector('.notice')?.textContent).toContain('UNVERIFIED')
     click('.tabs button:nth-child(1)')
     expect(mapStops.A).toEqual([77.40, 18.38])
     expect(element.querySelector('[data-testid="mapa"]')).not.toBeNull()

@@ -14,9 +14,11 @@ import Stroke from 'ol/style/Stroke.js'
 import Fill from 'ol/style/Fill.js'
 import CircleStyle from 'ol/style/Circle.js'
 import Text from 'ol/style/Text.js'
+import Modify from 'ol/interaction/Modify.js'
+import Polygon from 'ol/geom/Polygon.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
 import { sources, type LayerId } from '../data/sourceManifest'
-import { FALLBACK_EXTENT, insideRoi, marsProjection } from '../features/map/marsProjection'
+import { CTX_EXTENT, FALLBACK_EXTENT, ROI, insideRoi, marsProjection } from '../features/map/marsProjection'
 import { WmtsLayerManager, type LayerState } from '../features/map/wmtsLayerManager'
 import { changeZoom, createGlobalView, createJezeroView, fitGlobal, fitJezero, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
@@ -33,6 +35,8 @@ interface Props {
   stops: Stops
   mode: MapMode
   onPlace: (id: StopId, point: MarsPoint) => void
+  onMove: (id: StopId, point: MarsPoint) => void
+  onInvalid: () => void
   onLayerState: (id: LayerId, state: LayerState) => void
 }
 
@@ -42,7 +46,7 @@ const markers: Record<StopId, { color: string; text: string }> = {
   B: { color: '#ff8f77', text: 'Destino propuesto' },
 }
 
-export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayerState }: Props) {
+export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onMove, onInvalid, onLayerState }: Props) {
   const element = useRef<HTMLDivElement>(null)
   const map = useRef<Map | null>(null)
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
@@ -57,11 +61,23 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
   })
   const manager = useRef<WmtsLayerManager | null>(null)
   const vectors = useRef(new VectorSource())
+  const points = useRef(new VectorSource())
+  const pointFeatures = useRef(new globalThis.Map<StopId, Feature<Point>>())
+  const routeLayer = useRef<VectorLayer<VectorSource> | null>(null)
+  const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null)
+  const roiLayer = useRef<VectorLayer<VectorSource> | null>(null)
+  const modify = useRef<Modify | null>(null)
+  const dragOrigin = useRef<MarsPoint | null>(null)
+  const skipClick = useRef(false)
   const handler = useRef(onPlace)
+  const moveHandler = useRef(onMove)
+  const invalidHandler = useRef(onInvalid)
   const stateHandler = useRef(onLayerState)
   const modeRef = useRef(mode)
   const [zoom, setZoom] = useState({ in: true, out: true })
   handler.current = onPlace
+  moveHandler.current = onMove
+  invalidHandler.current = onInvalid
   stateHandler.current = onLayerState
   modeRef.current = mode
 
@@ -87,15 +103,76 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
     })
     fallback.current = local
     const route = new VectorLayer({ source: vectors.current })
+    const markerLayer = new VectorLayer({ source: points.current })
+    routeLayer.current = route
+    markerLayerRef.current = markerLayer
+    const border = new VectorLayer({
+      source: new VectorSource({ features: [new Feature({
+        geometry: new Polygon([[
+          [CTX_EXTENT[0], CTX_EXTENT[1]], [CTX_EXTENT[2], CTX_EXTENT[1]],
+          [CTX_EXTENT[2], CTX_EXTENT[3]], [CTX_EXTENT[0], CTX_EXTENT[3]], [CTX_EXTENT[0], CTX_EXTENT[1]],
+        ], [
+          [ROI[0], ROI[1]], [ROI[0], ROI[3]], [ROI[2], ROI[3]],
+          [ROI[2], ROI[1]], [ROI[0], ROI[1]],
+        ]]),
+      })] }),
+      style: new Style({ fill: new Fill({ color: '#081a2670' }),
+        stroke: new Stroke({ color: '#ffcf91', width: 2, lineDash: [8, 5] }) }),
+    })
+    roiLayer.current = border
+    function redrawRoute() {
+      vectors.current.clear()
+      for (const [from, to] of [['A', 'P'], ['P', 'B']] as [StopId, StopId][]) {
+        const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates()
+        const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates()
+        if (!first || !last) continue
+        const segment = new Feature({ geometry: new LineString([first, last]) })
+        segment.setStyle([
+          new Style({ stroke: new Stroke({ color: '#17242c', width: 9, lineCap: 'round', lineJoin: 'round' }) }),
+          new Style({ stroke: new Stroke({ color: '#ffcb84', width: 4, lineCap: 'round', lineJoin: 'round' }) }),
+        ])
+        vectors.current.addFeature(segment)
+      }
+    }
+    points.current.on('changefeature', redrawRoute)
     const jezero = createJezeroView()
     localView.current = jezero
     const instance = new Map({
       target: element.current,
-      layers: [local, layers.current.ctx, layers.current.mola, layers.current.themis, route],
+      layers: [local, layers.current.ctx, layers.current.mola, layers.current.themis, border, route, markerLayer],
       view: jezero,
       controls: defaultControls({ zoom: false, rotate: false }),
     })
     manager.current = new WmtsLayerManager(layers.current, (id, state) => reportHandler.current(id, state))
+    const drag = new Modify({ source: points.current, hitDetection: markerLayer, pixelTolerance: 18,
+      style: new Style({ image: new CircleStyle({ radius: 18, fill: new Fill({ color: '#263a42' }),
+        stroke: new Stroke({ color: '#fff0ba', width: 3 }) }) }) })
+    modify.current = drag
+    instance.addInteraction(drag)
+    drag.on('modifystart', event => {
+      const feature = event.features.item(0)
+      const coordinate = (feature?.getGeometry() as Point | undefined)?.getCoordinates()
+      dragOrigin.current = coordinate ? [coordinate[0], coordinate[1]] : null
+      skipClick.current = true
+    })
+    const resetClickGuard = () => { skipClick.current = false }
+    element.current.addEventListener('pointerdown', resetClickGuard)
+    drag.on('modifyend', event => {
+      const feature = event.features.item(0)
+      const coordinate = (feature?.getGeometry() as Point | undefined)?.getCoordinates()
+      const origin = dragOrigin.current
+      dragOrigin.current = null
+      window.setTimeout(() => { skipClick.current = false }, 500)
+      if (!feature || !coordinate || !origin) return
+      if (coordinate[0] === origin[0] && coordinate[1] === origin[1]) return
+      if (scopeRef.current !== 'jezero' || !insideRoi(coordinate) ||
+          !Number.isFinite(coordinate[0]) || !Number.isFinite(coordinate[1])) {
+        (feature.getGeometry() as Point).setCoordinates([...origin])
+        invalidHandler.current()
+        return
+      }
+      moveHandler.current(feature.getId() as StopId, [coordinate[0], coordinate[1]])
+    })
     instance.updateSize()
     fitJezero(jezero, instance.getSize() ?? [900, 650])
     const updateZoom = () => setZoom(zoomAvailability(instance.getView()))
@@ -108,13 +185,20 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
     updateZoom()
     instance.on('singleclick', event => {
       const selection = modeRef.current
-      if (scopeRef.current !== 'jezero' || selection.type === 'explore' || !insideRoi(event.coordinate)) return
+      if (skipClick.current) { skipClick.current = false; return }
+      if (scopeRef.current !== 'jezero' || selection.type === 'explore') return
+      if (instance.hasFeatureAtPixel(event.pixel, { layerFilter: layer => layer === markerLayer })) return
+      if (!insideRoi(event.coordinate)) { invalidHandler.current(); return }
       handler.current(selection.id, [event.coordinate[0], event.coordinate[1]])
     })
     map.current = instance
     return () => {
       observer.disconnect()
+      element.current?.removeEventListener('pointerdown', resetClickGuard)
+      points.current.un('changefeature', redrawRoute)
       manager.current?.dispose()
+      instance.removeInteraction(drag)
+      modify.current = null
       manager.current = null
       instance.setTarget(undefined)
       instance.dispose()
@@ -122,6 +206,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
       fallback.current = null
       localView.current = null
       globalView.current = null
+      routeLayer.current = null
+      markerLayerRef.current = null
+      roiLayer.current = null
     }
   }, [])
 
@@ -138,6 +225,10 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
       map.current.setView(localView.current)
     }
     fallback.current?.setVisible(scope === 'jezero' && enabled.ctx)
+    routeLayer.current?.setVisible(scope === 'jezero')
+    markerLayerRef.current?.setVisible(scope === 'jezero')
+    roiLayer.current?.setVisible(scope === 'jezero')
+    modify.current?.setActive(scope === 'jezero')
     for (const source of sources) manager.current?.setEnabled(source.id, scope === 'global' ? source.id === 'mola' : enabled[source.id])
     setZoom(zoomAvailability(map.current.getView()))
   }, [enabled, scope])
@@ -147,21 +238,22 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
   }, [opacity])
 
   useEffect(() => {
-    const features: Feature[] = []
-    const legs: [StopId, StopId][] = [['A', 'P'], ['P', 'B']]
-    for (const [from, to] of scope === 'global' ? [] : legs) {
-      if (!stops[from] || !stops[to]) continue
-      const segment = new Feature({ geometry: new LineString([[...stops[from]!], [...stops[to]!]]) })
-      segment.setStyle([
-        new Style({ stroke: new Stroke({ color: '#17242c', width: 9, lineCap: 'round', lineJoin: 'round' }) }),
-        new Style({ stroke: new Stroke({ color: '#ffcb84', width: 4, lineCap: 'round', lineJoin: 'round' }) }),
-      ])
-      features.push(segment)
-    }
-    for (const id of scope === 'global' ? [] : STOP_ORDER) {
+    for (const id of STOP_ORDER) {
       const point = stops[id]
-      if (!point) continue
-      const feature = new Feature({ geometry: new Point([...point]) })
+      let feature = pointFeatures.current.get(id)
+      if (!point) {
+        if (feature) { points.current.removeFeature(feature); pointFeatures.current.delete(id) }
+        continue
+      }
+      if (!feature) {
+        feature = new Feature({ geometry: new Point([...point]) })
+        feature.setId(id)
+        pointFeatures.current.set(id, feature)
+        points.current.addFeature(feature)
+      } else {
+        const coordinate = feature.getGeometry()!.getCoordinates()
+        if (coordinate[0] !== point[0] || coordinate[1] !== point[1]) feature.getGeometry()!.setCoordinates([...point])
+      }
       feature.setStyle(new Style({
         image: new CircleStyle({
           radius: mode.type === 'move' && mode.id === id ? 17 : 15,
@@ -170,17 +262,14 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
         }),
         text: new Text({ text: id, fill: new Fill({ color: '#fff' }), font: 'bold 14px sans-serif' }),
       }))
-      features.push(feature)
     }
-    vectors.current.clear()
-    vectors.current.addFeatures(features)
   }, [stops, mode, scope])
 
   return (
     <div className="map-shell">
       <div className={`map ${scope === 'jezero' && mode.type !== 'explore' ? 'map--placing' : ''}`} ref={element}
         role="application" aria-label={scope === 'global' ? 'Vista 2D global de Marte: relieve visual MOLA, sin planificación de rutas.' :
-          'Mapa orbital de Jezero, Marte. En modo explorar, arrastrá para navegar; elegí un punto en el panel de ruta para colocarlo.'} />
+          'Mapa orbital de Jezero, Marte. Arrastrá los marcadores para editarlos; fuera del sector delimitado no se puede planificar.'} />
       <div className="nav-tools" aria-label="Controles de navegación del mapa">
         <button type="button" aria-label="Acercar mapa" title="Acercar" disabled={!zoom.in}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), 0.75) }}>+</button>
@@ -192,8 +281,8 @@ export function MapView({ scope, enabled, opacity, stops, mode, onPlace, onLayer
           onClick={() => { if (map.current) (scope === 'global' ? fitGlobal : fitJezero)(map.current.getView(), map.current.getSize() ?? [900, 650]) }}>◎</button>
       </div>
       <div className="map-hint" aria-live="polite">
-        {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' : mode.type === 'explore' ? 'Modo explorar · arrastrá para navegar' :
-          `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${mode.id} · tocá el sector delimitado. Navegar no marcará otros puntos.`}
+        {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' : mode.type === 'explore' ? 'Sector punteado: editable · arrastrá marcadores o navegá el mapa' :
+          `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${mode.id} · tocá el sector delimitado. También podés arrastrar marcadores existentes.`}
       </div>
     </div>
   )
