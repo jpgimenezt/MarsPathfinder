@@ -12,7 +12,7 @@ import { BACKEND_BEDROCK_TOOLS } from './toolsRegistry.js'
 
 export interface NovaSonicCallbacks {
   onAudioChunk: (pcmBase64: string) => void
-  onTranscriptText: (text: string, isFinal: boolean) => void
+  onTranscriptText: (text: string, isFinal: boolean, role?: 'user' | 'assistant') => void
   onToolUse: (toolUseId: string, name: string, input: Record<string, unknown>) => Promise<Record<string, unknown>>
   onError: (error: Error) => void
   onSessionEnded: () => void
@@ -26,6 +26,7 @@ export class BedrockNovaSonicSession {
   private promptName: string
   private currentContentName: string | null = null
   private isUserContentOpen = false
+  private currentOutputRole: 'user' | 'assistant' = 'assistant'
 
   // Cola de eventos asíncronos para el generador de entrada
   private inputQueue: Uint8Array[] = []
@@ -245,27 +246,40 @@ export class BedrockNovaSonicSession {
           const event = parsed.event || {}
           const eventKey = Object.keys(event)[0]
 
-          if (eventKey === 'audioOutput') {
+          if (eventKey === 'contentStart') {
+            const role = event.contentStart?.role
+            if (role) {
+              this.currentOutputRole = String(role).toLowerCase() === 'user' ? 'user' : 'assistant'
+            }
+          } else if (eventKey === 'audioOutput') {
             const pcmBase64 = event.audioOutput?.content
             if (pcmBase64) {
               this.callbacks.onAudioChunk(pcmBase64)
             }
           } else if (eventKey === 'textOutput') {
             const text = event.textOutput?.content
-            if (text) {
-              this.callbacks.onTranscriptText(text, false)
+            if (text && text.trim().length > 0) {
+              this.callbacks.onTranscriptText(text, false, this.currentOutputRole)
             }
           } else if (eventKey === 'toolUse') {
             const toolUse = event.toolUse
             if (toolUse) {
-              const { toolUseId, name, content } = toolUse
+              const toolUseId = toolUse.toolUseId || toolUse.id || `tool-${Date.now()}`
+              const name = toolUse.toolName || toolUse.name || toolUse.tool?.name || ''
+              let content = toolUse.input || toolUse.content || toolUse.parameters || toolUse.arguments || {}
+              if (typeof content === 'string') {
+                try {
+                  content = JSON.parse(content)
+                } catch {}
+              }
+              console.log(`[ARES VOICE GATEWAY] Bedrock invocó herramienta: ${name}`, content)
               // Ejecutar la herramienta a través del callback
-              const output = await this.callbacks.onToolUse(toolUseId, name, content || {})
+              const output = await this.callbacks.onToolUse(toolUseId, name, content)
               // Enviar el resultado de vuelta a Bedrock
               this.sendToolResult(toolUseId, output)
             }
           } else if (eventKey === 'contentEnd') {
-            this.callbacks.onTranscriptText('', true)
+            this.callbacks.onTranscriptText('', true, this.currentOutputRole)
           }
         }
       }

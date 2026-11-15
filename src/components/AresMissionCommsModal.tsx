@@ -152,8 +152,25 @@ export function AresMissionCommsModal({
       },
       onTranscript: evt => {
         setTranscripts(prev => {
-          // Si el último mensaje es del mismo emisor y no es final, actualizarlo progresivamente
+          // Si el texto está vacío (por ejemplo delimitador de fin de turno), no crear una burbuja vacía
+          if (!evt.text || !evt.text.trim()) {
+            if (prev.length === 0) return prev
+            const last = prev[prev.length - 1]
+            if (last && last.role === evt.role && !last.isFinal) {
+              const updated = [...prev]
+              updated[updated.length - 1] = { ...last, isFinal: true }
+              return updated
+            }
+            return prev
+          }
+
+          // Si es un mensaje del astronauta y el último mensaje ya tiene exactamente este mismo texto, ignorar duplicado
           const last = prev[prev.length - 1]
+          if (last && last.role === 'user' && evt.role === 'user' && last.text.trim() === evt.text.trim()) {
+            return prev
+          }
+
+          // Si el último mensaje es del mismo emisor y no es final, actualizarlo progresivamente
           if (last && last.role === evt.role && !last.isFinal) {
             const updated = [...prev]
             updated[updated.length - 1] = {
@@ -163,6 +180,7 @@ export function AresMissionCommsModal({
             }
             return updated
           }
+
           return [...prev, evt]
         })
       },
@@ -185,13 +203,17 @@ export function AresMissionCommsModal({
           return { status: 'WAITING_FOR_USER_CONFIRMATION', message: res.confirmationMessage }
         }
 
-        // Mostrar notificación de herramienta ejecutada en el transcript
+        // Mostrar notificación de herramienta ejecutada de forma limpia y legible
+        const summaryText = res.success
+          ? `[ACCIÓN TÁCTICA]: ${res.actionPerformed || `Comando '${tool}' ejecutado correctamente.`}`
+          : `[AVISO TÁCTICO]: No se pudo ejecutar '${tool}': ${res.output.error || 'Operación no completada'}`
+
         setTranscripts(prev => [
           ...prev,
           {
             id: `tool-${Date.now()}`,
             role: 'assistant',
-            text: `[ACCIÓN TÁCTICA EJECUTADA]: ${tool}\n${JSON.stringify(res.output, null, 2)}`,
+            text: summaryText,
             isFinal: true,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           },
@@ -681,7 +703,9 @@ export function AresMissionCommsModal({
 
             {/* Cuerpo de Transcripción */}
             <div className="ares-comms-body" role="log" aria-live="polite">
-              {transcripts.map(tr => (
+              {transcripts
+                .filter(tr => tr.text && tr.text.trim().length > 0)
+                .map(tr => (
                 <div key={tr.id} className={`ares-comms-msg-row ${tr.role}`}>
                   <div className="ares-comms-avatar">
                     {tr.role === 'user' ? 'A' : 'AI'}

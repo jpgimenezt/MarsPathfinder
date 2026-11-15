@@ -129,8 +129,8 @@ wss.on('connection', (ws: WebSocket, req) => {
               send({ type: 'audio_chunk', pcmBase64 })
               send({ type: 'state_change', state: 'SPEAKING' })
             },
-            onTranscriptText: (text, isFinal) => {
-              send({ type: 'transcript', text, role: 'assistant', isFinal })
+            onTranscriptText: (text, isFinal, role = 'assistant') => {
+              send({ type: 'transcript', text, role, isFinal })
             },
             onToolUse: async (toolUseId, name, input) => {
               console.log(`[ARES VOICE GATEWAY] Ejecutando herramienta invocada por ARES: ${name}`, input)
@@ -217,12 +217,6 @@ wss.on('connection', (ws: WebSocket, req) => {
 
         case 'text_message': {
           if (session && message.text) {
-            send({
-              type: 'transcript',
-              text: message.text,
-              role: 'user',
-              isFinal: true,
-            })
             send({ type: 'state_change', state: 'PROCESSING' })
             session.sendTextMessage(message.text)
           }

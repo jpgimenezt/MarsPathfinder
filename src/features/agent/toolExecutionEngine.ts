@@ -69,8 +69,8 @@ export interface AppActionHandlers {
 export const GetCurrentMissionContextSchema = z.object({})
 
 export const FocusGeographicTargetSchema = z.object({
-  lat: z.number().min(-90).max(90).describe('Latitud planetocéntrica marciana (-90 a 90)'),
-  lon: z.number().min(-180).max(360).describe('Longitud Este marciana'),
+  lat: z.number().min(-90).max(90).optional().describe('Latitud planetocéntrica marciana (-90 a 90)'),
+  lon: z.number().min(-180).max(360).optional().describe('Longitud Este marciana'),
   height: z.number().optional().describe('Altitud de cámara en metros o unidades 3D'),
   durationSeconds: z.number().min(0.5).max(10).optional().default(2).describe('Duración de transición suave en segundos'),
   targetName: z.string().optional().describe('Nombre del objetivo geológico (ej: Mount Sharp, Delta Jezero)'),
@@ -83,6 +83,7 @@ export const ToggleScientificLayerSchema = z.object({
 
 export const ExplainSelectedRegionSchema = z.object({
   regionName: z.string().optional().describe("Nombre de región ('JEZERO', 'GALE', 'MOUNT_SHARP', 'BOXWORK', etc.)"),
+  region: z.string().optional().describe("Alias alternativo para regionName"),
 })
 
 export const GetMissionObservationsSchema = z.object({
@@ -307,13 +308,55 @@ export class ToolExecutionEngine {
   }
 
   /**
+   * Resuelve la definición de la herramienta admitiendo camelCase, snake_case o alias tolerantes
+   */
+  private resolveToolDefinition(toolName: string): ToolDefinition | undefined {
+    if (!toolName) return undefined
+    if (TOOL_REGISTRY[toolName]) return TOOL_REGISTRY[toolName]
+
+    // Normalizar snake_case a camelCase (ej: focus_geographic_target -> focusGeographicTarget)
+    const camel = toolName.replace(/_([a-z0-9])/g, (_, letter) => letter.toUpperCase())
+    if (TOOL_REGISTRY[camel]) return TOOL_REGISTRY[camel]
+
+    // Normalizar a minúsculas alfanuméricas
+    const clean = toolName.toLowerCase().replace(/[^a-z0-9]/g, '')
+    for (const [key, def] of Object.entries(TOOL_REGISTRY)) {
+      if (key.toLowerCase().replace(/[^a-z0-9]/g, '') === clean) {
+        return def
+      }
+    }
+
+    // Alias habituales invocados por modelos de lenguaje
+    const ALIASES: Record<string, string> = {
+      focusmarsregion: 'focusGeographicTarget',
+      focusregion: 'focusGeographicTarget',
+      focusmars: 'focusGeographicTarget',
+      focuscamera: 'focusGeographicTarget',
+      getsurfaceintelligence: 'explainSelectedRegion',
+      getsurfaceanalysis: 'explainSelectedRegion',
+      geologicalanalysis: 'explainSelectedRegion',
+      explainregion: 'explainSelectedRegion',
+      togglescientificlayers: 'toggleScientificLayer',
+      togglelayer: 'toggleScientificLayer',
+      togglelayers: 'toggleScientificLayer',
+    }
+
+    const aliasTarget = ALIASES[clean]
+    if (aliasTarget && TOOL_REGISTRY[aliasTarget]) {
+      return TOOL_REGISTRY[aliasTarget]
+    }
+
+    return undefined
+  }
+
+  /**
    * Ejecuta una herramienta solicitada por ARES
    */
   public async executeTool(
     request: ToolExecutionRequest,
     options: { confirmed?: boolean } = {}
   ): Promise<ToolExecutionResult> {
-    const def = TOOL_REGISTRY[request.tool]
+    const def = this.resolveToolDefinition(request.tool)
     if (!def) {
       return {
         tool: request.tool,
@@ -372,7 +415,7 @@ export class ToolExecutionEngine {
 
     // Ejecución directa de la acción
     try {
-      const output = await this.dispatchAction(request.tool, validatedInput)
+      const output = await this.dispatchAction(def.name, validatedInput)
       return {
         tool: request.tool,
         toolUseId: request.toolUseId,
@@ -433,8 +476,32 @@ export class ToolExecutionEngine {
       }
 
       case 'focusGeographicTarget': {
-        const { lat, lon, height, durationSeconds, targetName } = input
-        this.handlers.focusCamera?.({ lat, lon, height, duration: durationSeconds })
+        let { lat, lon, height, durationSeconds, targetName } = input
+        const nameLower = (targetName || '').toLowerCase()
+        if (lat === undefined || lon === undefined) {
+          if (nameLower.includes('sharp') || nameLower.includes('monte')) {
+            lat = -5.08
+            lon = 137.85
+            targetName = targetName || 'Mount Sharp (Gale Crater)'
+          } else if (nameLower.includes('jezero') || nameLower.includes('delta')) {
+            lat = 18.38
+            lon = 77.58
+            targetName = targetName || 'Delta de Jezero'
+          } else if (nameLower.includes('bradbury')) {
+            lat = -4.59
+            lon = 137.44
+            targetName = targetName || 'Bradbury Landing'
+          } else if (nameLower.includes('boxwork')) {
+            lat = -4.95
+            lon = 137.72
+            targetName = targetName || 'Boxwork Formations'
+          } else {
+            lat = -5.08
+            lon = 137.85
+            targetName = targetName || 'Mount Sharp'
+          }
+        }
+        this.handlers.focusCamera?.({ lat, lon, height: height || 18000, duration: durationSeconds ?? 2 })
         return {
           status: 'CAMERA_TRANSITION_DISPATCHED',
           targetName: targetName ?? `[${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E]`,
@@ -456,7 +523,8 @@ export class ToolExecutionEngine {
 
       case 'explainSelectedRegion': {
         const snapshot = this.handlers.getContextSnapshot()
-        const region = input.regionName || snapshot.geography.region
+        const rawRegion = input.regionName || input.region || snapshot.geography.region || 'GALE'
+        const region = String(rawRegion).toUpperCase()
         if (region.includes('GALE') || region.includes('SHARP') || region.includes('BOXWORK')) {
           return {
             region: 'Cráter Gale / Mount Sharp',
