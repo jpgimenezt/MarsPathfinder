@@ -8,6 +8,7 @@ export interface GatewayConfig {
   bedrockRegion: string
   bedrockModelId: string
   defaultVoice: string
+  defaultLanguage: string
   maxSessionDurationSeconds: number
   allowedOrigins: string[]
   sampleRateInput: number
@@ -18,7 +19,8 @@ export const GATEWAY_CONFIG: GatewayConfig = {
   port: Number(process.env.VOICE_GATEWAY_PORT || 8088),
   bedrockRegion: process.env.AWS_BEDROCK_REGION || 'us-west-2',
   bedrockModelId: process.env.BEDROCK_MODEL_ID || 'amazon.nova-2-5-sonic',
-  defaultVoice: process.env.DEFAULT_VOICE || 'carlos',
+  defaultVoice: process.env.DEFAULT_VOICE || 'tiffany', // Polyglot voice for Spanish and English
+  defaultLanguage: process.env.DEFAULT_LANGUAGE || 'es-US',
   maxSessionDurationSeconds: 450, // 7.5 minutos (límite de Bedrock es 8 min)
   allowedOrigins: ['*'],
   sampleRateInput: 16000, // 16kHz PCM para entrada de micrófono

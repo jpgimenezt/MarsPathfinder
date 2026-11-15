@@ -83,16 +83,17 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
   constructor(initialConfig?: Partial<VoiceConfig>) {
     this.config = {
-      voiceId: initialConfig?.voiceId || 'carlos',
+      voiceId: initialConfig?.voiceId || 'tiffany', // Voz poliglota por defecto
+      language: initialConfig?.language || 'es', // Español por defecto
       endpointUrl:
         initialConfig?.endpointUrl ||
         (typeof window !== 'undefined'
           ? `ws://${window.location.hostname}:8088/voice`
           : 'ws://localhost:8088/voice'),
-      interactionMode: initialConfig?.interactionMode || 'PUSH_TO_TALK',
+      interactionMode: initialConfig?.interactionMode || 'HANDS_FREE',
       volume: initialConfig?.volume ?? 1.0,
       isMuted: initialConfig?.isMuted ?? false,
-      turnDetectionSensitivity: initialConfig?.turnDetectionSensitivity || 'HIGH',
+      turnDetectionSensitivity: initialConfig?.turnDetectionSensitivity || 'MEDIUM',
     }
   }
 
@@ -216,19 +217,26 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     this.config.volume = Math.max(0, Math.min(1, volume))
   }
 
-  public interrupt(): void {
-    // Detener reproducción inmediata de audio de ARES
+  public flushAudioBuffers(): void {
     for (const source of this.activeAudioSources) {
       try {
         source.stop()
+        source.disconnect()
       } catch {}
     }
     this.activeAudioSources = []
     this.nextPlayTime = 0
+  }
 
-    // Notificar al gateway que se interrumpió el turno
+  public interrupt(): void {
+    this.flushAudioBuffers()
+    // Notificar al gateway que se interrumpió el turno (Barge-In)
     this.sendWsMessage({ type: 'interrupt' })
     this.setState('LISTENING')
+    for (const listener of this.listeners) {
+      listener.onBargeIn?.()
+      listener.onConversationStateChange?.('interrupted')
+    }
   }
 
   public async sendTextMessage(text: string): Promise<void> {
@@ -254,13 +262,27 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   }
 
   public updateConfig(newConfig: Partial<VoiceConfig>): void {
+    const prevVoice = this.config.voiceId
+    const prevLang = this.config.language
     this.config = { ...this.config, ...newConfig }
-    if ((newConfig.voiceId || newConfig.language) && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      // Reinicializar sesión con la nueva voz o idioma
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+
+    // Si cambió el idioma sin cambiar la voz, enviar directiva sin destruir la sesión persistente
+    if (newConfig.language && newConfig.language !== prevLang && (!newConfig.voiceId || newConfig.voiceId === prevVoice)) {
+      this.sendWsMessage({
+        type: 'language_switch',
+        language: newConfig.language,
+      })
+      return
+    }
+
+    // Si cambió explícitamente el ID de la voz a uno diferente, reinicializar
+    if (newConfig.voiceId && newConfig.voiceId !== prevVoice) {
       this.sendWsMessage({
         type: 'init',
         voiceId: this.config.voiceId,
-        language: this.config.language || (this.config.voiceId === 'matthew' || this.config.voiceId === 'tiffany' ? 'en' : 'es'),
+        language: this.config.language || 'es',
         initialContext: this.missionContext,
       })
     }
@@ -470,6 +492,28 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
       switch (data.type) {
         case 'state_change': {
           this.setState(data.state)
+          break
+        }
+
+        case 'barge_in': {
+          this.flushAudioBuffers()
+          for (const l of this.listeners) {
+            l.onBargeIn?.()
+          }
+          break
+        }
+
+        case 'completion_end': {
+          for (const l of this.listeners) {
+            l.onCompletionEnd?.()
+          }
+          break
+        }
+
+        case 'conversation_state': {
+          for (const l of this.listeners) {
+            l.onConversationStateChange?.(data.state)
+          }
           break
         }
 

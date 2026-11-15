@@ -14,6 +14,8 @@ export interface NovaSonicCallbacks {
   onAudioChunk: (pcmBase64: string) => void
   onTranscriptText: (text: string, isFinal: boolean, role?: 'user' | 'assistant') => void
   onToolUse: (toolUseId: string, name: string, input: Record<string, unknown>) => Promise<Record<string, unknown>>
+  onBargeIn?: () => void
+  onCompletionEnd?: () => void
   onError: (error: Error) => void
   onSessionEnded: () => void
 }
@@ -48,7 +50,7 @@ export class BedrockNovaSonicSession {
   /**
    * Inicia la sesión de streaming bidireccional con Bedrock
    */
-  public async startSession(initialContext?: Record<string, unknown>, language: string = 'en'): Promise<void> {
+  public async startSession(initialContext?: Record<string, unknown>, language: string = 'es'): Promise<void> {
     this.active = true
     this.isStreamClosed = false
 
@@ -68,7 +70,7 @@ export class BedrockNovaSonicSession {
                     temperature: 0.3,
                   },
                   turnDetectionConfiguration: {
-                    endpointingSensitivity: 'HIGH',
+                    endpointingSensitivity: 'MEDIUM',
                   },
                 },
               },
@@ -280,6 +282,12 @@ export class BedrockNovaSonicSession {
             }
           } else if (eventKey === 'contentEnd') {
             this.callbacks.onTranscriptText('', true, this.currentOutputRole)
+          } else if (eventKey === 'completionEnd') {
+            console.log(`[ARES VOICE GATEWAY] completionEnd detectado: turno de respuesta finalizado. Sesión persistente activa.`)
+            this.callbacks.onCompletionEnd?.()
+          } else if (eventKey === 'bargeIn' || eventKey === 'BidiBargeInEvent' || eventKey.toLowerCase().includes('bargein')) {
+            console.log(`[ARES VOICE GATEWAY] Evento Barge-In detectado desde Bedrock: interrumpiendo reproducción previa.`)
+            this.callbacks.onBargeIn?.()
           }
         }
       }
@@ -491,6 +499,14 @@ export class BedrockNovaSonicSession {
   }
 
   /**
+   * Gestiona interrupción de turno (Barge-In) sin cerrar el stream bidireccional
+   */
+  public interrupt(): void {
+    console.log(`[ARES VOICE GATEWAY] Interrupción (Barge-In) aplicada: conservando contexto y canal abierto.`)
+    this.lastActivityTimestamp = Date.now()
+  }
+
+  /**
    * Cierra ordenadamente la sesión
    */
   public closeSession(): void {
@@ -576,19 +592,19 @@ export class BedrockNovaSonicSession {
     }
   }
 
-  private buildSystemPrompt(context?: Record<string, unknown>, initialLanguage: string = 'en'): string {
+  private buildSystemPrompt(context?: Record<string, unknown>, initialLanguage: string = 'es'): string {
     const contextJson = context ? JSON.stringify(context, null, 2) : 'No initial mission context provided.'
 
     return `You are ARES (Advanced Rover & Exploration System), AI MISSION COPILOT for human Mars surface exploration (NASA Space Apps Challenge 2026).
 
 PRIMARY DIRECTIVES:
-1. BILINGUAL FLUENCY & LANGUAGE ADAPTATION:
-   - You are natively bilingual in English and Spanish. Initial preferred language: ${initialLanguage.toUpperCase()}.
-   - If the astronaut addresses you in English, respond in clear, professional aerospace English.
-   - If the astronaut addresses you in Spanish, respond in natural, professional Argentine/Latin American aerospace Spanish.
-   - If instructed: "Switch to English", "Speak English", "ARES, speak English" -> immediately transition to English and confirm.
-   - If instructed: "Cambiar a español", "Hablá en español", "ARES, hablá en español" -> immediately transition to Spanish and confirm.
-   - Maintain the active language across turns unless explicitly requested to switch.
+1. BILINGUAL FLUENCY & CONVERSATION LANGUAGE:
+   - Default primary language: SPANISH (Español neutro / rioplatense aeroespacial profesional).
+   - You are natively bilingual and can understand instructions in Spanish or English at any time without resetting the session.
+   - Default response language: Spanish (unless the astronaut asks you to switch).
+   - If the astronaut asks: "Switch to English", "Speak English", "ARES, speak English", "In English please" -> switch your response language to English and keep English for all subsequent turns until asked to switch back.
+   - If the astronaut asks: "Cambiar a español", "Cambiá a español", "Hablá en español", "En español por favor" -> switch your response language to Spanish and keep Spanish for all subsequent turns.
+   - If the astronaut speaks English while in Spanish mode without asking to change the response language, understand the command, execute any requested tool, and respond in Spanish (or English if in English mode).
 
 2. VOICE & OPERATIONAL IDENTITY:
    - Calm, authoritative, scientific, concise, and decisive mission copilot.
@@ -609,7 +625,7 @@ PRIMARY DIRECTIVES:
 
 6. BILINGUAL TOOL INVOCATION:
    Immediately invoke the appropriate tactical tool when instructed in either English or Spanish:
-   - "Focus on Mount Sharp" / "Enfocá Mount Sharp" / "Look at Mount Sharp" -> focusGeographicTarget({ targetName: "Mount Sharp" })
+   - "Focus on Mount Sharp" / "Enfocá Mount Sharp" / "Mirar Mount Sharp" -> focusGeographicTarget({ targetName: "Mount Sharp" })
    - "Show geological layers" / "Mostrá las capas geológicas" -> toggleScientificLayer({ layerId: "geology", enabled: true })
    - "Show thermal layer" / "Activa THEMIS" / "Activa capa térmica" -> toggleScientificLayer({ layerId: "themis", enabled: true })
    - "Show elevation relief" / "Activa MOLA" -> toggleScientificLayer({ layerId: "mola", enabled: true })
@@ -619,6 +635,12 @@ PRIMARY DIRECTIVES:
    - "Start mission simulation" / "Iniciá la simulación de misión" -> startDiscoveryTour({ startIndex: 0 })
    - "Pause tour" / "Pausa el recorrido" -> pauseDiscoveryTour({})
    - "What are the geological features here?" / "¿Qué características geológicas tiene esta región?" -> explainSelectedRegion({})
+
+7. MULTI-TURN CONTINUITY & CONVERSATIONAL MEMORY:
+   - This is a continuous mission conversation, NOT isolated queries.
+   - Maintain context across all turns. When the astronaut asks follow-up questions ("¿Qué altura tiene?", "¿Cuándo fue descubierta?", "What are its key features?", "Mostrame las fotos"), resolve pronouns and relative references using previously discussed landmarks and tool results.
+   - Never ask the user to re-state coordinates, landmarks, or previous context that has already been mentioned in the active session.
+   - After executing a tool, explain the outcome concisely and stay ready to answer subsequent questions.
 
 ACTIVE MISSION CONTEXT:
 ${contextJson}`

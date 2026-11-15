@@ -18,7 +18,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'getCurrentMissionContext',
-      description: 'Obtiene el estado en tiempo real del mapa marciano, región activa, capas y ruta trazada.',
+      description: 'Obtiene el estado en tiempo real del mapa marciano, región activa, capas y ruta trazada. / Retrieves real-time mission context, active map region, layers, and planned route.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
@@ -30,18 +30,17 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'focusGeographicTarget',
-      description: 'Mueve la cámara 3D hacia un punto geográfico o hito relevante en Marte.',
+      description: 'Mueve la cámara 3D hacia un hito o coordenadas en Marte (Mount Sharp, Jezero Delta, Bradbury Base, etc.). / Focuses 3D camera on a landmark or geographic coordinate on Mars.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            lat: { type: 'number', description: 'Latitud planetocéntrica marciana (-90 a 90)' },
-            lon: { type: 'number', description: 'Longitud Este marciana (-180 a 360)' },
-            height: { type: 'number', description: 'Altitud o distancia de cámara' },
-            durationSeconds: { type: 'number', description: 'Segundos de transición suave (1 a 5)' },
-            targetName: { type: 'string', description: 'Nombre del hito (ej: Mount Sharp, Delta Jezero)' },
+            targetName: { type: 'string', description: 'Nombre del hito o destino / Name of the landmark or target (e.g. Mount Sharp, Delta Jezero, Bradbury Base)' },
+            lat: { type: 'number', description: 'Latitud planetocéntrica marciana (-90 a 90) / Martian latitude' },
+            lon: { type: 'number', description: 'Longitud Este marciana (-180 a 360) / Martian East longitude' },
+            height: { type: 'number', description: 'Altitud o distancia de cámara / Camera distance' },
+            durationSeconds: { type: 'number', description: 'Segundos de transición suave (1 a 5) / Transition seconds' },
           },
-          required: ['lat', 'lon'],
         }),
       },
     },
@@ -49,13 +48,13 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'toggleScientificLayer',
-      description: 'Activa o desactiva capas orbitales científicas de NASA (ctx, mola, themis, gale_dem, geology).',
+      description: 'Activa o desactiva capas orbitales científicas de NASA (ctx, mola, themis, gale_dem, geology). / Enables or disables NASA scientific orbital map layers.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            layerId: { type: 'string', description: "Identificador de la capa: 'ctx', 'mola', 'themis', 'gale_dem', 'geology'" },
-            enabled: { type: 'boolean', description: 'true para activar, false para desactivar' },
+            layerId: { type: 'string', description: "Identificador de la capa / Layer identifier: 'ctx', 'mola', 'themis', 'gale_dem', 'geology'" },
+            enabled: { type: 'boolean', description: 'true para activar, false para desactivar / true to enable, false to disable' },
           },
           required: ['layerId', 'enabled'],
         }),
@@ -65,12 +64,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'explainSelectedRegion',
-      description: 'Consulta explicaciones geológicas y astrobiológicas fundadas en misiones de NASA para una región.',
+      description: 'Consulta explicaciones geológicas y astrobiológicas fundadas en misiones de NASA para una región. / Explains geological and astrobiological context for a region based on NASA missions.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            regionName: { type: 'string', description: "Nombre de región: 'JEZERO', 'GALE', 'MOUNT_SHARP', 'BOXWORK'" },
+            regionName: { type: 'string', description: "Nombre de región / Region name: 'JEZERO', 'GALE', 'MOUNT_SHARP', 'BOXWORK'" },
           },
         }),
       },
@@ -79,14 +78,14 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'getMissionObservations',
-      description: 'Obtiene observaciones orbitales y de superficie de NASA (Perseverance, Curiosity, CTX, HiRISE).',
+      description: 'Obtiene observaciones orbitales y de superficie de NASA (Perseverance, Curiosity, CTX, HiRISE). / Retrieves orbital and surface observations from NASA missions.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
             lat: { type: 'number', description: 'Latitud de consulta' },
             lon: { type: 'number', description: 'Longitud de consulta' },
-            region: { type: 'string', description: "Región: 'GALE' o 'JEZERO'" },
+            region: { type: 'string', description: "Región / Region: 'GALE' or 'JEZERO'" },
           },
         }),
       },
@@ -95,7 +94,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'createMissionWaypoint',
-      description: 'Agrega o modifica un punto de navegación (A, P o B) en la ruta actual de la misión.',
+      description: 'Agrega o modifica un punto de navegación (A, P o B) en la ruta actual de la misión. / Creates or updates a navigation waypoint (A, P, B).',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
@@ -113,12 +112,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'previewEVARoute',
-      description: 'Genera una previsualización de ruta y evalúa viabilidad según límites de caminata marciana.',
+      description: 'Genera una previsualización de ruta y evalúa viabilidad según límites de marcha marciana. / Generates an EVA route preview and evaluates traversability limits.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            mode: { type: 'string', enum: ['FOOT', 'ROVER'], description: 'Modo de desplazamiento' },
+            mode: { type: 'string', enum: ['FOOT', 'ROVER'], description: 'Modo de desplazamiento / Travel mode' },
           },
         }),
       },
@@ -127,12 +126,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'compareMissionRoutes',
-      description: 'Abre el comparador de rutas para evaluar la traza de Curiosity vs la ruta actual.',
+      description: 'Abre el comparador de rutas para evaluar la traza de Curiosity vs la ruta actual. / Opens route comparison between Curiosity traverse and planned EVA.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            showModal: { type: 'boolean', description: 'true para mostrar el modal de comparación' },
+            showModal: { type: 'boolean', description: 'true para mostrar el modal de comparación / true to open comparison' },
           },
         }),
       },
@@ -141,7 +140,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'getRouteStatistics',
-      description: 'Calcula distancia geodésica con radio de Marte (3,389.5 km), elevaciones y límites de marcha.',
+      description: 'Calcula distancia geodésica con radio de Marte (3,389.5 km), elevaciones y límites de marcha. / Calculates Martian geodesic distance (Rm = 3,389.5 km), elevations, and walk limits.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
@@ -155,12 +154,12 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'startDiscoveryTour',
-      description: 'Inicia el recorrido guiado cinematográfico por los descubrimientos científicos en Gale/Mount Sharp.',
+      description: 'Inicia el recorrido guiado cinematográfico por los descubrimientos científicos en Gale/Mount Sharp. / Starts the guided exploration tour across Gale / Mount Sharp scientific sites.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            startIndex: { type: 'number', description: 'Índice de parada de inicio (0 a 10)' },
+            startIndex: { type: 'number', description: 'Índice de parada de inicio (0 a 10) / Start stop index' },
           },
         }),
       },
@@ -169,7 +168,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'pauseDiscoveryTour',
-      description: 'Pausa o reanuda el recorrido de descubrimiento científico.',
+      description: 'Pausa o reanuda el recorrido de descubrimiento científico. / Pauses or resumes the discovery tour.',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
@@ -181,7 +180,7 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'getHabitatStatus',
-      description: 'Consulta los sistemas operativos de la Base Ares Alpha (energía solar, reactores, soporte vital).',
+      description: 'Consulta los sistemas operativos de la Base Ares Alpha (energía solar, reactores, soporte vital). / Retrieves habitat operational telemetry (power, life support, consumables).',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
@@ -193,18 +192,17 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
   {
     toolSpec: {
       name: 'activateMissionSimulation',
-      description: 'Activa un escenario de simulación (descenso EDL, travesía o contingencia atmosférica).',
+      description: 'Activa un escenario de simulación (descenso EDL, travesía o contingencia atmosférica). / Activates a mission simulation scenario (EDL, traverse, or contingency).',
       inputSchema: {
         json: JSON.stringify({
           type: 'object',
           properties: {
-            scenario: {
+            scenarioType: {
               type: 'string',
-              enum: ['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY'],
-              description: 'Escenario a ejecutar',
+              enum: ['EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
+              description: 'Tipo de simulación',
             },
           },
-          required: ['scenario'],
         }),
       },
     },

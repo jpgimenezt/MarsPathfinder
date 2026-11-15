@@ -13,6 +13,21 @@ export type VoiceState =
   | 'RECONNECTING'
   | 'ERROR'
 
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed'
+
+export type ConversationState =
+  | 'standby'
+  | 'listening'
+  | 'processing'
+  | 'tool_pending'
+  | 'executing_tool'
+  | 'speaking'
+  | 'interrupted'
+  | 'awaiting_user'
+  | 'ending'
+
+export type PresentationMode = 'compact' | 'orb' | 'minimized'
+
 export type InteractionMode = 'PUSH_TO_TALK' | 'HANDS_FREE' | 'TEXT_AND_VOICE'
 
 export interface TranscriptEvent {
@@ -43,9 +58,13 @@ export interface AudioVisualizerData {
 
 export type VoiceEventListener = {
   onStateChange?: (state: VoiceState) => void
+  onConnectionStateChange?: (state: ConnectionState) => void
+  onConversationStateChange?: (state: ConversationState) => void
   onTranscript?: (event: TranscriptEvent) => void
   onAudioLevel?: (data: AudioVisualizerData) => void
   onToolCall?: (tool: string, input: Record<string, unknown>, toolUseId: string) => Promise<Record<string, unknown>>
+  onBargeIn?: () => void
+  onCompletionEnd?: () => void
   onError?: (error: { message: string; code?: string; fatal?: boolean }) => void
 }
 

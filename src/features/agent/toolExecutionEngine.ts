@@ -249,6 +249,13 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     requiresConfirmation: true,
     confirmationPrompt: (args: any) => `¿Activar la simulación de misión para el escenario ${args.scenario}?`,
   },
+  openSurfaceIntelligence: {
+    name: 'openSurfaceIntelligence',
+    description: 'Abre el catálogo interactivo de inteligencia de superficie marciana y objetivos geológicos.',
+    securityLevel: 2,
+    schema: z.object({ open: z.boolean().optional().default(true) }),
+    requiresConfirmation: false,
+  },
   triggerMissionContingency: {
     name: 'triggerMissionContingency',
     description: 'Inicia un simulacro de contingencia táctica únicamente en el entorno de simulación.',
@@ -624,6 +631,14 @@ export class ToolExecutionEngine {
           status: 'SIMULATION_ACTIVATED',
           scenario: input.scenario,
           provenance: 'SIMULATED',
+        }
+      }
+
+      case 'openSurfaceIntelligence': {
+        this.handlers.openSurfaceIntelligenceModal?.(input.open ?? true)
+        return {
+          status: 'SURFACE_INTELLIGENCE_OPENED',
+          message: 'Catálogo de inteligencia de superficie abierto.',
         }
       }
 

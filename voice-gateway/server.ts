@@ -121,21 +121,33 @@ wss.on('connection', (ws: WebSocket, req) => {
         case 'init': {
           cleanup()
           const voiceId = message.voiceId || GATEWAY_CONFIG.defaultVoice
-          const language = message.language || (voiceId === 'matthew' || voiceId === 'tiffany' ? 'en' : 'es')
-          console.log(`[ARES VOICE GATEWAY] Inicializando sesión de Nova Sonic | Voz: ${voiceId} | Idioma: ${language}`)
+          const language = message.language || GATEWAY_CONFIG.defaultLanguage || 'es'
+          console.log(`[ARES VOICE GATEWAY] Inicializando sesión de Nova Sonic | Voz: ${voiceId} | Idioma predeterminado: ${language}`)
           send({ type: 'state_change', state: 'CONNECTING' })
 
           session = new BedrockNovaSonicSession(voiceId, {
             onAudioChunk: pcmBase64 => {
               send({ type: 'audio_chunk', pcmBase64 })
               send({ type: 'state_change', state: 'SPEAKING' })
+              send({ type: 'conversation_state', state: 'speaking' })
             },
             onTranscriptText: (text, isFinal, role = 'assistant') => {
               send({ type: 'transcript', text, role, isFinal })
             },
+            onBargeIn: () => {
+              send({ type: 'barge_in' })
+              send({ type: 'conversation_state', state: 'interrupted' })
+              send({ type: 'state_change', state: 'LISTENING' })
+            },
+            onCompletionEnd: () => {
+              send({ type: 'completion_end' })
+              send({ type: 'conversation_state', state: 'awaiting_user' })
+              send({ type: 'state_change', state: 'LISTENING' })
+            },
             onToolUse: async (toolUseId, name, input) => {
-              console.log(`[ARES VOICE GATEWAY] Ejecutando herramienta invocada por ARES: ${name}`, input)
+              console.log(`[ARES VOICE GATEWAY] Bedrock invocó herramienta: ${name}`, input)
               send({ type: 'state_change', state: 'TOOL_EXECUTION' })
+              send({ type: 'conversation_state', state: 'executing_tool' })
               send({
                 type: 'tool_call',
                 toolUseId,
@@ -171,16 +183,19 @@ wss.on('connection', (ws: WebSocket, req) => {
                 code: (err as any).name || 'BEDROCK_STREAM_ERROR',
               })
               send({ type: 'state_change', state: 'ERROR' })
+              send({ type: 'conversation_state', state: 'error' })
             },
             onSessionEnded: () => {
               console.log(`[ARES VOICE GATEWAY] Sesión Bedrock finalizada.`)
               send({ type: 'state_change', state: 'VOICE_OFFLINE' })
+              send({ type: 'conversation_state', state: 'standby' })
             },
           })
 
           try {
             await session.startSession(message.initialContext, language)
             send({ type: 'state_change', state: 'LISTENING' })
+            send({ type: 'conversation_state', state: 'awaiting_user' })
             resetSessionTimer()
 
             // Saludo táctico inicial bilingüe de ARES Copilot con síntesis de voz inmediata
@@ -200,6 +215,28 @@ wss.on('connection', (ws: WebSocket, req) => {
             })
             send({ type: 'state_change', state: 'ERROR' })
           }
+          break
+        }
+
+        case 'language_switch': {
+          const targetLang = message.language === 'en' ? 'en' : 'es'
+          console.log(`[ARES VOICE GATEWAY] Cambio de idioma persistente en la sesión: ${targetLang}`)
+          if (session) {
+            const directiveText = targetLang === 'en'
+              ? '[SYSTEM DIRECTIVE]: The astronaut switched conversation language to English. Respond strictly in English from now on.'
+              : '[DIRECTIVA DE SISTEMA]: El astronauta cambió el idioma de conversación a español. Responde estrictamente en español de ahora en adelante.'
+            session.sendTextMessage(directiveText)
+          }
+          break
+        }
+
+        case 'interrupt': {
+          if (session) {
+            session.interrupt()
+          }
+          send({ type: 'barge_in' })
+          send({ type: 'conversation_state', state: 'interrupted' })
+          send({ type: 'state_change', state: 'LISTENING' })
           break
         }
 

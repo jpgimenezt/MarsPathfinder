@@ -22,16 +22,17 @@ export interface WakeWordEvent {
 
 export type WakeWordListener = (event: WakeWordEvent) => void
 export type CommandListener = (command: string, language: SupportedLanguage) => void
+export type DisconnectListener = () => void
 
 export class LocalWakeWordDetector {
   private recognition: any = null
   private isListening = false
   private isCommandListening = false
-  private currentLanguage: SupportedLanguage = 'en'
+  private currentLanguage: SupportedLanguage = 'es'
   private listeners: WakeWordListener[] = []
   private commandListeners: CommandListener[] = []
+  private disconnectListeners: DisconnectListener[] = []
   private restartTimeout: any = null
-  private commandTimeout: any = null
   private isExplicitlyStopped = false
 
   constructor() {
@@ -119,7 +120,14 @@ export class LocalWakeWordDetector {
       return
     }
 
-    // 2. Si estamos en modo de escucha de comando activo tras el despertar
+    // 2. Verificar comando explícito de desconexión / cierre de comunicaciones
+    const disconnectMatch = text.match(/\b(cerrar\s+comunicaciones|desconectar|cortar\s+enlace|terminar\s+sesion|disconnect|close\s+comms|end\s+session)\b/i)
+    if (disconnectMatch) {
+      this.emitDisconnect()
+      return
+    }
+
+    // 3. Si estamos en modo de escucha de comando activo tras el despertar (conversación continua)
     if (this.isCommandListening && isFinal && text.length > 2) {
       this.emitCommand(text, this.currentLanguage)
     }
@@ -147,31 +155,21 @@ export class LocalWakeWordDetector {
     for (const listener of this.commandListeners) {
       listener(command, language)
     }
+  }
 
-    // Reiniciar temporizador de modo comando (10 segundos de atención continua)
-    this.scheduleCommandTimeout(10000)
+  private emitDisconnect(): void {
+    console.log(`[VOICE DISCONNECT REQUESTED] Cierre ordenado de comunicaciones`)
+    this.setCommandMode(false)
+    for (const listener of this.disconnectListeners) {
+      listener()
+    }
   }
 
   /**
-   * Activa o desactiva la escucha activa de comandos tras el despertar
+   * Activa o desactiva la escucha activa continua de comandos (mantiene la sesión viva para multiturno)
    */
-  public setCommandMode(active: boolean, timeoutMs: number = 10000): void {
+  public setCommandMode(active: boolean): void {
     this.isCommandListening = active
-    if (this.commandTimeout) {
-      clearTimeout(this.commandTimeout)
-      this.commandTimeout = null
-    }
-
-    if (active) {
-      this.scheduleCommandTimeout(timeoutMs)
-    }
-  }
-
-  private scheduleCommandTimeout(ms: number): void {
-    if (this.commandTimeout) clearTimeout(this.commandTimeout)
-    this.commandTimeout = setTimeout(() => {
-      this.isCommandListening = false
-    }, ms)
   }
 
   /**
@@ -233,7 +231,6 @@ export class LocalWakeWordDetector {
     this.isListening = false
     this.isCommandListening = false
     if (this.restartTimeout) clearTimeout(this.restartTimeout)
-    if (this.commandTimeout) clearTimeout(this.commandTimeout)
     try {
       this.recognition?.stop()
     } catch {}
@@ -250,6 +247,13 @@ export class LocalWakeWordDetector {
     this.commandListeners.push(listener)
     return () => {
       this.commandListeners = this.commandListeners.filter(l => l !== listener)
+    }
+  }
+
+  public subscribeDisconnect(listener: DisconnectListener): () => void {
+    this.disconnectListeners.push(listener)
+    return () => {
+      this.disconnectListeners = this.disconnectListeners.filter(l => l !== listener)
     }
   }
 }
