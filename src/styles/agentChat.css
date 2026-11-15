@@ -5,109 +5,364 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
+   Kinetic AI Core (Marvel J.A.R.V.I.S. ARC Reactor Architecture)
+   -------------------------------------------------------------------------- */
+.jarvis-core-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.jarvis-core-svg {
+  overflow: visible;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.45));
+  transition: filter 0.3s ease;
+}
+
+.jarvis-core-container:hover .jarvis-core-svg,
+.jarvis-core-container.is-active .jarvis-core-svg {
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.75)) drop-shadow(0 0 18px rgba(0, 240, 255, 0.4));
+}
+
+/* Transform-box & Origin para rotaciones SVG consistentes en todos los navegadores */
+.jarvis-ring-outer-ticks,
+.jarvis-orbital-nodes,
+.jarvis-ring-segmented,
+.jarvis-ring-counter,
+.jarvis-ring-inner-arc,
+.jarvis-iris-rays,
+.jarvis-pulse-glow,
+.jarvis-core-pulse {
+  transform-origin: 50px 50px;
+  transform-box: fill-box;
+}
+
+/* Keyframes de rotación cinéticas J.A.R.V.I.S. */
+@keyframes jarvisSpinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jarvisSpinCounter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes jarvisPulseGlow {
+  0%, 100% {
+    transform: scale(0.88);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.16);
+    opacity: 0.88;
+  }
+}
+
+@keyframes jarvisCoreBeat {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 0.95;
+  }
+}
+
+/* Asignación de órbitas y velocidades */
+.jarvis-ring-outer-ticks {
+  animation: jarvisSpinClockwise 16s linear infinite;
+}
+
+.jarvis-orbital-nodes {
+  animation: jarvisSpinCounter 24s linear infinite;
+}
+
+.jarvis-ring-segmented {
+  animation: jarvisSpinClockwise 8.5s linear infinite;
+}
+
+.jarvis-ring-counter {
+  animation: jarvisSpinCounter 5.2s linear infinite;
+}
+
+.jarvis-ring-inner-arc {
+  animation: jarvisSpinClockwise 3.4s linear infinite;
+}
+
+.jarvis-iris-rays {
+  animation: jarvisSpinCounter 7s linear infinite;
+}
+
+.jarvis-pulse-glow {
+  animation: jarvisPulseGlow 2.4s ease-in-out infinite;
+}
+
+.jarvis-core-pulse {
+  animation: jarvisCoreBeat 1.8s ease-in-out infinite;
+}
+
+/* Aceleración en hover y en estado activo / procesamiento */
+.jarvis-core-container:hover .jarvis-ring-segmented,
+.jarvis-core-container.is-active .jarvis-ring-segmented {
+  animation-duration: 3.2s;
+}
+
+.jarvis-core-container:hover .jarvis-ring-counter,
+.jarvis-core-container.is-active .jarvis-ring-counter {
+  animation-duration: 2.2s;
+}
+
+.jarvis-core-container:hover .jarvis-ring-inner-arc,
+.jarvis-core-container.is-active .jarvis-ring-inner-arc {
+  animation-duration: 1.4s;
+}
+
+/* --------------------------------------------------------------------------
    Floating Action Button (FAB)
    -------------------------------------------------------------------------- */
 .ares-fab-trigger {
   position: fixed;
-  bottom: 24px;
+  bottom: 68px;
   right: 24px;
-  z-index: 999;
+  z-index: 9999;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, rgba(14, 28, 36, 0.95), rgba(7, 16, 22, 0.98));
-  border: 1px solid rgba(0, 240, 255, 0.45);
-  border-radius: 30px;
+  gap: 12px;
+  padding: 8px 18px 8px 12px;
+  background: linear-gradient(135deg, rgba(10, 24, 32, 0.94), rgba(4, 12, 17, 0.98));
+  border: 1px solid rgba(0, 240, 255, 0.5);
+  border-radius: 40px;
   color: #00f0ff;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.6),
-    0 0 16px rgba(0, 240, 255, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 10px 30px rgba(0, 0, 0, 0.7),
+    0 0 22px rgba(0, 240, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  pointer-events: auto;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .ares-fab-trigger:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.02);
   border-color: #00f0ff;
   box-shadow: 
-    0 12px 30px rgba(0, 0, 0, 0.7),
-    0 0 24px rgba(0, 240, 255, 0.45);
+    0 14px 38px rgba(0, 0, 0, 0.8),
+    0 0 32px rgba(0, 240, 255, 0.55),
+    inset 0 0 12px rgba(0, 240, 255, 0.25);
   color: #ffffff;
 }
 
 .ares-fab-trigger:focus-visible {
   outline: 2px solid #00f0ff;
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
 
-.ares-fab-pulse {
-  width: 8px;
-  height: 8px;
+.ares-fab-core-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ares-fab-sonar-ping {
+  position: absolute;
+  inset: -6px;
   border-radius: 50%;
-  background: #00ffaa;
-  box-shadow: 0 0 10px #00ffaa;
-  animation: fabPulse 2s infinite ease-out;
+  border: 1.5px solid #00f0ff;
+  opacity: 0;
+  animation: jarvisSonarPing 2.5s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+  pointer-events: none;
 }
 
-@keyframes fabPulse {
-  0% { transform: scale(0.9); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.6; }
-  100% { transform: scale(0.9); opacity: 1; }
+@keyframes jarvisSonarPing {
+  0% { transform: scale(0.85); opacity: 0.85; }
+  60% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+.ares-fab-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.ares-fab-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: #38bdf8;
+  font-weight: 700;
+  opacity: 0.85;
+  text-transform: uppercase;
 }
 
 .ares-fab-text {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f1f5f9;
   white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------------
-   Modal Window & Backdrop
+   Modal Window & Futuristic Opening Holographic Animation
    -------------------------------------------------------------------------- */
 .ares-agent-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(4, 9, 14, 0.82);
-  backdrop-filter: blur(12px);
-  animation: overlayFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.08) 0%, rgba(4, 9, 14, 0.88) 75%), rgba(4, 9, 14, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: hudOverlayBoot 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes hudOverlayBoot {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
 }
 
 .ares-agent-window {
   position: relative;
-  width: min(920px, 96vw);
-  height: min(780px, 92vh);
+  width: min(940px, 96vw);
+  height: min(800px, 92vh);
   display: flex;
   flex-direction: column;
-  background: linear-gradient(165deg, rgba(13, 24, 30, 0.98) 0%, rgba(7, 14, 18, 0.99) 100%);
-  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: linear-gradient(165deg, rgba(11, 22, 28, 0.98) 0%, rgba(5, 12, 16, 0.99) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.45);
   border-radius: 12px;
   box-shadow: 
-    0 0 40px rgba(0, 240, 255, 0.15),
-    0 25px 60px rgba(0, 0, 0, 0.85),
-    inset 0 0 1px 1px rgba(255, 255, 255, 0.08);
+    0 0 45px rgba(0, 240, 255, 0.22),
+    0 25px 70px rgba(0, 0, 0, 0.88),
+    inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
   overflow: hidden;
   color: #f1f5f9;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
-  animation: windowSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+  animation: hudHologramDeploy 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
 }
 
-@keyframes windowSlideIn {
-  from { opacity: 0; transform: scale(0.97) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+/* Despliegue holográfico 3D con destello y expansión cibernética */
+@keyframes hudHologramDeploy {
+  0% {
+    opacity: 0;
+    transform: perspective(1200px) rotateX(9deg) scale(0.86) translateY(35px);
+    filter: blur(10px) brightness(1.75);
+    box-shadow: 0 0 70px rgba(0, 240, 255, 0.7);
+  }
+  45% {
+    opacity: 0.95;
+    transform: perspective(1200px) rotateX(-1.5deg) scale(1.015) translateY(-3px);
+    filter: blur(1px) brightness(1.25);
+  }
+  75% {
+    transform: perspective(1200px) rotateX(0.5deg) scale(0.998) translateY(1px);
+    filter: blur(0) brightness(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1200px) rotateX(0deg) scale(1) translateY(0);
+    filter: blur(0) brightness(1);
+    box-shadow: 
+      0 0 45px rgba(0, 240, 255, 0.22),
+      0 25px 70px rgba(0, 0, 0, 0.88),
+      inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Haz de barrido láser de arranque (Laser Boot Scan) */
+.hud-laser-boot-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.3) 15%, #ffffff 50%, rgba(0, 240, 255, 0.3) 85%, transparent 100%);
+  box-shadow:
+    0 0 16px #00f0ff,
+    0 0 35px rgba(0, 240, 255, 0.8);
+  pointer-events: none;
+  z-index: 25;
+  animation: laserBootScan 0.65s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes laserBootScan {
+  0% {
+    top: 0%;
+    opacity: 1;
+    transform: scaleX(0.2);
+  }
+  35% {
+    transform: scaleX(1);
+  }
+  85% {
+    top: 100%;
+    opacity: 0.85;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/* Esquinas tácticas Sci-Fi HUD */
+.hud-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 15;
+  transition: all 0.3s ease;
+}
+
+.hud-corner.top-left {
+  top: 4px;
+  left: 4px;
+  border-top: 2px solid #00f0ff;
+  border-left: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.top-right {
+  top: 4px;
+  right: 4px;
+  border-top: 2px solid #00f0ff;
+  border-right: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.bottom-left {
+  bottom: 4px;
+  left: 4px;
+  border-bottom: 2px solid #00f0ff;
+  border-left: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.bottom-right {
+  bottom: 4px;
+  right: 4px;
+  border-bottom: 2px solid #00f0ff;
+  border-right: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
 }
 
 .hud-scanline {
@@ -125,7 +380,7 @@
 
 @keyframes scanline {
   0% { transform: translateY(0); opacity: 0.8; }
-  100% { transform: translateY(780px); opacity: 0; }
+  100% { transform: translateY(800px); opacity: 0; }
 }
 
 /* Header */
@@ -682,11 +937,25 @@
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .hud-scanline,
+  .hud-laser-boot-beam,
+  .jarvis-ring-outer-ticks,
+  .jarvis-orbital-nodes,
+  .jarvis-ring-segmented,
+  .jarvis-ring-counter,
+  .jarvis-ring-inner-arc,
+  .jarvis-iris-rays,
+  .jarvis-pulse-glow,
+  .jarvis-core-pulse,
+  .ares-fab-sonar-ping,
   .radar-ring,
   .ares-fab-pulse,
   .hud-action-pill,
   .scan-wave {
     animation: none !important;
+  }
+  .ares-agent-window {
+    animation: none !important;
+    transform: none !important;
   }
   .ares-fab-trigger:hover,
   .hud-send-btn:hover,

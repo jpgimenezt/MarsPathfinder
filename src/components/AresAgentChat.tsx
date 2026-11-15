@@ -11,17 +11,131 @@ interface AresAgentChatProps {
   onOpen?: () => void
 }
 
-// Iconografía vectorial táctica (SVG) - Sin emojis
-const SatelliteIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M4.93 4.93a10 10 0 0 1 14.14 0" />
-    <path d="M7.76 7.76a6 6 0 0 1 8.48 0" />
-    <path d="M12 15v6" />
-    <path d="M9 21h6" />
-  </svg>
-)
+/**
+ * Icono de Núcleo de IA cinético estilo J.A.R.V.I.S. (Marvel ARC Reactor / HUD FUI)
+ * Construido con SVG vectorial puro y anillos concéntricos contra-rotatorios acelerados por GPU.
+ */
+export function JarvisAiCore({
+  size = 28,
+  active = true,
+  className = '',
+}: {
+  size?: number
+  active?: boolean
+  className?: string
+}) {
+  const gradientId = useId()
+  const filterId = useId()
 
+  return (
+    <div
+      className={`jarvis-core-container ${active ? 'is-active' : ''} ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        className="jarvis-core-svg"
+      >
+        <defs>
+          <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="25%" stopColor="#00f0ff" stopOpacity="0.8" />
+            <stop offset="65%" stopColor="#0284c7" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#00f0ff" stopOpacity="0" />
+          </radialGradient>
+          <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Aura de energía de fondo */}
+        <circle cx="50" cy="50" r="32" fill={`url(#${gradientId})`} className="jarvis-pulse-glow" />
+
+        {/* Anillo exterior con marcas de cuadrante (FUI / Jarvis ring) */}
+        <circle
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke="#00f0ff"
+          strokeWidth="1.2"
+          strokeDasharray="3 5"
+          opacity="0.6"
+          className="jarvis-ring-outer-ticks"
+        />
+
+        {/* 4 Nodos orbitales en cruz */}
+        <g className="jarvis-orbital-nodes">
+          <circle cx="50" cy="5" r="2.2" fill="#00f0ff" />
+          <circle cx="95" cy="50" r="2.2" fill="#00f0ff" />
+          <circle cx="50" cy="95" r="2.2" fill="#00f0ff" />
+          <circle cx="5" cy="50" r="2.2" fill="#00f0ff" />
+        </g>
+
+        {/* Anillo de datos segmentado (rotación horaria) */}
+        <circle
+          cx="50"
+          cy="50"
+          r="37"
+          fill="none"
+          stroke="#38bdf8"
+          strokeWidth="2.2"
+          strokeDasharray="18 8 5 8"
+          strokeLinecap="round"
+          className="jarvis-ring-segmented"
+        />
+
+        {/* Anillo contra-rotatorio con cortes angulares (rotación antihoraria) */}
+        <circle
+          cx="50"
+          cy="50"
+          r="28"
+          fill="none"
+          stroke="#00f0ff"
+          strokeWidth="2.8"
+          strokeDasharray="26 14"
+          strokeLinecap="round"
+          filter={`url(#${filterId})`}
+          className="jarvis-ring-counter"
+        />
+
+        {/* Anillo interior del reactor ARC */}
+        <circle
+          cx="50"
+          cy="50"
+          r="18"
+          fill="none"
+          stroke="#7dd3fc"
+          strokeWidth="1.6"
+          strokeDasharray="8 6"
+          className="jarvis-ring-inner-arc"
+        />
+
+        {/* Rayos radiales de energía del iris */}
+        <g className="jarvis-iris-rays" stroke="#00f0ff" strokeWidth="1.2" opacity="0.8">
+          <line x1="50" y1="34" x2="50" y2="40" />
+          <line x1="50" y1="60" x2="50" y2="66" />
+          <line x1="34" y1="50" x2="40" y2="50" />
+          <line x1="60" y1="50" x2="66" y2="50" />
+        </g>
+
+        {/* Núcleo central del reactor (ARC Reactor Core) */}
+        <circle cx="50" cy="50" r="7.5" fill="#00f0ff" opacity="0.55" className="jarvis-core-pulse" />
+        <circle cx="50" cy="50" r="4.2" fill="#ffffff" filter={`url(#${filterId})`} className="jarvis-center-dot" />
+        <circle cx="50" cy="50" r="2" fill="#00f0ff" />
+      </svg>
+    </div>
+  )
+}
+
+// Iconografía vectorial táctica (SVG) - Sin emojis
 const AstronautIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 2a7 7 0 0 0-7 7v4a7 7 0 0 0 14 0V9a7 7 0 0 0-7-7z" />
@@ -30,13 +144,6 @@ const AstronautIcon = () => (
     <path d="M15 19v3" />
     <path d="M5 14H3" />
     <path d="M21 14h-2" />
-  </svg>
-)
-
-const CoreIcon = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" />
-    <circle cx="12" cy="12" r="3" />
   </svg>
 )
 
@@ -68,16 +175,17 @@ export function AresAgentChat({
   onOpen: controlledOnOpen,
 }: AresAgentChatProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false)
-  const isModalOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen
+  const isControlled = controlledIsOpen !== undefined
+  const isModalOpen = isControlled ? controlledIsOpen : internalIsOpen
 
   const handleOpen = useCallback(() => {
-    if (controlledOnOpen) controlledOnOpen()
     setInternalIsOpen(true)
+    controlledOnOpen?.()
   }, [controlledOnOpen])
 
   const handleClose = useCallback(() => {
-    if (controlledOnClose) controlledOnClose()
     setInternalIsOpen(false)
+    controlledOnClose?.()
   }, [controlledOnClose])
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -190,9 +298,14 @@ export function AresAgentChat({
           aria-label="Abrir consola táctica de navegación Ares"
           title="Consola Táctica de Navegación (Copiloto EVA)"
         >
-          <span className="ares-fab-pulse" aria-hidden="true" />
-          <SatelliteIcon />
-          <span className="ares-fab-text">COPILOTO TÁCTICO</span>
+          <div className="ares-fab-core-container">
+            <span className="ares-fab-sonar-ping" aria-hidden="true" />
+            <JarvisAiCore size={32} className="ares-fab-jarvis" />
+          </div>
+          <div className="ares-fab-labels">
+            <span className="ares-fab-badge">[IA TÁCTICA]</span>
+            <span className="ares-fab-text">COPILOTO TÁCTICO</span>
+          </div>
         </button>
       )}
 
@@ -208,15 +321,22 @@ export function AresAgentChat({
           }}
         >
           <div className="ares-agent-window">
-            <div className="hud-scanline" />
+            {/* Haz de barrido láser holográfico de inicialización */}
+            <div className="hud-laser-boot-beam" aria-hidden="true" />
+
+            {/* Scanline CRT permanente */}
+            <div className="hud-scanline" aria-hidden="true" />
+
+            {/* Retículas y esquinas tácticas FUI */}
+            <div className="hud-corner top-left" aria-hidden="true" />
+            <div className="hud-corner top-right" aria-hidden="true" />
+            <div className="hud-corner bottom-left" aria-hidden="true" />
+            <div className="hud-corner bottom-right" aria-hidden="true" />
 
             {/* Header de Cabina Táctica */}
             <header className="hud-header">
               <div className="hud-title-group">
-                <div className="hud-pulse-radar" aria-hidden="true">
-                  <span className="radar-core" />
-                  <span className="radar-ring" />
-                </div>
+                <JarvisAiCore size={38} className="hud-header-jarvis" />
                 <div>
                   <div className="hud-sub">CONSOLA TÁCTICA DE NAVEGACIÓN // NASA SPACE APPS</div>
                   <h2 id="agent-title" className="hud-title">
@@ -341,7 +461,7 @@ export function AresAgentChat({
                   {messages.map(msg => (
                     <div key={msg.id} className={`hud-message-row ${msg.role}`}>
                       <div className="hud-avatar" aria-hidden="true">
-                        {msg.role === 'user' ? <AstronautIcon /> : <CoreIcon />}
+                        {msg.role === 'user' ? <AstronautIcon /> : <JarvisAiCore size={22} className="hud-msg-jarvis" />}
                       </div>
                       <div className="hud-message-bubble">
                         <div className="hud-msg-meta">
@@ -378,7 +498,7 @@ export function AresAgentChat({
                   {loading && (
                     <div className="hud-message-row assistant loading">
                       <div className="hud-avatar" aria-hidden="true">
-                        <CoreIcon />
+                        <JarvisAiCore size={22} active className="hud-loading-jarvis" />
                       </div>
                       <div className="hud-message-bubble loading-bubble">
                         <div className="hud-typing-indicator">

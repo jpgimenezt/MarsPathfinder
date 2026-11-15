@@ -82,6 +82,16 @@ export function App() {
             {panelButton('route', 'Ruta')}
             {panelButton('layers', 'Capas')}
             {panelButton('science', 'Ciencia y riesgos')}
+            <button
+              type="button"
+              className={`tab tab-agent ${isAgentOpen ? 'active' : ''}`}
+              aria-pressed={isAgentOpen}
+              onClick={() => setIsAgentOpen(prev => !prev)}
+              title="Copiloto Táctico ARES-NAV (IA)"
+            >
+              <span className="tab-agent-indicator" aria-hidden="true" />
+              Copiloto táctico
+            </button>
           </nav>
           <button type="button" className="scope-toggle" onClick={() => {
             setScope(current => current === 'jezero' ? 'global' : 'jezero')
@@ -186,6 +196,7 @@ export function App() {
 
       <AresAgentChat
         isOpen={isAgentOpen}
+        onOpen={() => setIsAgentOpen(true)}
         onClose={() => setIsAgentOpen(false)}
         currentStops={plan.stops}
         totalDistanceMeters={legs.total}
