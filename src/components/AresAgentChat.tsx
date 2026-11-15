@@ -10,6 +10,14 @@ interface AresAgentChatProps {
   onClose: () => void
 }
 
+const TARS_QUOTES = [
+  'No es posible... No, es necesario.',
+  'La ley de Murphy no significa que algo malo vaya a pasar; significa que lo que tenga que pasar, pasará.',
+  'No entres dócilmente en esa buena noche. Ruge contra la muerte de la luz.',
+  'Humor al 75%: Si caminas más de 5 km en regolito fino marciano, el que necesitará un acoplamiento de emergencia serás tú.',
+  'Honestidad al 90%: Sin un DEM submétrico de HiRISE, esa ladera oculta rocas que ningún mapa orbital podrá resolver.',
+]
+
 export function AresAgentChat({
   currentStops,
   totalDistanceMeters,
@@ -21,15 +29,23 @@ export function AresAgentChat({
       id: 'init-msg',
       role: 'assistant',
       content:
-        'SISTEMA ARES-AI EN LÍNEA // Enlace orbital activo con Amazon Bedrock (Nova Pro en us-east-2).\n\nSoy tu copiloto táctico de navegación para misiones de superficie marciana (NASA Space Apps 2026). Puedo evaluar la viabilidad de tus rutas con geodesia marciana real (R = 3,389.5 km), analizar sensores de NASA (CTX, MOLA, THEMIS, HiRISE) o consultar objetivos científicos como el Delta de Jezero o las formaciones Boxwork.',
+        'SISTEMA ARES-AI EN LÍNEA // Enlace orbital activo con Amazon Bedrock (Nova Pro en us-east-2).\n\n[CALIBRACIÓN TÁCTICA TARS]: Honestidad: 90% | Humor: 65%.\n"No es posible... No, es necesario."\n\nSoy tu copiloto táctico de navegación para misiones de superficie marciana (NASA Space Apps 2026). Puedo evaluar la viabilidad de tus rutas con geodesia marciana real (R = 3,389.5 km), analizar sensores de NASA (CTX, MOLA, THEMIS, HiRISE) o consultar objetivos científicos como el Delta de Jezero o las formaciones Boxwork.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'telemetry'>('chat')
+  const [quoteIndex, setQuoteIndex] = useState(-1)
+  const [interstellarQuote, setInterstellarQuote] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputId = useId()
+
+  const cycleTarsQuote = () => {
+    const nextIdx = (quoteIndex + 1) % TARS_QUOTES.length
+    setQuoteIndex(nextIdx)
+    setInterstellarQuote(TARS_QUOTES[nextIdx])
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' })
@@ -130,6 +146,15 @@ export function AresAgentChat({
             </div>
             <button
               type="button"
+              className="telemetry-badge tars-badge"
+              onClick={cycleTarsQuote}
+              title="Calibración TARS (Interstellar) — Haz clic para activar protocolo"
+            >
+              <span className="tars-star">★</span>
+              <span>TARS: H:90% · U:65%</span>
+            </button>
+            <button
+              type="button"
               className="hud-close-btn"
               onClick={onClose}
               aria-label="Cerrar terminal táctica"
@@ -138,6 +163,15 @@ export function AresAgentChat({
             </button>
           </div>
         </header>
+
+        {/* Banner de Cita de Interstellar / Protocolo TARS */}
+        {interstellarQuote && (
+          <div className="hud-interstellar-banner" onClick={() => setInterstellarQuote(null)} role="alert">
+            <span className="tars-banner-icon">🌌</span>
+            <span className="tars-banner-text">"{interstellarQuote}"</span>
+            <span className="tars-banner-sub">— PROTOCOLO TARS // INTERSTELLAR (clic para cerrar)</span>
+          </div>
+        )}
 
         {/* Selector de Pestañas Tácticas */}
         <div className="hud-nav-bar">
@@ -177,6 +211,14 @@ export function AresAgentChat({
           <div className="hud-chat-body">
             {/* Chips de Consultas Rápidas */}
             <div className="hud-chips-tray" aria-label="Sugerencias rápidas">
+              <button
+                type="button"
+                className="hud-chip interstellar"
+                onClick={() => handleSend('Ares-AI, ¿cuál es tu nivel de humor y honestidad para esta caminata en Marte? ¿Qué opinas de la ley de Murphy en Jezero?')}
+                disabled={loading}
+              >
+                🌌 Protocolo TARS (Interstellar)
+              </button>
               <button
                 type="button"
                 className="hud-chip"

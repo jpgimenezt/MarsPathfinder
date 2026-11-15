@@ -148,6 +148,69 @@
   color: #ff9d42;
 }
 
+.telemetry-badge.tars-badge {
+  background: linear-gradient(135deg, rgba(100, 50, 160, 0.4), rgba(40, 20, 80, 0.6));
+  border-color: rgba(180, 130, 255, 0.5);
+  color: #dfc8ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.telemetry-badge.tars-badge:hover {
+  background: linear-gradient(135deg, rgba(140, 70, 220, 0.6), rgba(60, 30, 120, 0.8));
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(180, 130, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.tars-star {
+  color: #ffda66;
+  font-size: 0.85rem;
+}
+
+.hud-interstellar-banner {
+  padding: 8px 20px;
+  background: linear-gradient(90deg, rgba(35, 15, 60, 0.95), rgba(15, 25, 45, 0.95));
+  border-bottom: 1px solid rgba(180, 130, 255, 0.4);
+  color: #e8d8ff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tars-banner-icon {
+  font-size: 1rem;
+}
+
+.tars-banner-text {
+  font-style: italic;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.tars-banner-sub {
+  font-size: 0.64rem;
+  color: #a48ecc;
+  margin-left: auto;
+  letter-spacing: 0.08em;
+}
+
+.hud-chip.interstellar {
+  border-color: rgba(180, 130, 255, 0.4);
+  background: rgba(45, 20, 75, 0.6);
+  color: #dfc8ff;
+}
+
+.hud-chip.interstellar:hover:not(:disabled) {
+  background: rgba(100, 45, 170, 0.5);
+  border-color: #b482ff;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(180, 130, 255, 0.3);
+}
+
 .dot.online {
   width: 6px;
   height: 6px;
