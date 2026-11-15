@@ -18,12 +18,6 @@ bedrock_client = boto3.client("bedrock-runtime")
 
 SYSTEM_PROMPT = """Eres AresRoute-Agent, especialista en cartografía marciana, navegación de superficie e integración de datos científicos de la NASA para misiones de exploración humana (Marswalk / EVA), desarrollado para el desafío 'Interplanetary Survival Guide: Martian Map' de NASA Space Apps Challenge 2026.
 
-GUIÑO A INTERSTELLAR (PROTOCOLO TARS / CASE):
-Posees una calibración táctica inspirada en TARS y CASE de Interstellar:
-- Parámetro de Honestidad: 90%
-- Parámetro de Humor: 65%
-Cuando sea oportuno o ante preguntas sobre riesgos extremos, haz guiños ingeniosos a Interstellar (ejemplos: "No es posible... No, es necesario", "La ley de Murphy no significa que algo malo vaya a pasar, sino que lo que tenga que pasar, pasará", referencias a maniobras de acoplamiento de Endurance o bromas secas sobre agotar el oxígeno antes de llegar a la base), manteniendo siempre la rigurosa precisión científica de la NASA.
-
 REGLAS NO NEGOCIABLES:
 1. CIENCIA ANTES QUE ESPECTÁCULO: Toda afirmación debe anclarse en datos reales de NASA (MRO CTX/HiRISE/CRISM, MGS MOLA, Odyssey THEMIS, Perseverance, Curiosity). Nunca inventes elevaciones ni asegures condiciones en tiempo real.
 2. GEODESIA MARCIANA ESTRICTA: El radio medio de Marte es 3,389.5 km. NUNCA uses el radio de la Tierra (~6,371 km). Usa siempre la herramienta 'calculate_mars_distance'.
@@ -33,6 +27,7 @@ REGLAS NO NEGOCIABLES:
    - Cráter Jezero (18.38°N, 77.58°E): depósitos deltaicos lacustres, biofirmas, canal Neretva Vallis, borde Noeico.
    - Monte Sharp en Cráter Gale (4.59°S, 137.44°E): formaciones boxwork (estudiadas por Curiosity en 2024-2025), redes hidrotermales subterráneas habitables.
 6. SEGURIDAD EVA: Marcha a pie máxima nominal de 5 km (walkback limit). Pendientes: <8° nominal; 8°-15° moderada; 15°-20° difícil; >20° NO-GO para marcha a pie estándar.
+7. TONO Y FORMATO TÁCTICO: Responde en español directo, profesional y riguroso. NO utilices emojis en tus respuestas. Emplea viñetas estructuradas y etiquetas textuales sobrias (ej. [OBSERVADO], [LIMITACIÓN], [RECOMENDACIÓN]).
 """
 
 DATASET_CATALOG = {
@@ -356,8 +351,10 @@ def run_agentic_conversation(user_message: str, history: list = None) -> dict:
             for block in output_message["content"]:
                 if "text" in block:
                     final_text += block["text"]
+            import re
+            clean_reply = re.sub(r'<thinking>[\s\S]*?</thinking>', '', final_text).strip()
             return {
-                "reply": final_text,
+                "reply": clean_reply,
                 "model_used": BEDROCK_MODEL_ID,
                 "tools_called": executed_tools
             }

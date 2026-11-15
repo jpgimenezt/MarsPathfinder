@@ -16,8 +16,8 @@ afterEach(() => {
   container?.remove()
 })
 
-describe('AresAgentChat - Futuristic Martian HUD Component', () => {
-  it('no renderiza contenido cuando isOpen es false', () => {
+describe('AresAgentChat - Tactical Martian HUD Component', () => {
+  it('renderiza el botón flotante (FAB) cuando el modal está cerrado', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -26,10 +26,13 @@ describe('AresAgentChat - Futuristic Martian HUD Component', () => {
       root.render(<AresAgentChat isOpen={false} onClose={vi.fn()} />)
     })
 
+    const fab = container.querySelector('.ares-fab-trigger')
+    expect(fab).not.toBeNull()
+    expect(fab?.textContent).toContain('COPILOTO TÁCTICO')
     expect(container.querySelector('.ares-agent-overlay')).toBeNull()
   })
 
-  it('renderiza la interfaz futurista del HUD cuando isOpen es true', () => {
+  it('renderiza la interfaz táctica del HUD cuando isOpen es true', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -48,20 +51,20 @@ describe('AresAgentChat - Futuristic Martian HUD Component', () => {
     const overlay = container.querySelector('.ares-agent-overlay')
     expect(overlay).not.toBeNull()
 
-    // Comprobar título futurista y badges de telemetría
-    expect(container.textContent).toContain('ARES-AI')
-    expect(container.textContent).toContain('TACTICAL ASSISTANT')
-    expect(container.textContent).toContain('UPLINK ACTIVE')
-    expect(container.textContent).toContain('US-EAST-2')
-    expect(container.textContent).toContain('NOVA PRO (BEDROCK)')
+    // Comprobar título táctico y telemetría de misión
+    expect(container.textContent).toContain('ARES-NAV')
+    expect(container.textContent).toContain('SISTEMA DE ASISTENCIA')
+    expect(container.textContent).toContain('ENLACE: ACTIVO')
+    expect(container.textContent).toContain('DATUM: AREOIDE 6.1 MBAR')
+    expect(container.textContent).toContain('GEODESIA: 3,389.5 KM')
 
     // Comprobar presencia del botón táctico de ruta actual
     const routeActionBtn = container.querySelector('.hud-action-pill')
     expect(routeActionBtn).not.toBeNull()
-    expect(routeActionBtn?.textContent).toContain('EVALUAR RUTA ACTUAL')
+    expect(routeActionBtn?.textContent).toContain('EVALUAR RUTA')
   })
 
-  it('permite alternar a la pestaña de diagnóstico y telemetría', () => {
+  it('permite alternar a la pestaña de parámetros y sensores', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -71,17 +74,17 @@ describe('AresAgentChat - Futuristic Martian HUD Component', () => {
     })
 
     const telemetryTabBtn = container.querySelectorAll<HTMLButtonElement>('.hud-tab')[1]
-    expect(telemetryTabBtn.textContent).toContain('DIAGNÓSTICO Y HERRAMIENTAS')
+    expect(telemetryTabBtn.textContent).toContain('PARÁMETROS Y SENSORES')
 
     act(() => {
       telemetryTabBtn.click()
     })
 
-    // Debe mostrar la telemetría serverless de AWS
-    expect(container.textContent).toContain('DIAGNÓSTICO DEL SISTEMA SERVERLESS // AWS')
-    expect(container.textContent).toContain('Radio Medio de Marte: 3,389.5 km')
-    expect(container.textContent).toContain('calculate_mars_distance')
-    expect(container.textContent).toContain('evaluate_eva_feasibility')
+    // Debe mostrar los parámetros geodésicos y sensores
+    expect(container.textContent).toContain('PARÁMETROS DE MISIÓN Y SISTEMAS DE REFERENCIA')
+    expect(container.textContent).toContain('Radio Medio ($R_M$): 3,389.50 km')
+    expect(container.textContent).toContain('MRO CTX')
+    expect(container.textContent).toContain('MGS MOLA')
   })
 
   it('invoca onClose al presionar el botón de cerrar', () => {

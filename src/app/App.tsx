@@ -63,18 +63,8 @@ export function App() {
         <div className="brand"><span className="brand-mark" aria-hidden="true">⌾</span>
           <div><span className="eyebrow">ATLAS DE EXPLORACIÓN MARCIANA</span><h1>Ares<span>Route</span></h1></div>
         </div>
-        <div className="header-right">
-          <button
-            type="button"
-            className="hud-trigger-btn"
-            onClick={() => setIsAgentOpen(true)}
-            title="Abrir Copiloto Táctico ARES-AI (AWS Serverless Bedrock)"
-          >
-            <span className="hud-trigger-icon" aria-hidden="true">🤖</span> ARES-AI COPILOT
-          </button>
-          <span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
-          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span>
-        </div>
+        <div className="header-right"><span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
+          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span></div>
       </header>
 
       {screen === 'globe' ? <main className="globe-main">
@@ -92,15 +82,6 @@ export function App() {
             {panelButton('route', 'Ruta')}
             {panelButton('layers', 'Capas')}
             {panelButton('science', 'Ciencia y riesgos')}
-            <button
-              type="button"
-              className="tab"
-              onClick={() => setIsAgentOpen(true)}
-              style={{ color: '#00f0ff' }}
-              title="Copiloto Táctico IA (Amazon Bedrock)"
-            >
-              🤖 Copiloto IA
-            </button>
           </nav>
           <button type="button" className="scope-toggle" onClick={() => {
             setScope(current => current === 'jezero' ? 'global' : 'jezero')
