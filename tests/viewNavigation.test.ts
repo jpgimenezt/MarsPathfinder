@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitJezero, zoomAvailability } from '../src/features/map/viewNavigation'
+import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, INITIAL_JEZERO_VIEW, zoomAvailability } from '../src/features/map/viewNavigation'
 import { CTX_EXTENT, ROI } from '../src/features/map/marsProjection'
 import { JEZERO_CONTEXT } from '../src/features/map/planningRegion'
 
 describe('navegación de Jezero independiente de cobertura CTX', () => {
+  it('el encuadre inicial no depende de la región manual editable', () => {
+    expect(INITIAL_JEZERO_VIEW).not.toEqual(JEZERO_CONTEXT)
+    const view = createJezeroView()
+    view.setViewportSize([1100, 740])
+    fitInitialJezero(view, [1100, 740], true)
+    const visible = view.calculateExtent([1100, 740])
+    expect(visible[0]).toBeLessThan(ROI[0])
+    expect(visible[2]).toBeGreaterThan(ROI[2])
+    expect(view.getZoom()!).toBeGreaterThan(9)
+  })
+  it('encuadra los ocho manejadores de la región al entrar en edición', () => {
+    for (const size of [[1440, 670], [375, 622]]) {
+      const view = createJezeroView()
+      view.setViewportSize(size)
+      fitPlanningRegion(view, JEZERO_CONTEXT, size)
+      const visible = view.calculateExtent(size)
+      expect(visible[0]).toBeLessThan(JEZERO_CONTEXT[0])
+      expect(visible[1]).toBeLessThan(JEZERO_CONTEXT[1])
+      expect(visible[2]).toBeGreaterThan(JEZERO_CONTEXT[2])
+      expect(visible[3]).toBeGreaterThan(JEZERO_CONTEXT[3])
+    }
+  })
   it.each([[1100, 740], [560, 540], [375, 420]])('encuadra Jezero y el sector CTX en %ix%i sin limitarse al bbox', (width, height) => {
     const view = createJezeroView()
     view.setViewportSize([width, height])

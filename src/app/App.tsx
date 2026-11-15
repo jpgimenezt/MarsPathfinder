@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useReducer, useState } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
-import { sources, type LayerId } from '../data/sourceManifest'
+import { sources, vikingBase, type LayerId } from '../data/sourceManifest'
 import { ROI, insideRoi } from '../features/map/marsProjection'
 import { JEZERO_CONTEXT, inRegion, segmentCoverage, validRegion, type Region } from '../features/map/planningRegion'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
@@ -26,6 +26,8 @@ export function App() {
   const [states, setStates] = useState<Record<LayerId, LayerState>>({
     ctx: 'cargando', mola: 'apagada', themis: 'apagada',
   })
+  const [baseState, setBaseState] = useState<'cargando' | 'visible' | 'parcial' | 'error'>('cargando')
+  const [baseRetry, setBaseRetry] = useState(0)
   const [plan, dispatch] = useReducer(routePlanReducer, initialRoutePlan)
   const [selected, setSelected] = useState<LayerId>('ctx')
   const [mode, setMode] = useState<MapMode>({ type: 'explore' })
@@ -126,12 +128,18 @@ export function App() {
           }}>◉ Volver al globo 3D</button>
         </div>
 
-        <section className={`map-stage${mode.type === 'edit-region' ? ' map-stage--editing' : ''}`}
+        <section className={`map-stage${panel ? ' map-stage--panel' : ''}${mode.type === 'edit-region' ? ' map-stage--editing' : ''}`}
           aria-label={scope === 'global' ? 'Vista 2D global de Marte' : 'Explorador 2D de Jezero'}>
           <MapView scope={scope} enabled={enabled} opacity={opacity} stops={plan.stops} mode={mode} panelOpen={panel !== null}
+            baseRetry={baseRetry} onBaseState={setBaseState}
             region={region} onRegionChange={changeRegion} onPlace={place}
             onMove={movePoint} onInvalid={() => setRouteNotice('Fuera de la región elegida: el punto no cambió. Ampliá la región o elegí una posición dentro.')}
             onLayerState={(id, state) => setStates(current => current[id] === state ? current : { ...current, [id]: state })} />
+          {scope === 'jezero' && <div className="base-status" role="status">
+            <a href={vikingBase.sourceUrl} target="_blank" rel="noreferrer">Viking · contexto ↗</a>
+            <span>WMTS {baseState}{baseState !== 'visible' ? ' · miniatura local' : ''}</span>
+            {baseState === 'error' && <button type="button" onClick={() => setBaseRetry(current => current + 1)}>Reintentar</button>}
+          </div>}
           {scope === 'jezero' && routeNotice && <div className="roi-notice" role="alert">
             {routeNotice} Ningún límite indica que una zona sea peligrosa o segura.
             <button type="button" onClick={() => setRouteNotice(null)} aria-label="Cerrar aviso">×</button>
@@ -145,7 +153,7 @@ export function App() {
               <h2>Tu recorrido <span className="soft">exploratorio</span></h2>
               {scope === 'global' && <div className="notice"><b>OUT_OF_COVERAGE · Planificación desactivada</b><br />
                 El plan de Jezero se conserva, pero en Marte global solo se muestra el relieve MOLA regional. Volvé a Jezero para editar la ruta.</div>}
-              <p className="intro">Elegí A/P/B o arrastrá sus marcadores. El rectángulo naranja es tu región manual; el contorno turquesa identifica CTX comprobado. Ninguno garantiza transitabilidad.</p>
+              <p className="intro">Elegí A/P/B o arrastrá sus marcadores. La región manual aparece al colocar puntos o al editarla; el contorno turquesa identifica CTX auditado. Viking es solo contexto global. Ninguno garantiza transitabilidad.</p>
               <div className="region-actions">
                 <button type="button" disabled={scope === 'global'} aria-pressed={mode.type === 'edit-region'}
                   onClick={() => {
@@ -199,6 +207,13 @@ export function App() {
               <h2>Capas científicas</h2>
               <p className="intro">{scope === 'global' ? 'Solo MOLA tiene cobertura global en esta vista. CTX Jezero y THEMIS se conservan para el modo local.' :
                 'Tres misiones. Activá y compará imágenes; una capa visual no equivale a una medición de seguridad.'}</p>
+              {scope === 'jezero' && <section className="notice" aria-label="Origen del mapa base Viking">
+                <b>Mapa base · Viking MDIM 2.1 colorizado</b><br />
+                NASA Ames/USGS · Viking. {vikingBase.resolution}. {vikingBase.coverage}. Imágenes históricas 1976–1980;
+                fecha local: sin datos. {vikingBase.limitations}{' '}
+                <a href={vikingBase.sourceUrl} target="_blank" rel="noreferrer">GetCapabilities oficial ↗</a>
+                <br />WMTS: {baseState}; cuando no carga, se ve una miniatura local, no detalle CTX.
+              </section>}
               {sources.map(item => <div className="layer-card" key={item.id}>
                 <label className="layer-toggle"><input type="checkbox" checked={scope === 'global' ? item.id === 'mola' : enabled[item.id]}
                   disabled={scope === 'global'}
@@ -240,7 +255,7 @@ export function App() {
       </main>}
       <footer className="footer">
         <span>{screen === 'globe' ? 'Globo esférico: relieve MGS MOLA NASA/USGS o mosaico Viking MDIM 2.1 colorizado NASA Ames/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el centro del cráter no es un punto de ruta documentado.' :
-          'Respaldo estático: una sola tesela CTX, no toda la región editable. Fuera de ella, la imagen depende de Mars Trek. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
+          'Fondo Viking MDIM 2.1 colorizado: NASA Ames/USGS · Mars Trek (respaldo local global de baja resolución). CTX: NASA/JPL-Caltech/USGS · una sola tesela de respaldo local. MOLA: NASA/JPL-Caltech. THEMIS: NASA/JPL-Caltech/ASU. La región manual no indica cobertura científica.'}</span>
         <strong>Prototipo independiente · No apto para uso operacional.</strong>
       </footer>
     </div>

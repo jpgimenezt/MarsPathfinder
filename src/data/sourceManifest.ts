@@ -16,6 +16,17 @@ export interface SourceRecord {
 }
 
 const root = 'https://trek.nasa.gov/tiles/Mars/EQ/'
+// Mapa de contexto, no cuarta familia científica ni detalle EVA.
+export const vikingBase = {
+  productId: 'Mars_Viking_MDIM21_ClrMosaic_global_232m',
+  sourceUrl: root + 'Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/WMTSCapabilities.xml',
+  attribution: 'NASA Ames/USGS · Viking MDIM 2.1 colorizado · Mars Trek',
+  resolution: '≈232 m/píxel del producto original; respaldo local ≈21 km/píxel ecuatorial',
+  coverage: 'Global; contexto visual, no imagen CTX de detalle',
+  acquisitionDate: 'Imágenes Viking históricas (1976–1980); fecha del mosaico local: sin datos por píxel',
+  limitations: 'Mosaico colorizado; no color natural exacto, DEM, imágenes actuales ni evidencia de obstáculos.',
+} as const
+
 export const sources: SourceRecord[] = [
   {
     id: 'ctx', title: 'CTX · imagen orbital controlada de Jezero',

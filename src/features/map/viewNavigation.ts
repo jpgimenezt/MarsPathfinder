@@ -1,6 +1,10 @@
 import View from 'ol/View.js'
 import { marsProjection, ROI } from './marsProjection'
-import { EDIT_LIMITS, JEZERO_CONTEXT } from './planningRegion'
+import { EDIT_LIMITS, JEZERO_CONTEXT, type Region } from './planningRegion'
+
+// Encuadre visual inicial fijo, NO se calcula desde la región editable ni
+// afirma que haya cobertura CTX fuera de ROI.
+export const INITIAL_JEZERO_VIEW: [number, number, number, number] = [77.20, 18.16, 77.89, 18.76]
 
 export function createJezeroView(): View {
   return new View({
@@ -27,20 +31,28 @@ export function createGlobalView(): View {
   })
 }
 
-export function fitJezero(view: View, size: number[], panelOpen = false): void {
+function viewPadding(size: number[], panelOpen: boolean): number[] {
   const [width, height] = size
-  const padding = width <= 680
+  return width <= 680
     ? [24, 26, panelOpen ? Math.min(300, height * 0.43) : 28, 26]
-    : [36, 36, 36, panelOpen ? Math.min(390, width * 0.34) : 36]
-  view.fit([...JEZERO_CONTEXT], { size, padding, maxZoom: 11.3 })
+    : [36, 36, 36, 36] // panel en columna propia, fuera del viewport del mapa
+}
+
+export function fitInitialJezero(view: View, size: number[], panelOpen = false): void {
+  view.fit(INITIAL_JEZERO_VIEW, { size, padding: viewPadding(size, panelOpen), maxZoom: 11.3 })
+}
+
+export function fitJezero(view: View, size: number[], panelOpen = false): void {
+  view.fit([...JEZERO_CONTEXT], { size, padding: viewPadding(size, panelOpen), maxZoom: 11.3 })
 }
 
 export function fitCtx(view: View, size: number[], panelOpen = false): void {
-  const [width, height] = size
-  const padding = width <= 680
-    ? [24, 26, panelOpen ? Math.min(300, height * 0.43) : 28, 26]
-    : [36, 36, 36, panelOpen ? Math.min(390, width * 0.34) : 36]
-  view.fit(ROI, { size, padding, maxZoom: 12.5 })
+  view.fit(ROI, { size, padding: viewPadding(size, panelOpen), maxZoom: 12.5 })
+}
+
+export function fitPlanningRegion(view: View, region: Region, size: number[]): void {
+  const padding = size[0] <= 680 ? [145, 28, 90, 28] : [44, 44, 44, 44]
+  view.fit([...region], { size, padding, maxZoom: 12.5 })
 }
 
 export function fitGlobal(view: View, size: number[]): void {

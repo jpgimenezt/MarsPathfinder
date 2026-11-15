@@ -18,12 +18,13 @@ import Modify from 'ol/interaction/Modify.js'
 import Translate from 'ol/interaction/Translate.js'
 import Polygon from 'ol/geom/Polygon.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
-import { sources, type LayerId } from '../data/sourceManifest'
+import { sources, vikingBase, type LayerId } from '../data/sourceManifest'
 import { FALLBACK_EXTENT, ROI, marsProjection } from '../features/map/marsProjection'
 import { handleCoordinates, inRegion, regionRing, resizeRegion, shiftRegion,
   validRegion, type Region, type RegionHandle } from '../features/map/planningRegion'
 import { WmtsLayerManager, type LayerState } from '../features/map/wmtsLayerManager'
-import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitJezero, zoomAvailability } from '../features/map/viewNavigation'
+import { loadWmts } from '../features/map/wmtsSources'
+import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 
@@ -44,6 +45,8 @@ interface Props {
   onMove: (id: StopId, point: MarsPoint) => void
   onInvalid: () => void
   onLayerState: (id: LayerId, state: LayerState) => void
+  onBaseState: (state: 'cargando' | 'visible' | 'parcial' | 'error') => void
+  baseRetry: number
 }
 
 const markers: Record<StopId, { color: string; text: string }> = {
@@ -52,10 +55,13 @@ const markers: Record<StopId, { color: string; text: string }> = {
   B: { color: '#ff8f77', text: 'Destino propuesto' },
 }
 
-export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState }: Props) {
+export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState, onBaseState, baseRetry }: Props) {
   const element = useRef<HTMLDivElement>(null)
   const map = useRef<Map | null>(null)
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
+  const baseLayer = useRef(new TileLayer<WMTS>())
+  const baseHandler = useRef(onBaseState)
+  baseHandler.current = onBaseState
   const localView = useRef<ReturnType<typeof createJezeroView> | null>(null)
   const globalView = useRef<ReturnType<typeof createGlobalView> | null>(null)
   const scopeRef = useRef(scope)
@@ -93,6 +99,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   const invalidHandler = useRef(onInvalid)
   const stateHandler = useRef(onLayerState)
   const modeRef = useRef(mode)
+  const previousEdit = useRef(false)
   const [regionError, setRegionError] = useState(false)
   const [zoom, setZoom] = useState({ in: true, out: true })
   handler.current = onPlace
@@ -105,7 +112,6 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     if (scopeRef.current === 'global') {
       if (id !== 'mola' && state !== 'apagada') return
     } else if (!enabledRef.current[id] && state !== 'apagada') return
-    if (id === 'ctx') fallback.current?.setVisible(scopeRef.current === 'jezero' && enabledRef.current.ctx && state !== 'visible')
     stateHandler.current(id, state)
   }
   const reportHandler = useRef(reportState)
@@ -113,6 +119,16 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
 
   useEffect(() => {
     if (!element.current) return
+    // Miniatura USGS usada por el globo: solo contexto global de baja
+    // resolución, nunca reemplaza detalles de CTX ni se estira sobre Jezero.
+    const vikingFallback = new ImageLayer({
+      source: new ImageStatic({
+        url: `${import.meta.env.BASE_URL}data/mars-viking-global-1024.webp`,
+        projection: marsProjection,
+        imageExtent: [-180, -90, 180, 90],
+        attributions: 'Respaldo global colorizado de baja resolución (≈21 km/píxel ecuatorial): NASA Ames/USGS · Viking MDIM 2.1',
+      }),
+    })
     const local = new ImageLayer({
       source: new ImageStatic({
         url: `${import.meta.env.BASE_URL}data/ctx-jezero-tile-z10.png`,
@@ -161,7 +177,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     localView.current = jezero
     const instance = new Map({
       target: element.current,
-      layers: [local, layers.current.ctx, layers.current.mola, layers.current.themis,
+      layers: [vikingFallback, baseLayer.current, local, layers.current.ctx, layers.current.mola, layers.current.themis,
         border, regionOutline, route, markerLayer, handles],
       view: jezero,
       controls: defaultControls({ zoom: false, rotate: false }),
@@ -255,7 +271,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       moveHandler.current(feature.getId() as StopId, [coordinate[0], coordinate[1]])
     })
     instance.updateSize()
-    fitJezero(jezero, instance.getSize() ?? [900, 650], panelRef.current)
+    fitInitialJezero(jezero, instance.getSize() ?? [900, 650], panelRef.current)
     const updateZoom = () => setZoom(zoomAvailability(instance.getView()))
     instance.on('moveend', updateZoom)
     const observer = new ResizeObserver(() => {
@@ -300,6 +316,31 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   }, [])
 
   useEffect(() => {
+    const controller = new AbortController()
+    let good = 0
+    let failed = 0
+    baseHandler.current('cargando')
+    baseLayer.current.setSource(null)
+    loadWmts(vikingBase, controller.signal).then(wmts => {
+      if (controller.signal.aborted) return
+      wmts.on('tileloadend', () => {
+        good++
+        baseHandler.current(failed ? 'parcial' : 'visible')
+      })
+      wmts.on('tileloaderror', () => {
+        failed++
+        baseHandler.current(good ? 'parcial' : 'error')
+      })
+      baseLayer.current.setSource(wmts)
+    }).catch(error => {
+      if (controller.signal.aborted) return
+      baseHandler.current('error')
+      console.warn('Fondo Viking WMTS:', error)
+    })
+    return () => { controller.abort(); baseLayer.current.setSource(null) }
+  }, [baseRetry])
+
+  useEffect(() => {
     if (!map.current) return
     if (scope === 'global') {
       globalView.current ??= createGlobalView()
@@ -312,10 +353,13 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       map.current.setView(localView.current)
     }
     fallback.current?.setVisible(scope === 'jezero' && enabled.ctx)
+    baseLayer.current.setVisible(scope === 'jezero')
+    const fallbackLayer = map.current.getLayers().item(0)
+    fallbackLayer?.setVisible(scope === 'jezero')
     routeLayer.current?.setVisible(scope === 'jezero')
     markerLayerRef.current?.setVisible(scope === 'jezero')
     roiLayer.current?.setVisible(scope === 'jezero')
-    regionLayer.current?.setVisible(scope === 'jezero')
+    regionLayer.current?.setVisible(scope === 'jezero' && modeRef.current.type !== 'explore')
     handlesLayer.current?.setVisible(scope === 'jezero' && modeRef.current.type === 'edit-region')
     modify.current?.setActive(scope === 'jezero' && modeRef.current.type !== 'edit-region')
     handleModify.current?.setActive(scope === 'jezero' && modeRef.current.type === 'edit-region')
@@ -340,10 +384,29 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
 
   useEffect(() => {
     const edit = scope === 'jezero' && mode.type === 'edit-region'
+    let frame = 0
+    if (edit && !previousEdit.current && map.current) {
+      // El modo exploración enfoca CTX; al editar debe verse TODA la región,
+      // incluso si fue ampliada o movida por el usuario.
+      frame = requestAnimationFrame(() => {
+        const instance = map.current
+        if (!instance) return
+        instance.updateSize()
+        fitPlanningRegion(instance.getView(), regionRef.current, instance.getSize() ?? [900, 650])
+      })
+    }
+    previousEdit.current = edit
+    regionLayer.current?.setVisible(scope === 'jezero' && mode.type !== 'explore')
+    regionLayer.current?.setStyle(new Style({
+      fill: new Fill({ color: edit ? '#ffc78411' : '#ffc78404' }),
+      stroke: new Stroke({ color: edit ? '#ffbf77' : '#ffa95788', width: edit ? 3 : 1.5,
+        lineDash: edit ? [9, 6] : [5, 7] }),
+    }))
     handlesLayer.current?.setVisible(edit)
     modify.current?.setActive(scope === 'jezero' && !edit)
     handleModify.current?.setActive(edit)
     regionTranslate.current?.setActive(edit)
+    return () => cancelAnimationFrame(frame)
   }, [mode, scope])
 
   useEffect(() => {
@@ -400,7 +463,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       <div className="map-hint" aria-live="polite">
         {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' :
           mode.type === 'edit-region' ? 'Región manual naranja · arrastrá esquinas, bordes o el interior' :
-          mode.type === 'explore' ? 'Región manual naranja · cobertura CTX turquesa · fuera de ella: sin imagen detallada' :
+           mode.type === 'explore' ? 'Viking: contexto global · CTX turquesa: detalle auditado · editá región desde Ruta' :
           `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${'id' in mode ? mode.id : ''} · tocá la región manual. También podés arrastrar marcadores existentes.`}
       </div>
       {regionError && <div className="region-error" role="alert">Región no modificada: tamaño mínimo o límite del editor en Jezero.
