@@ -37,10 +37,17 @@ export function routePlanReducer(plan: RoutePlan, action: RouteAction): RoutePla
   }
 }
 
-export function routeLegs(stops: Stops) {
-  const ap = stops.A && stops.P ? marsDistance(stops.A, stops.P) : null
-  const pb = stops.P && stops.B ? marsDistance(stops.P, stops.B) : null
+export function routeLegs(stops: Stops): {
+  first: number | null
+  second: number | null
+  total: number | null
+  ap: number | null
+  pb: number | null
+  ab: number | null
+} {
+  const first = stops.A && stops.P ? marsDistance(stops.A, stops.P) : null
+  const second = stops.P && stops.B ? marsDistance(stops.P, stops.B) : null
   const ab = stops.A && stops.B ? marsDistance(stops.A, stops.B) : null
-  const total = ap !== null && pb !== null ? ap + pb : null
-  return { ap, pb, ab, total }
+  const total = first === null ? null : first + (second ?? 0)
+  return { first, second, total, ap: first, pb: second, ab }
 }
