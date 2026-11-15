@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AmbientLight, DirectionalLight, Mesh, MeshStandardMaterial, PerspectiveCamera,
-  Raycaster, Scene, SphereGeometry, SRGBColorSpace, TextureLoader, Vector2, Vector3, WebGLRenderer,
+  Raycaster, Scene, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { isFrontFacing, isSurfaceClick, JEZERO_CRATER, surfacePoint } from '../features/globe/globeCoordinates'
+import { MolaElevationLegend } from './MolaElevationLegend'
 
 const MIN_DISTANCE = 2.25
 const MAX_DISTANCE = 5.8
 const initialPosition = surfacePoint(...JEZERO_CRATER, 3.15)
+type GlobeTexture = 'mola' | 'viking'
+const textureFiles: Record<GlobeTexture, string> = {
+  mola: 'data/mars-mola-global-1024.jpg',
+  viking: 'data/mars-viking-global-1024.webp',
+}
+const sourceUrls: Record<GlobeTexture, string> = {
+  mola: 'https://astrogeology.usgs.gov/search/map/mars_mgs_mola_global_color_shaded_relief_463m',
+  viking: 'https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m',
+}
 
 interface Props {
   onJezero: () => void
@@ -19,7 +29,11 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const marker = useRef<HTMLButtonElement>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [activeTexture, setActiveTexture] = useState<GlobeTexture>('mola')
+  const [vikingLoading, setVikingLoading] = useState(false)
+  const [vikingError, setVikingError] = useState(false)
   const actions = useRef<{ rotate: (degrees: number) => void; zoom: (factor: number) => void } | null>(null)
+  const selectTexture = useRef<(texture: GlobeTexture) => void>(() => {})
 
   useEffect(() => {
     const container = host.current
@@ -64,7 +78,54 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     const activePointers = new Set<number>()
     let frame = 0
     let disposed = false
-    let texture: ReturnType<TextureLoader['load']> | null = null
+    const textures: Partial<Record<GlobeTexture, Texture>> = {}
+    let requestedTexture: GlobeTexture = 'mola'
+    let vikingPending = false
+    const loader = new TextureLoader()
+
+    function select(next: GlobeTexture) {
+      requestedTexture = next
+      setVikingError(false)
+      if (next === 'mola') {
+        if (textures.mola) {
+          material.map = textures.mola
+          material.needsUpdate = true
+          setActiveTexture('mola')
+        }
+        setVikingLoading(false)
+        return
+      }
+      if (textures.viking) {
+        material.map = textures.viking
+        material.needsUpdate = true
+        setActiveTexture('viking')
+        setVikingLoading(false)
+        return
+      }
+      setVikingLoading(true)
+      if (vikingPending) return
+      vikingPending = true
+      loader.load(`${import.meta.env.BASE_URL}${textureFiles.viking}`,
+        image => {
+          if (disposed) { image.dispose(); return }
+          vikingPending = false
+          image.colorSpace = SRGBColorSpace
+          textures.viking = image
+          if (requestedTexture === 'viking') select('viking')
+        },
+        undefined,
+        () => {
+          if (disposed) return
+          vikingPending = false
+          if (requestedTexture === 'viking') {
+            requestedTexture = 'mola'
+            setVikingLoading(false)
+            setVikingError(true)
+          }
+        },
+      )
+    }
+    selectTexture.current = select
 
     function fit() {
       const width = container!.clientWidth
@@ -153,14 +214,16 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     observer.observe(container)
     fit()
     frame = requestAnimationFrame(render)
-    new TextureLoader().load(`${import.meta.env.BASE_URL}data/mars-mola-global-1024.jpg`,
+    loader.load(`${import.meta.env.BASE_URL}${textureFiles.mola}`,
       image => {
         if (disposed) { image.dispose(); return }
-        texture = image
+        textures.mola = image
         // La muestra USGS va de -180°E (izquierda) a +180°E (derecha).
         image.colorSpace = SRGBColorSpace
-        material.map = image
-        material.needsUpdate = true
+        if (requestedTexture === 'mola') {
+          material.map = image
+          material.needsUpdate = true
+        }
         setStatus('ready')
       },
       undefined,
@@ -193,7 +256,8 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
       canvas.removeEventListener('webglcontextlost', lostContext)
       controls.dispose()
       actions.current = null
-      texture?.dispose()
+      selectTexture.current = () => {}
+      Object.values(textures).forEach(image => image.dispose())
       geometry.dispose()
       material.dispose()
       scene.clear()
@@ -205,11 +269,24 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
 
   return <section className="globe-stage" aria-label="Exploración global de Marte en 3D">
     <div className="globe-copy">
-      <span className="eyebrow">EXPLORACIÓN PLANETARIA · MGS MOLA</span>
+      <span className="eyebrow">EXPLORACIÓN PLANETARIA · {activeTexture === 'mola' ? 'MGS MOLA' : 'VIKING MDIM 2.1'}</span>
       <h2>Marte, antes de<br /><em>dar el primer paso.</em></h2>
       <p>Girá el planeta y explorá sus regiones. Jezero te lleva al mapa científico 2D, donde permanece tu plan de recorrido.</p>
       <button type="button" className="globe-primary" onClick={onJezero}>Explorar Jezero <span aria-hidden="true">↗</span></button>
-      <p className="globe-warning">Relieve sombreado visual NASA/USGS · no representa pendientes ni seguridad de una ruta.</p>
+      <p className="globe-warning">{activeTexture === 'mola' ? 'Relieve sombreado visual NASA/USGS' :
+        'Mosaico Viking colorizado por NASA Ames / USGS, no color natural exacto'} · no representa pendientes ni seguridad de una ruta.</p>
+    </div>
+    <div className="globe-data">
+      <fieldset className="globe-texture-options" aria-label="Textura del planeta" disabled={status !== 'ready'}>
+        <legend>VISUALIZACIÓN DEL PLANETA</legend>
+        <button type="button" aria-pressed={activeTexture === 'mola'} className={activeTexture === 'mola' ? 'selected' : ''}
+          onClick={() => selectTexture.current('mola')}>Relieve MOLA</button>
+        <button type="button" aria-pressed={activeTexture === 'viking'} className={activeTexture === 'viking' ? 'selected' : ''}
+          onClick={() => selectTexture.current('viking')}>Color de superficie</button>
+      </fieldset>
+      {vikingLoading && <p className="texture-status" role="status">Cargando mosaico Viking…</p>}
+      {vikingError && <p className="texture-error" role="alert">No se pudo cargar Viking. Sigue visible MOLA; podés reintentar «Color de superficie».</p>}
+      {activeTexture === 'mola' && <MolaElevationLegend />}
     </div>
     <div className="globe-viewport">
       <div className="globe-canvas" ref={host} aria-label="Esfera de Marte; arrastrá para girar, usá la rueda para acercar, tocá una región para centrarla." />
@@ -225,6 +302,8 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
       <button type="button" onClick={() => actions.current?.zoom(0.82)} aria-label="Acercar Marte">+</button>
       <button type="button" onClick={() => actions.current?.zoom(1.22)} aria-label="Alejar Marte">−</button>
     </div>
-    <div className="globe-credit"><a href="https://astrogeology.usgs.gov/search/map/mars_mgs_mola_global_color_shaded_relief_463m" target="_blank" rel="noreferrer">NASA / USGS · MGS MOLA · relieve sombreado ↗</a> · Imagen global reducida a 1024×512 px</div>
+    <div className="globe-credit"><a href={sourceUrls[activeTexture]} target="_blank" rel="noreferrer">
+      {activeTexture === 'mola' ? 'NASA / USGS · MGS MOLA · relieve sombreado' :
+        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global 1024×512 px</div>
   </section>
 }

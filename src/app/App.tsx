@@ -176,7 +176,7 @@ export function App() {
         </section>
       </main>}
       <footer className="footer">
-        <span>{screen === 'globe' ? 'Globo esférico con textura de relieve sombreado MGS MOLA, NASA/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el ROI del planificador es un sector distinto.' :
+        <span>{screen === 'globe' ? 'Globo esférico: relieve MGS MOLA NASA/USGS o mosaico Viking MDIM 2.1 colorizado NASA Ames/USGS. Jezero: 18.41°N, 77.69°E (USGS/IAU); el ROI del planificador es un sector distinto.' :
           'Fondo de respaldo: una tesela CTX real limitada al sector. Fuera de ella: sin datos. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
         <strong>Prototipo independiente · No apto para uso operacional.</strong>
       </footer>
