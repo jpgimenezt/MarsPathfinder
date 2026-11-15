@@ -1,0 +1,45 @@
+{
+  "family": "ares-voice-gateway",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::306538367011:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::306538367011:role/aresroute-voice-gateway-role",
+  "containerDefinitions": [
+    {
+      "name": "ares-voice-gateway",
+      "image": "306538367011.dkr.ecr.us-east-2.amazonaws.com/ares-voice-gateway:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8088,
+          "hostPort": 8088,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "VOICE_GATEWAY_PORT", "value": "8088" },
+        { "name": "AWS_BEDROCK_REGION", "value": "us-west-2" },
+        { "name": "BEDROCK_MODEL_ID", "value": "amazon.nova-2-5-sonic" },
+        { "name": "DEFAULT_VOICE", "value": "carlos" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ares-voice-gateway",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://localhost:8088/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      }
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AresRoute Martian Map Agent - AWS Serverless Agentic Backend
+  NASA Space Apps Challenge 2026: Interplanetary Survival Guide
+
+Parameters:
+  FoundationModel:
+    Type: String
+    Default: "us.amazon.nova-pro-v1:0"
+    Description: "Foundation model ID / Inference profile on Amazon Bedrock"
+
+Resources:
+  # -------------------------------------------------------------
+  # S3 Bucket for Knowledge Base documents
+  # -------------------------------------------------------------
+  MarsKnowledgeBaseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "aresroute-mars-kb-${AWS::AccountId}-${AWS::Region}"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # -------------------------------------------------------------
+  # IAM Execution Role for Action Group & Agent Lambda
+  # -------------------------------------------------------------
+  MarsToolsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAndS3AccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:GetFoundationModel
+                  - bedrock:GetInferenceProfile
+                Resource:
+                  - !Sub "arn:aws:bedrock:*::foundation-model/*"
+                  - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt MarsKnowledgeBaseBucket.Arn
+                  - !Sub "${MarsKnowledgeBaseBucket.Arn}/*"
+
+  # -------------------------------------------------------------
+  # Lambda Function: Martian Serverless Agent & Tools
+  # -------------------------------------------------------------
+  MarsNavigationToolsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aresroute-martian-tools
+      CodeUri: action_groups/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 60
+      MemorySize: 512
+      ReservedConcurrentExecutions: 10
+      Role: !GetAtt MarsToolsLambdaRole.Arn
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: !Ref FoundationModel
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "https://aresroute.vercel.app"
+            - "https://ares-route.vercel.app"
+            - "https://mars-pathfinder.vercel.app"
+            - "https://jpgimenezt.github.io"
+            - "http://localhost:5173"
+            - "http://localhost:4173"
+            - "http://localhost:3000"
+            - "http://localhost:8088"
+            - "http://127.0.0.1:5173"
+            - "http://127.0.0.1:4173"
+          AllowMethods:
+            - "GET"
+            - "POST"
+            - "OPTIONS"
+          AllowHeaders:
+            - "content-type"
+            - "authorization"
+          MaxAge: 86400
+
+  # -------------------------------------------------------------
+  # Permission for Amazon Bedrock to invoke Lambda
+  # -------------------------------------------------------------
+  BedrockInvocationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref MarsNavigationToolsFunction
+      Action: lambda:InvokeFunction
+      Principal: bedrock.amazonaws.com
+      SourceArn: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:agent/*"
+
+Outputs:
+  KnowledgeBaseBucketName:
+    Description: "Bucket de S3 para subir los documentos de la base de conocimiento"
+    Value: !Ref MarsKnowledgeBaseBucket
+
+  LambdaFunctionArn:
+    Description: "ARN de la función Lambda con las herramientas geodésicas de Marte"
+    Value: !GetAtt MarsNavigationToolsFunction.Arn
+
+  FunctionUrl:
+    Description: "URL pública HTTP del Agente Chatbot Serverless"
+    Value: !GetAtt MarsNavigationToolsFunctionUrl.FunctionUrl

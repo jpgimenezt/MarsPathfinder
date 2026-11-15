@@ -1,3 +1,4 @@
+import { insideAnyActiveRoi } from '../map/marsProjection'
 import { inRegion, type Region } from '../map/planningRegion'
 import { marsDistance, type MarsPoint } from './marsDistance'
 
@@ -11,7 +12,7 @@ export interface RoutePlan {
 }
 
 export type RouteAction =
-  | { type: 'set'; id: StopId; point: MarsPoint; region: Region }
+  | { type: 'set'; id: StopId; point: MarsPoint; region?: Region }
   | { type: 'undo' }
   | { type: 'reset' }
 
@@ -26,7 +27,8 @@ export function routePlanReducer(plan: RoutePlan, action: RouteAction): RoutePla
     if (!STOP_ORDER.some(id => plan.stops[id])) return plan
     return { stops: {}, history: [...plan.history, plan.stops] }
   }
-  if (!inRegion(action.point, action.region)) return plan
+  const isInside = action.region ? inRegion(action.point, action.region) : insideAnyActiveRoi(action.point)
+  if (!isInside || !Number.isFinite(action.point[0]) || !Number.isFinite(action.point[1])) return plan
   if (action.id === 'P' && !plan.stops.A) return plan
   if (action.id === 'B' && (!plan.stops.A || !plan.stops.P)) return plan
   return {
@@ -35,8 +37,17 @@ export function routePlanReducer(plan: RoutePlan, action: RouteAction): RoutePla
   }
 }
 
-export function routeLegs(stops: Stops): { first: number | null; second: number | null; total: number | null } {
+export function routeLegs(stops: Stops): {
+  first: number | null
+  second: number | null
+  total: number | null
+  ap: number | null
+  pb: number | null
+  ab: number | null
+} {
   const first = stops.A && stops.P ? marsDistance(stops.A, stops.P) : null
   const second = stops.P && stops.B ? marsDistance(stops.P, stops.B) : null
-  return { first, second, total: first === null ? null : first + (second ?? 0) }
+  const ab = stops.A && stops.B ? marsDistance(stops.A, stops.B) : null
+  const total = first === null ? null : first + (second ?? 0)
+  return { first, second, total, ap: first, pb: second, ab }
 }

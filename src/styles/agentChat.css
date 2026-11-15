@@ -1,0 +1,1285 @@
+/* ==========================================================================
+   ARES TACTICAL COPILOT // HUD SCI-FI FUI DESIGN SYSTEM (ui-ux-pro-max)
+   Palette: Star White (#F8FAFC), Deep Void (#070E14), Tactical Cyan (#00F0FF),
+   Martian Amber (#FF9D42), Border Slate (#1E293B)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Kinetic AI Core (Marvel J.A.R.V.I.S. ARC Reactor Architecture)
+   -------------------------------------------------------------------------- */
+.jarvis-core-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.jarvis-core-svg {
+  overflow: visible;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.45));
+  transition: filter 0.3s ease;
+}
+
+.jarvis-core-container:hover .jarvis-core-svg,
+.jarvis-core-container.is-active .jarvis-core-svg {
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.75)) drop-shadow(0 0 18px rgba(0, 240, 255, 0.4));
+}
+
+/* Transform-box & Origin para rotaciones SVG consistentes en todos los navegadores */
+.jarvis-ring-outer-ticks,
+.jarvis-orbital-nodes,
+.jarvis-ring-segmented,
+.jarvis-ring-counter,
+.jarvis-ring-inner-arc,
+.jarvis-iris-rays,
+.jarvis-pulse-glow,
+.jarvis-core-pulse,
+.jarvis-spin-orbit-alpha,
+.jarvis-spin-orbit-beta,
+.jarvis-spin-orbit-gamma {
+  transform-origin: 0 0;
+  transform-box: view-box;
+}
+
+/* Órbitas 3D externas que se proyectan y giran fuera del objeto (centradas en 0, 0) */
+.jarvis-outer-orbits-group {
+  pointer-events: none;
+}
+
+@keyframes spinOrbitAlpha {
+  0% {
+    transform: rotate(-30deg);
+  }
+
+  100% {
+    transform: rotate(330deg);
+  }
+}
+
+@keyframes spinOrbitBeta {
+  0% {
+    transform: rotate(45deg);
+  }
+
+  100% {
+    transform: rotate(-315deg);
+  }
+}
+
+@keyframes spinOrbitGamma {
+  0% {
+    transform: rotate(-70deg);
+  }
+
+  100% {
+    transform: rotate(290deg);
+  }
+}
+
+.jarvis-spin-orbit-alpha {
+  animation: spinOrbitAlpha 7s linear infinite;
+}
+
+.jarvis-spin-orbit-beta {
+  animation: spinOrbitBeta 9s linear infinite;
+}
+
+.jarvis-spin-orbit-gamma {
+  animation: spinOrbitGamma 5.5s linear infinite;
+}
+
+/* Partículas cuánticas orbitales con pulso y resplandor */
+.orbit-particle-alpha {
+  animation: particlePulseAlpha 2s ease-in-out infinite alternate;
+}
+
+.orbit-particle-beta {
+  animation: particlePulseBeta 2.5s ease-in-out infinite alternate;
+}
+
+.orbit-particle-gamma {
+  animation: particlePulseGamma 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes particlePulseAlpha {
+  0% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 12px #00f0ff);
+  }
+}
+
+@keyframes particlePulseBeta {
+  0% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #38bdf8);
+  }
+}
+
+@keyframes particlePulseGamma {
+  0% {
+    opacity: 0.4;
+  }
+
+  100% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 6px #7dd3fc);
+  }
+}
+
+/* Keyframes de rotación cinéticas J.A.R.V.I.S. */
+@keyframes jarvisSpinClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes jarvisSpinCounter {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes jarvisPulseGlow {
+
+  0%,
+  100% {
+    transform: scale(0.88);
+    opacity: 0.45;
+  }
+
+  50% {
+    transform: scale(1.16);
+    opacity: 0.88;
+  }
+}
+
+@keyframes jarvisCoreBeat {
+
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.22);
+    opacity: 0.95;
+  }
+}
+
+/* Asignación de órbitas y velocidades */
+.jarvis-ring-outer-ticks {
+  animation: jarvisSpinClockwise 16s linear infinite;
+}
+
+.jarvis-orbital-nodes {
+  animation: jarvisSpinCounter 24s linear infinite;
+}
+
+.jarvis-ring-segmented {
+  animation: jarvisSpinClockwise 8.5s linear infinite;
+}
+
+.jarvis-ring-counter {
+  animation: jarvisSpinCounter 5.2s linear infinite;
+}
+
+.jarvis-ring-inner-arc {
+  animation: jarvisSpinClockwise 3.4s linear infinite;
+}
+
+.jarvis-iris-rays {
+  animation: jarvisSpinCounter 7s linear infinite;
+}
+
+.jarvis-pulse-glow {
+  animation: jarvisPulseGlow 2.4s ease-in-out infinite;
+}
+
+.jarvis-core-pulse {
+  animation: jarvisCoreBeat 1.8s ease-in-out infinite;
+}
+
+/* Aceleración en hover y en estado activo / procesamiento */
+.jarvis-core-container:hover .jarvis-spin-orbit-alpha,
+.jarvis-core-container.is-active .jarvis-spin-orbit-alpha {
+  animation-duration: 2.6s;
+}
+
+.jarvis-core-container:hover .jarvis-spin-orbit-beta,
+.jarvis-core-container.is-active .jarvis-spin-orbit-beta {
+  animation-duration: 3.4s;
+}
+
+.jarvis-core-container:hover .jarvis-spin-orbit-gamma,
+.jarvis-core-container.is-active .jarvis-spin-orbit-gamma {
+  animation-duration: 2s;
+}
+
+.jarvis-core-container:hover .jarvis-ring-segmented,
+.jarvis-core-container.is-active .jarvis-ring-segmented {
+  animation-duration: 3.2s;
+}
+
+.jarvis-core-container:hover .jarvis-ring-counter,
+.jarvis-core-container.is-active .jarvis-ring-counter {
+  animation-duration: 2.2s;
+}
+
+.jarvis-core-container:hover .jarvis-ring-inner-arc,
+.jarvis-core-container.is-active .jarvis-ring-inner-arc {
+  animation-duration: 1.4s;
+}
+
+/* --------------------------------------------------------------------------
+   Floating Action Button (FAB)
+   -------------------------------------------------------------------------- */
+.ares-fab-trigger {
+  position: fixed;
+  bottom: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 22px 8px 14px;
+  background: linear-gradient(135deg, rgba(10, 24, 32, 0.95), rgba(4, 12, 17, 0.98));
+  border: 1px solid rgba(0, 240, 255, 0.55);
+  border-radius: 40px;
+  color: #00f0ff;
+  font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.75),
+    0 0 25px rgba(0, 240, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  pointer-events: auto;
+  overflow: visible;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.ares-fab-trigger:hover {
+  transform: translateX(-50%) translateY(-3px) scale(1.03);
+  border-color: #00f0ff;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.85),
+    0 0 35px rgba(0, 240, 255, 0.6),
+    inset 0 0 14px rgba(0, 240, 255, 0.3);
+  color: #ffffff;
+}
+
+/* Ocultar en modo pantalla limpia */
+body.is-clean-view .ares-fab-trigger {
+  display: none !important;
+}
+
+.ares-fab-trigger:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 4px;
+}
+
+.ares-fab-core-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.ares-fab-sonar-ping {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid #00f0ff;
+  opacity: 0;
+  animation: jarvisSonarPing 2.5s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes jarvisSonarPing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.85;
+  }
+
+  60% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.ares-fab-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.ares-fab-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: #38bdf8;
+  font-weight: 700;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.ares-fab-text {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Modal Window & Futuristic Genie Opening Animation (Efecto Aladino)
+   -------------------------------------------------------------------------- */
+.ares-agent-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 92%, rgba(0, 240, 255, 0.20) 0%, rgba(4, 9, 14, 0.88) 55%), rgba(4, 9, 14, 0.84);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: hudOverlayBoot 0.4s ease-out forwards;
+}
+
+@keyframes hudOverlayBoot {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.ares-agent-window {
+  position: relative;
+  width: min(940px, 96vw);
+  height: min(800px, 92vh);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(165deg, rgba(11, 22, 28, 0.98) 0%, rgba(5, 12, 16, 0.99) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 12px;
+  box-shadow:
+    0 0 45px rgba(0, 240, 255, 0.22),
+    0 25px 70px rgba(0, 0, 0, 0.88),
+    inset 0 0 1px 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  color: #f1f5f9;
+  font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
+  transform-origin: 50% 100%;
+  animation: aladdinGenieDeploy 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Despliegue efecto Aladín puro acelerado por GPU desde el centro inferior hacia arriba */
+@keyframes aladdinGenieDeploy {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 95px, 0) scale(0.08, 0.03);
+    filter: blur(8px) brightness(2);
+  }
+
+  35% {
+    opacity: 0.85;
+    transform: translate3d(0, 35px, 0) scale(0.38, 0.55);
+    filter: blur(2px) brightness(1.5);
+  }
+
+  70% {
+    opacity: 0.98;
+    transform: translate3d(0, -6px, 0) scale(1.02, 1.01);
+    filter: blur(0px) brightness(1.1);
+  }
+
+  88% {
+    opacity: 1;
+    transform: translate3d(0, 2px, 0) scale(0.995, 0.998);
+    filter: blur(0px) brightness(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1, 1);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+/* Haz de barrido láser de arranque acelerado por GPU ascendiendo desde el centro inferior */
+.hud-laser-boot-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 240, 255, 0.4) 20%, #ffffff 50%, rgba(0, 240, 255, 0.4) 80%, transparent 100%);
+  box-shadow: 0 0 12px #00f0ff;
+  pointer-events: none;
+  z-index: 25;
+  animation: laserBootScan 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes laserBootScan {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 780px, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Esquinas tácticas Sci-Fi HUD */
+.hud-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 15;
+  transition: all 0.3s ease;
+}
+
+.hud-corner.top-left {
+  top: 4px;
+  left: 4px;
+  border-top: 2px solid #00f0ff;
+  border-left: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.top-right {
+  top: 4px;
+  right: 4px;
+  border-top: 2px solid #00f0ff;
+  border-right: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.bottom-left {
+  bottom: 4px;
+  left: 4px;
+  border-bottom: 2px solid #00f0ff;
+  border-left: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-corner.bottom-right {
+  bottom: 4px;
+  right: 4px;
+  border-bottom: 2px solid #00f0ff;
+  border-right: 2px solid #00f0ff;
+  filter: drop-shadow(0 0 4px #00f0ff);
+}
+
+.hud-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.7), transparent);
+  box-shadow: 0 0 8px #00f0ff;
+  pointer-events: none;
+  animation: scanline 5s linear infinite;
+  z-index: 10;
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(800px);
+    opacity: 0;
+  }
+}
+
+/* Header */
+.hud-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(14, 28, 36, 0.9);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  position: relative;
+  z-index: 10;
+}
+
+.hud-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.hud-header-jarvis {
+  flex-shrink: 0;
+}
+
+.hud-title-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hud-pulse-radar {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+
+.radar-core {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 10px #00f0ff;
+}
+
+.radar-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(0, 240, 255, 0.4);
+  border-radius: 50%;
+  animation: radarPulse 2s ease-out infinite;
+}
+
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.hud-sub {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: #ff9d42;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hud-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.hud-title span {
+  color: #00f0ff;
+  font-weight: 400;
+  font-size: 0.88rem;
+}
+
+.hud-telemetry-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.telemetry-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 0.66rem;
+  background: rgba(18, 36, 44, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+}
+
+.telemetry-badge.active {
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+}
+
+.telemetry-badge.highlight {
+  border-color: rgba(255, 157, 66, 0.4);
+  color: #ff9d42;
+}
+
+.dot.online {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ffaa;
+  box-shadow: 0 0 8px #00ffaa;
+}
+
+.hud-close-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.hud-close-btn:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+/* Nav & Route Inspection */
+.hud-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 18px;
+  background: rgba(10, 20, 26, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hud-tab.active {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
+}
+
+.hud-tab:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+.hud-action-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(255, 112, 32, 0.2), rgba(255, 157, 66, 0.15));
+  border: 1px solid #ff9d42;
+  color: #ffb777;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 0.70rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: pillGlow 3s infinite ease-in-out;
+}
+
+.hud-action-pill:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255, 112, 32, 0.35), rgba(255, 157, 66, 0.25));
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.hud-action-pill:focus-visible {
+  outline: 2px solid #ff9d42;
+  outline-offset: 2px;
+}
+
+@keyframes pillGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(255, 157, 66, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 14px rgba(255, 157, 66, 0.45);
+  }
+}
+
+/* Chat Body */
+.hud-chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Prompt Chips - Adaptables sin scrolls horizontales */
+.hud-chips-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(8, 16, 20, 0.6);
+  overflow-x: hidden;
+}
+
+.hud-chip {
+  background: rgba(18, 36, 44, 0.7);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #cbd5e1;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 0.70rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-chip:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: #00f0ff;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.hud-chip:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+/* Messages Area - Estrictamente vertical sin scroll horizontal */
+.hud-messages-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+}
+
+.hud-message-row {
+  display: flex;
+  gap: 10px;
+  max-width: 88%;
+  min-width: 0;
+}
+
+.hud-message-row.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.hud-message-row.assistant {
+  align-self: flex-start;
+}
+
+.hud-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: rgba(22, 42, 52, 0.8);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  color: #00f0ff;
+  flex-shrink: 0;
+}
+
+.hud-message-row.user .hud-avatar {
+  border-color: rgba(255, 157, 66, 0.35);
+  background: rgba(45, 28, 18, 0.8);
+  color: #ff9d42;
+}
+
+.hud-message-bubble {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(14, 28, 36, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.hud-message-row.user .hud-message-bubble {
+  background: linear-gradient(135deg, rgba(34, 52, 60, 0.9), rgba(20, 36, 42, 0.95));
+  border-color: rgba(255, 157, 66, 0.3);
+}
+
+.hud-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.62rem;
+  margin-bottom: 6px;
+  color: #64748b;
+}
+
+.sender-tag {
+  font-weight: 800;
+  color: #00f0ff;
+  letter-spacing: 0.08em;
+}
+
+.hud-message-row.user .sender-tag {
+  color: #ff9d42;
+}
+
+.hud-msg-text {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.hud-msg-text p {
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.hud-msg-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Tool Telemetry Collapsible Accordion (Sin JSON en bruto) */
+.hud-tool-details {
+  margin-top: 10px;
+  background: rgba(6, 14, 20, 0.7);
+  border: 1px solid rgba(0, 255, 170, 0.2);
+  border-radius: 6px;
+  font-size: 0.70rem;
+  overflow: hidden;
+}
+
+.tool-details-summary {
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(0, 255, 170, 0.05);
+  transition: background 0.15s ease;
+  list-style: none;
+}
+
+.tool-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-details-summary:hover {
+  background: rgba(0, 255, 170, 0.12);
+}
+
+.summary-badge {
+  color: #00ffaa;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+.summary-toggle-text {
+  color: #64748b;
+  font-size: 0.64rem;
+}
+
+.tool-details-body {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(4, 9, 14, 0.5);
+}
+
+.tool-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-card-title {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+}
+
+.tool-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-dl-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.tool-dt {
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.tool-dd {
+  color: #e2e8f0;
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Typing Indicator */
+.loading-bubble {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.hud-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #00f0ff;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+}
+
+.scan-wave {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #00f0ff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Input Bar */
+.hud-input-bar {
+  padding: 12px 18px;
+  display: flex;
+  gap: 10px;
+  background: rgba(12, 24, 30, 0.95);
+  border-top: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+.hud-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hud-input-prefix {
+  position: absolute;
+  left: 12px;
+  color: #00f0ff;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.hud-input {
+  width: 100%;
+  background: rgba(6, 12, 16, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 6px;
+  padding: 10px 14px 10px 32px;
+  color: #ffffff;
+  font-size: 0.80rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hud-input:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+}
+
+.hud-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #00f0ff, #0284c7);
+  border: 0;
+  border-radius: 6px;
+  padding: 0 18px;
+  color: #020617;
+  font-weight: 800;
+  font-size: 0.74rem;
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38bdf8, #0369a1);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.hud-send-btn:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
+}
+
+/* Telemetry Diagnostics Body */
+.hud-telemetry-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+}
+
+.hud-telemetry-body h3 {
+  margin: 0 0 16px 0;
+  font-size: 0.88rem;
+  letter-spacing: 0.1em;
+  color: #00f0ff;
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+
+/* Supresión estricta de barras de scroll horizontal en todo el visor */
+.hud-messages-area::-webkit-scrollbar,
+.hud-telemetry-body::-webkit-scrollbar,
+.tool-io::-webkit-scrollbar {
+  width: 6px;
+  height: 0px;
+}
+
+.hud-messages-area::-webkit-scrollbar-track,
+.hud-telemetry-body::-webkit-scrollbar-track,
+.tool-io::-webkit-scrollbar-track {
+  background: rgba(4, 9, 14, 0.4);
+}
+
+.hud-messages-area::-webkit-scrollbar-thumb,
+.hud-telemetry-body::-webkit-scrollbar-thumb,
+.tool-io::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.25);
+  border-radius: 4px;
+}
+
+.telemetry-card {
+  background: rgba(14, 28, 36, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.telemetry-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: #ff9d42;
+}
+
+.telemetry-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.74rem;
+  line-height: 1.75;
+  color: #cbd5e1;
+}
+
+.telemetry-card strong {
+  color: #ffffff;
+}
+
+/* Footer */
+.hud-footer {
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(6, 12, 16, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.60rem;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.hud-coord-indicator {
+  color: #ff9d42;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility: Prefers-Reduced-Motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+  .hud-scanline,
+  .hud-laser-boot-beam,
+  .hud-genie-steam,
+  .jarvis-spin-orbit-alpha,
+  .jarvis-spin-orbit-beta,
+  .jarvis-spin-orbit-gamma,
+  .orbit-particle-alpha,
+  .orbit-particle-beta,
+  .orbit-particle-gamma,
+  .jarvis-ring-outer-ticks,
+  .jarvis-orbital-nodes,
+  .jarvis-ring-segmented,
+  .jarvis-ring-counter,
+  .jarvis-ring-inner-arc,
+  .jarvis-iris-rays,
+  .jarvis-pulse-glow,
+  .jarvis-core-pulse,
+  .ares-fab-sonar-ping,
+  .radar-ring,
+  .ares-fab-pulse,
+  .hud-action-pill,
+  .scan-wave {
+    animation: none !important;
+  }
+
+  .ares-agent-window {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .ares-fab-trigger:hover,
+  .hud-send-btn:hover,
+  .hud-chip:hover {
+    transform: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Responsiveness (375px - 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .ares-fab-trigger {
+    bottom: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    padding: 8px 16px;
+    font-size: 0.72rem;
+  }
+
+  .ares-agent-window {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .hud-message-row {
+    max-width: 95%;
+  }
+
+  .telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-badge:not(.active):not(.highlight) {
+    display: none;
+  }
+}

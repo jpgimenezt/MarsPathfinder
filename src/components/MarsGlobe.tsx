@@ -4,7 +4,7 @@ import {
   Raycaster, Scene, SphereGeometry, SRGBColorSpace, Texture, TextureLoader, Vector2, Vector3, WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { isFrontFacing, isSurfaceClick, JEZERO_CRATER, surfacePoint } from '../features/globe/globeCoordinates'
+import { GALE_CRATER, isFrontFacing, isSurfaceClick, JEZERO_CRATER, surfacePoint } from '../features/globe/globeCoordinates'
 import { MolaElevationLegend } from './MolaElevationLegend'
 
 const MIN_DISTANCE = 2.25
@@ -13,7 +13,7 @@ const initialPosition = surfacePoint(...JEZERO_CRATER, 3.15)
 type GlobeTexture = 'mola' | 'viking'
 const textureFiles: Record<GlobeTexture, string> = {
   mola: 'data/mars-mola-global-1024.jpg',
-  viking: 'data/mars-viking-global-1024.webp',
+  viking: 'data/mars-viking-global-2048.webp',
 }
 const sourceUrls: Record<GlobeTexture, string> = {
   mola: 'https://astrogeology.usgs.gov/search/map/mars_mgs_mola_global_color_shaded_relief_463m',
@@ -22,12 +22,14 @@ const sourceUrls: Record<GlobeTexture, string> = {
 
 interface Props {
   onJezero: () => void
+  onGaleTerrain?: () => void
   onFailure: () => void
 }
 
-export function MarsGlobe({ onJezero, onFailure }: Props) {
+export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const marker = useRef<HTMLButtonElement>(null)
+  const galeMarker = useRef<HTMLButtonElement>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeTexture, setActiveTexture] = useState<GlobeTexture>('mola')
   const [vikingLoading, setVikingLoading] = useState(false)
@@ -72,6 +74,7 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     const raycaster = new Raycaster()
     const pointer = new Vector2()
     const markerPoint = surfacePoint(...JEZERO_CRATER, 1.025)
+    const galeMarkerPoint = surfacePoint(...GALE_CRATER, 1.025)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let animation: { from: Vector3; to: Vector3; started: number } | null = null
     let start: { x: number; y: number; id: number; moved: boolean } | null = null
@@ -137,13 +140,25 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     }
     function updateMarker() {
       const button = marker.current
-      if (!button) return
-      const visible = isFrontFacing(markerPoint, camera.position, 1.025)
-      const projected = markerPoint.clone().project(camera)
-      button.hidden = !visible || Math.abs(projected.x) > 0.94 || Math.abs(projected.y) > 0.9
-      if (!button.hidden) {
-        button.style.left = `${(projected.x + 1) * 50}%`
-        button.style.top = `${(1 - projected.y) * 50}%`
+      if (button) {
+        const visible = isFrontFacing(markerPoint, camera.position, 1.025)
+        const projected = markerPoint.clone().project(camera)
+        button.hidden = !visible || Math.abs(projected.x) > 0.94 || Math.abs(projected.y) > 0.9
+        if (!button.hidden) {
+          button.style.left = `${(projected.x + 1) * 50}%`
+          button.style.top = `${(1 - projected.y) * 50}%`
+        }
+      }
+
+      const galeBtn = galeMarker.current
+      if (galeBtn) {
+        const visibleGale = isFrontFacing(galeMarkerPoint, camera.position, 1.025)
+        const projectedGale = galeMarkerPoint.clone().project(camera)
+        galeBtn.hidden = !visibleGale || Math.abs(projectedGale.x) > 0.94 || Math.abs(projectedGale.y) > 0.9
+        if (!galeBtn.hidden) {
+          galeBtn.style.left = `${(projectedGale.x + 1) * 50}%`
+          galeBtn.style.top = `${(1 - projectedGale.y) * 50}%`
+        }
       }
     }
     function render(time: number) {
@@ -271,8 +286,17 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     <div className="globe-copy">
       <span className="eyebrow">EXPLORACIÓN PLANETARIA · {activeTexture === 'mola' ? 'MGS MOLA' : 'VIKING MDIM 2.1'}</span>
       <h2>Marte, antes de<br /><em>dar el primer paso.</em></h2>
-      <p>Girá el planeta y explorá sus regiones. Jezero te lleva al mapa científico 2D, donde permanece tu plan de recorrido.</p>
-      <button type="button" className="globe-primary" onClick={onJezero}>Explorar Jezero <span aria-hidden="true">↗</span></button>
+      <p>Girá el planeta y explorá sus regiones. Ingresá a Gale Crater para el relieve 3D con elevaciones reales o a Jezero para el mapa 2D.</p>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {onGaleTerrain && (
+          <button type="button" className="globe-primary" onClick={onGaleTerrain} style={{ background: 'linear-gradient(135deg, #00f0ff, #0284c7)', color: '#04090e', fontWeight: 800 }}>
+            [01] GALE CRATER 3D <span aria-hidden="true">↗</span>
+          </button>
+        )}
+        <button type="button" className="globe-primary" onClick={onJezero}>
+          [03] JEZERO 2D <span aria-hidden="true">↗</span>
+        </button>
+      </div>
       <p className="globe-warning">{activeTexture === 'mola' ? 'Relieve sombreado visual NASA/USGS' :
         'Mosaico Viking colorizado por NASA Ames / USGS, no color natural exacto'} · no representa pendientes ni seguridad de una ruta.</p>
     </div>
@@ -291,10 +315,21 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     <div className="globe-viewport">
       <div className="globe-canvas" ref={host} aria-label="Esfera de Marte; arrastrá para girar, usá la rueda para acercar, tocá una región para centrarla." />
       {status === 'loading' && <span className="globe-loading" role="status">Cargando textura MOLA…</span>}
-      {status === 'ready' && <button type="button" className="globe-marker" ref={marker} onClick={onJezero}
-        aria-label="Jezero Crater, 18.41 grados norte, 77.69 grados este. Abrir mapa científico 2D">
-        <span className="globe-arrow" aria-hidden="true">⌄</span><span>Jezero Crater</span>
-      </button>}
+      {status === 'ready' && (
+        <>
+          <button type="button" className="globe-marker" ref={marker} onClick={onJezero}
+            aria-label="Jezero Crater, 18.41 grados norte, 77.69 grados este. Abrir mapa científico 2D">
+            <span className="globe-arrow" aria-hidden="true">⌄</span><span>Jezero Crater</span>
+          </button>
+          {onGaleTerrain && (
+            <button type="button" className="globe-marker gale-marker" ref={galeMarker} onClick={onGaleTerrain}
+              style={{ borderColor: '#00f0ff', color: '#00f0ff' }}
+              aria-label="Gale Crater, 5.37 grados sur, 137.44 grados este. Abrir visor 3D de terreno y Mount Sharp">
+              <span className="globe-arrow" aria-hidden="true" style={{ color: '#00f0ff' }}>⌄</span><span>Gale Crater (Mount Sharp)</span>
+            </button>
+          )}
+        </>
+      )}
     </div>
     <div className="globe-controls" aria-label="Controles del globo">
       <button type="button" onClick={() => actions.current?.rotate(-20)} aria-label="Girar Marte a la izquierda">←</button>
@@ -304,6 +339,6 @@ export function MarsGlobe({ onJezero, onFailure }: Props) {
     </div>
     <div className="globe-credit"><a href={sourceUrls[activeTexture]} target="_blank" rel="noreferrer">
       {activeTexture === 'mola' ? 'NASA / USGS · MGS MOLA · relieve sombreado' :
-        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global 1024×512 px</div>
+        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global {activeTexture === 'viking' ? '2048×1024 px' : '1024×512 px'}</div>
   </section>
 }

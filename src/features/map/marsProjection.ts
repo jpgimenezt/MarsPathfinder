@@ -24,6 +24,17 @@ export const FALLBACK_EXTENT: [number, number, number, number] = [
   77.34375, 18.28125, 77.51953125, 18.45703125,
 ]
 
+// ROI de exploración de Gale Crater y Mount Sharp (Curiosity MSL)
+export const GALE_ROI: [number, number, number, number] = [137.20, -5.45, 138.00, -4.50]
+
 export function insideRoi(point: readonly number[]): boolean {
   return point[0] >= ROI[0] && point[0] <= ROI[2] && point[1] >= ROI[1] && point[1] <= ROI[3]
+}
+
+export function insideGaleRoi(point: readonly number[]): boolean {
+  return point[0] >= GALE_ROI[0] && point[0] <= GALE_ROI[2] && point[1] >= GALE_ROI[1] && point[1] <= GALE_ROI[3]
+}
+
+export function insideAnyActiveRoi(point: readonly number[]): boolean {
+  return insideRoi(point) || insideGaleRoi(point)
 }

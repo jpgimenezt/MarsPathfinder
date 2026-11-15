@@ -27,7 +27,7 @@ import { loadWmts } from '../features/map/wmtsSources'
 import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
-import type { TerrainMissionRoute, TerrainRouteResult } from '../features/route/terrainPathfinder'
+import { type TerrainMissionRoute, type TerrainRouteResult } from '../features/route/terrainPathfinder'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
 export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
@@ -98,6 +98,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   const regionChangeHandler = useRef(onRegionChange)
   regionChangeHandler.current = onRegionChange
   const dragOrigin = useRef<MarsPoint | null>(null)
+  const redrawRouteRef = useRef<(() => void) | null>(null)
+  const suggestedRouteRef = useRef(suggestedRoute)
+  suggestedRouteRef.current = suggestedRoute
   const skipClick = useRef(false)
   const handler = useRef(onPlace)
   const moveHandler = useRef(onMove)
@@ -168,17 +171,28 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     function redrawRoute() {
       vectors.current.clear()
       for (const [from, to] of [['A', 'P'], ['P', 'B']] as [StopId, StopId][]) {
-        const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates()
-        const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates()
+        const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
+        const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
         if (!first || !last) continue
-        const segment = new Feature({ geometry: new LineString([first, last]) })
-        segment.setStyle([
-          new Style({ stroke: new Stroke({ color: '#17242c', width: 9, lineCap: 'round', lineJoin: 'round' }) }),
-          new Style({ stroke: new Stroke({ color: '#ffcb84', width: 4, lineCap: 'round', lineJoin: 'round' }) }),
-        ])
+        const segment = new Feature({ geometry: new LineString([[first[0], first[1]], [last[0], last[1]]]) })
+        if (suggestedRouteRef.current) {
+          // Conservar trazado manual como referencia visual (baseline)
+          segment.setStyle([
+            new Style({ stroke: new Stroke({ color: 'rgba(15, 23, 42, 0.75)', width: 7 }) }),
+            new Style({ stroke: new Stroke({ color: 'rgba(245, 158, 11, 0.65)', width: 2.5, lineDash: [8, 8] }) }),
+          ])
+        } else {
+          // Trazado manual activo: conexión directa geodésica seleccionada por el usuario
+          segment.setStyle([
+            new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
+          ])
+        }
         vectors.current.addFeature(segment)
       }
     }
+    redrawRouteRef.current = redrawRoute
     points.current.on('changefeature', redrawRoute)
     const jezero = createJezeroView()
     localView.current = jezero
@@ -379,7 +393,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
 
   useEffect(() => {
     suggestedVectors.current.clear()
-    routeLayer.current?.setVisible(scope === 'jezero' && !suggestedRoute)
+    // Conservar SIEMPRE el trazado manual visible como referencia en Jezero
+    routeLayer.current?.setVisible(scope === 'jezero')
+    redrawRouteRef.current?.()
     if (!suggestedRoute) return
     function addLine(points: MarsPoint[], color: string, dashed = false) {
       if (points.length < 2) return
