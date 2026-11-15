@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import {
   AmbientLight,
+  BoxGeometry,
   BufferGeometry,
   CatmullRomCurve3,
   Color,
@@ -16,6 +17,8 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  OctahedronGeometry,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
   Raycaster,
@@ -215,7 +218,7 @@ export function MarsTerrain3D({
     cameraRef.current = camera
     camera.position.set(-50, 48, 85)
 
-    // 3. Renderizador WebGL2 con PBR e iluminación lineal
+    // 3. Renderizador WebGL2 con PBR e iluminación lineal y sombras suaves PCF
     const renderer = new WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -225,6 +228,8 @@ export function MarsTerrain3D({
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.outputColorSpace = SRGBColorSpace
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = PCFSoftShadowMap
     container.innerHTML = ''
     container.appendChild(renderer.domElement)
 
@@ -243,12 +248,23 @@ export function MarsTerrain3D({
     const skyDome = createMartianSkyDome(950)
     scene.add(skyDome)
 
-    // 6. Iluminación Solar y Difusa
+    // 6. Iluminación Solar y Difusa con sombras rasantes de Marte
     const ambientLight = new AmbientLight(0xffeedd, 0.65)
     scene.add(ambientLight)
 
-    const sunLight = new DirectionalLight(0xfff5ea, 2.4)
+    const sunLight = new DirectionalLight(0xfff5ea, 2.5)
     sunLight.position.set(140, 220, 100)
+    sunLight.castShadow = true
+    sunLight.shadow.mapSize.width = 2048
+    sunLight.shadow.mapSize.height = 2048
+    sunLight.shadow.camera.near = 10
+    sunLight.shadow.camera.far = 600
+    sunLight.shadow.camera.left = -150
+    sunLight.shadow.camera.right = 150
+    sunLight.shadow.camera.top = 150
+    sunLight.shadow.camera.bottom = -150
+    sunLight.shadow.bias = -0.0003
+    sunLight.shadow.normalBias = 0.02
     scene.add(sunLight)
 
     const skyFillLight = new DirectionalLight(0xd97736, 0.75)
@@ -298,40 +314,92 @@ export function MarsTerrain3D({
     })
 
     const terrainMesh = new Mesh(terrainGeo, terrainMat)
+    terrainMesh.receiveShadow = true
     terrainMeshRef.current = terrainMesh
     scene.add(terrainMesh)
 
-    // 8. Balizas Científicas de Descubrimientos de Curiosity
+    // 8. Balizas Científicas de Descubrimientos de Curiosity (Estaciones de Sensores + Retícula Holográfica)
     const beaconsGroup = new Group()
     beaconsGroupRef.current = beaconsGroup
     scene.add(beaconsGroup)
 
     GALE_DISCOVERIES.forEach((disc) => {
       const { x, z } = geoToTerrainPosition(disc.coordinates.lon, disc.coordinates.lat)
-      const y = (disc.elevationMeters + 4500) * ELEVATION_SCALE + 0.5
+      const y = (disc.elevationMeters + 4500) * ELEVATION_SCALE
 
       const pinGroup = new Group()
       pinGroup.position.set(x, y, z)
       pinGroup.name = `discovery-${disc.id}`
+      pinGroup.userData = { discoveryData: disc }
 
-      const stemGeo = new CylinderGeometry(0.3, 0.3, 4.5, 12)
-      stemGeo.translate(0, 2.25, 0)
-      const stemMat = new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 })
-      const stem = new Mesh(stemGeo, stemMat)
-      pinGroup.add(stem)
+      // Trípode de anclaje de titanio al regolito
+      for (let leg = 0; leg < 3; leg++) {
+        const legAngle = (leg * Math.PI * 2) / 3
+        const legGeo = new CylinderGeometry(0.08, 0.1, 1.8, 6)
+        legGeo.rotateZ(Math.PI / 5.2)
+        legGeo.translate(0.65, 0.8, 0)
+        legGeo.rotateY(legAngle)
+        const legMesh = new Mesh(legGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.3 }))
+        legMesh.castShadow = true
+        legMesh.receiveShadow = true
+        pinGroup.add(legMesh)
+      }
 
-      const ringGeo = new RingGeometry(1.2, 1.8, 24)
-      ringGeo.rotateX(-Math.PI / 2)
-      const ringMat = new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7 })
-      const ring = new Mesh(ringGeo, ringMat)
-      pinGroup.add(ring)
+      // Canister central presurizado de instrumentación analítica (CheMin/SAM)
+      const coreGeo = new CylinderGeometry(0.55, 0.62, 1.0, 8)
+      coreGeo.translate(0, 1.2, 0)
+      const coreMesh = new Mesh(coreGeo, new MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.3 }))
+      coreMesh.castShadow = true
+      coreMesh.receiveShadow = true
+      pinGroup.add(coreMesh)
 
-      const headGeo = new CylinderGeometry(1.3, 0, 1.8, 6)
-      headGeo.translate(0, 5, 0)
-      const headMat = new MeshBasicMaterial({ color: 0xffffff })
-      const head = new Mesh(headGeo, headMat)
-      pinGroup.add(head)
+      // Tapa con micro-celdas solares fotovoltaicas
+      const capGeo = new CylinderGeometry(0.6, 0.6, 0.08, 8)
+      capGeo.translate(0, 1.72, 0)
+      const capMesh = new Mesh(capGeo, new MeshStandardMaterial({ color: 0x172554, metalness: 0.9, roughness: 0.15 }))
+      pinGroup.add(capMesh)
 
+      // Mástil sensor vertical con cabezal óptico Mastcam / ChemCam
+      const mastGeo = new CylinderGeometry(0.09, 0.09, 2.2, 8)
+      mastGeo.translate(0, 2.8, 0)
+      const mastMesh = new Mesh(mastGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 }))
+      mastMesh.castShadow = true
+      pinGroup.add(mastMesh)
+
+      const sensorHeadGeo = new BoxGeometry(0.5, 0.35, 0.5)
+      sensorHeadGeo.translate(0, 3.9, 0)
+      const sensorHeadMesh = new Mesh(sensorHeadGeo, new MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.7, roughness: 0.3 }))
+      sensorHeadMesh.castShadow = true
+      pinGroup.add(sensorHeadMesh)
+
+      // Lente óptica del espectrómetro láser
+      const lensGeo = new CylinderGeometry(0.14, 0.14, 0.1, 12)
+      lensGeo.rotateX(Math.PI / 2)
+      lensGeo.translate(0, 3.9, 0.26)
+      pinGroup.add(new Mesh(lensGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
+
+      // Retícula táctica holográfica FUI flotante sobre la estación de superficie
+      const reticleGroup = new Group()
+      reticleGroup.position.set(0, 5.4, 0)
+      reticleGroup.name = 'holographic-reticle'
+
+      // Anillo exterior con muescas de adquisición de objetivo
+      const outerRingGeo = new RingGeometry(1.3, 1.45, 32)
+      outerRingGeo.rotateX(-Math.PI / 2)
+      reticleGroup.add(new Mesh(outerRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8, side: DoubleSide })))
+
+      // Rombo de telemetría interior
+      const diamondRingGeo = new RingGeometry(0.5, 0.65, 4)
+      diamondRingGeo.rotateX(-Math.PI / 2)
+      diamondRingGeo.rotateZ(Math.PI / 4)
+      reticleGroup.add(new Mesh(diamondRingGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: DoubleSide })))
+
+      // Rayo guía láser vertical hacia el suelo
+      const guideLaserGeo = new CylinderGeometry(0.02, 0.02, 5.4, 6)
+      guideLaserGeo.translate(0, -2.7, 0)
+      reticleGroup.add(new Mesh(guideLaserGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.35 })))
+
+      pinGroup.add(reticleGroup)
       beaconsGroup.add(pinGroup)
     })
 
@@ -511,8 +579,12 @@ export function MarsTerrain3D({
       clockTime += 0.016
 
       beaconsGroup.children.forEach((beacon, index) => {
-        const pulse = Math.sin(clockTime * 3 + index * 1.5) * 0.15 + 1
-        beacon.scale.set(pulse, 1, pulse)
+        const reticle = beacon.getObjectByName('holographic-reticle')
+        if (reticle) {
+          reticle.rotation.y += 0.015
+          const pulse = Math.sin(clockTime * 3 + index * 1.2) * 0.1 + 1.0
+          reticle.scale.set(pulse, pulse, pulse)
+        }
       })
 
       if (landingRingsRef.current) {
@@ -615,14 +687,19 @@ export function MarsTerrain3D({
 
     if (sampled3DPoints.length >= 2) {
       const curve = new CatmullRomCurve3(sampled3DPoints)
-      const tubeGeo = new TubeGeometry(curve, sampled3DPoints.length * 2, 0.45, 8, false)
-      const tubeMat = new MeshBasicMaterial({
+      // Núcleo central luminoso blanco
+      const coreTubeGeo = new TubeGeometry(curve, sampled3DPoints.length * 2, 0.22, 8, false)
+      const coreMat = new MeshBasicMaterial({ color: 0xffffff })
+      group.add(new Mesh(coreTubeGeo, coreMat))
+
+      // Envoltura táctica holográfica coloreada
+      const haloTubeGeo = new TubeGeometry(curve, sampled3DPoints.length * 2, 0.52, 8, false)
+      const haloMat = new MeshBasicMaterial({
         color: walkbackAssessment.status === 'CRÍTICO' ? 0xef4444 : 0x00f0ff,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.65,
       })
-      const routeMesh = new Mesh(tubeGeo, tubeMat)
-      group.add(routeMesh)
+      group.add(new Mesh(haloTubeGeo, haloMat))
     }
 
     routePointsList.forEach((stop) => {
@@ -630,13 +707,42 @@ export function MarsTerrain3D({
       const elev = getGaleElevation(stop.point[0], stop.point[1])
       const y = (elev + 4500) * ELEVATION_SCALE
 
-      const markerGeo = new CylinderGeometry(0.8, 0.8, 3, 16)
-      markerGeo.translate(0, 1.5, 0)
-      const color = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xef4444
-      const markerMat = new MeshBasicMaterial({ color })
-      const markerMesh = new Mesh(markerGeo, markerMat)
-      markerMesh.position.set(x, y, z)
-      group.add(markerMesh)
+      const waypointGroup = new Group()
+      waypointGroup.position.set(x, y, z)
+
+      const colorHex = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xef4444
+
+      // Base octogonal de titanio anclada al suelo
+      const baseGeo = new CylinderGeometry(1.3, 1.5, 0.28, 8)
+      const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 }))
+      baseMesh.castShadow = true
+      baseMesh.receiveShadow = true
+      waypointGroup.add(baseMesh)
+
+      // Anillo de distancia de seguridad en el regolito
+      const distRingGeo = new RingGeometry(2.5, 2.8, 32)
+      distRingGeo.rotateX(-Math.PI / 2)
+      distRingGeo.translate(0, 0.08, 0)
+      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.75, side: DoubleSide })))
+
+      // Pylón táctico de aleación aeroespacial
+      const pylonGeo = new CylinderGeometry(0.28, 0.38, 2.8, 8)
+      pylonGeo.translate(0, 1.4, 0)
+      const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 }))
+      pylonMesh.castShadow = true
+      waypointGroup.add(pylonMesh)
+
+      // Collar emisor de baliza de navegación
+      const collarGeo = new CylinderGeometry(0.48, 0.48, 0.45, 8)
+      collarGeo.translate(0, 2.4, 0)
+      waypointGroup.add(new Mesh(collarGeo, new MeshBasicMaterial({ color: colorHex })))
+
+      // Prisma holográfico en la cima
+      const diamondGeo = new OctahedronGeometry(0.5, 0)
+      diamondGeo.translate(0, 3.4, 0)
+      waypointGroup.add(new Mesh(diamondGeo, new MeshBasicMaterial({ color: 0xffffff })))
+
+      group.add(waypointGroup)
     })
   }, [routePointsList, walkbackAssessment.status])
 
