@@ -1,11 +1,15 @@
-import { lazy, Suspense, useCallback, useReducer, useState } from 'react'
+import { lazy, Suspense, useCallback, useReducer, useState, useMemo } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
 import { AresAgentChat } from '../components/AresAgentChat'
+import { AresMissionCommsModal } from '../components/AresMissionCommsModal'
 import { sources, type LayerId } from '../data/sourceManifest'
 import { insideAnyActiveRoi, insideRoi } from '../features/map/marsProjection'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
+import { buildCompactMissionContext } from '../features/agent/missionContext'
+import type { AppActionHandlers } from '../features/agent/toolExecutionEngine'
+import type { TerrainLayerType } from '../features/terrain/terrainShaderUtils'
 import '../styles/agentChat.css'
 import '../styles/terrain3D.css'
 
@@ -44,6 +48,19 @@ export function App() {
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
   const [isAgentOpen, setIsAgentOpen] = useState(false)
+  const [isCommsOpen, setIsCommsOpen] = useState(false)
+
+  // Estados de control remoto para ARES MISSION COMMS sobre el mapa 3D y capas
+  const [focusTarget, setFocusTarget] = useState<{ lat: number; lon: number; height?: number } | null>(null)
+  const [activeLayer3DOverride, setActiveLayer3DOverride] = useState<TerrainLayerType | null>(null)
+  const [isComparisonOpenOverride, setIsComparisonOpenOverride] = useState<boolean | null>(null)
+  const [isDataCenterOpenOverride, setIsDataCenterOpenOverride] = useState<boolean | null>(null)
+  const [isTourActiveOverride, setIsTourActiveOverride] = useState<boolean | null>(null)
+  const [tourStatus, setTourStatus] = useState<{ active: boolean; paused: boolean; stopIdx: number }>({
+    active: false,
+    paused: false,
+    stopIdx: 0,
+  })
 
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
@@ -92,6 +109,61 @@ export function App() {
       </button>
     )
   }
+
+  const appHandlers = useMemo<AppActionHandlers>(() => {
+    return {
+      focusCamera: ({ lat, lon, height }) => {
+        setScreen('terrain3d')
+        setFocusTarget({ lat, lon, height })
+      },
+      toggleLayer: (layerId, enabledVal) => {
+        if (layerId === 'ctx' || layerId === 'mola' || layerId === 'themis') {
+          setEnabled(prev => ({ ...prev, [layerId as LayerId]: enabledVal }))
+        }
+        if (layerId === 'geology') {
+          setActiveLayer3DOverride(enabledVal ? 'geology' : 'optical')
+        } else if (layerId === 'themis') {
+          setActiveLayer3DOverride(enabledVal ? 'thermal' : 'optical')
+        } else if (layerId === 'mola') {
+          setActiveLayer3DOverride(enabledVal ? 'dem' : 'optical')
+        } else if (layerId === 'ctx') {
+          setActiveLayer3DOverride('ctx_mosaic')
+        }
+      },
+      setWaypoint: (id, point) => {
+        dispatch({ type: 'set', id, point })
+      },
+      previewRoute: () => {
+        setPanel('route')
+      },
+      openComparisonModal: open => {
+        setScreen('terrain3d')
+        setIsComparisonOpenOverride(open)
+      },
+      openDataCenterModal: open => {
+        setScreen('terrain3d')
+        setIsDataCenterOpenOverride(open)
+      },
+      startTour: () => {
+        setScreen('terrain3d')
+        setIsTourActiveOverride(true)
+      },
+      pauseTour: () => {
+        setIsTourActiveOverride(prev => !prev)
+      },
+      getContextSnapshot: () => {
+        return buildCompactMissionContext({
+          screen,
+          scope,
+          currentStops: plan.stops,
+          enabledLayers: enabled,
+          isDiscoveryTourActive: tourStatus.active,
+          isDiscoveryPaused: tourStatus.paused,
+          currentDiscoveryStopIndex: tourStatus.stopIdx,
+        })
+      },
+    }
+  }, [screen, scope, plan.stops, enabled, tourStatus])
 
   return (
     <div className="app">
@@ -146,6 +218,16 @@ export function App() {
           </button>
           <button
             type="button"
+            className={`nav-mode-btn nav-mode-comms ${isCommsOpen ? 'active' : ''}`}
+            onClick={() => setIsCommsOpen(prev => !prev)}
+            title="ARES MISSION COMMS (Copiloto de voz en tiempo real con Amazon Nova 2.5 Sonic)"
+          >
+            <span className="nav-mode-pulse" aria-hidden="true" />
+            <span className="nav-btn-code">VOZ</span>
+            <span className="nav-btn-text">MISSION COMMS</span>
+          </button>
+          <button
+            type="button"
             className={`nav-mode-btn nav-mode-agent ${isAgentOpen ? 'active' : ''}`}
             onClick={() => setIsAgentOpen(prev => !prev)}
             title="Consola Táctica Copiloto ARES-NAV (IA con verificación geodésica)"
@@ -193,6 +275,12 @@ export function App() {
               onSelectScienceStop={handleSelectScienceStopFrom3D}
               onSwitchToGlobal={() => setScreen('globe')}
               onSwitchToJezero2D={openJezero}
+              focusTarget={focusTarget}
+              activeLayerOverride={activeLayer3DOverride}
+              isComparisonOpenOverride={isComparisonOpenOverride}
+              isDataCenterOpenOverride={isDataCenterOpenOverride}
+              isTourActiveOverride={isTourActiveOverride}
+              onTourStateChange={(active, paused, stopIdx) => setTourStatus({ active, paused, stopIdx })}
             />
           </Suspense>
         </main>
@@ -577,6 +665,23 @@ export function App() {
         onClose={() => setIsAgentOpen(false)}
         currentStops={plan.stops}
         totalDistanceMeters={legs.total}
+      />
+
+      <AresMissionCommsModal
+        isOpen={isCommsOpen}
+        onOpen={() => setIsCommsOpen(true)}
+        onClose={() => setIsCommsOpen(false)}
+        appHandlers={appHandlers}
+        contextInput={{
+          screen,
+          scope,
+          currentStops: plan.stops,
+          enabledLayers: enabled,
+          isDiscoveryTourActive: tourStatus.active,
+          isDiscoveryPaused: tourStatus.paused,
+          currentDiscoveryStopIndex: tourStatus.stopIdx,
+        }}
+        currentStops={plan.stops}
       />
     </div>
   )

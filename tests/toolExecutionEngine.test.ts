@@ -1,0 +1,132 @@
+import { describe, it, expect, vi } from 'vitest'
+import { ToolExecutionEngine, type AppActionHandlers } from '../src/features/agent/toolExecutionEngine'
+import { buildCompactMissionContext } from '../src/features/agent/missionContext'
+
+describe('ARES MISSION COMMS - ToolExecutionEngine', () => {
+  const mockHandlers: AppActionHandlers = {
+    focusCamera: vi.fn(),
+    toggleLayer: vi.fn(),
+    setWaypoint: vi.fn(),
+    previewRoute: vi.fn(),
+    openComparisonModal: vi.fn(),
+    openDataCenterModal: vi.fn(),
+    openSurfaceIntelligenceModal: vi.fn(),
+    startTour: vi.fn(),
+    pauseTour: vi.fn(),
+    setCleanViewMode: vi.fn(),
+    triggerSimContingency: vi.fn(),
+    getContextSnapshot: () =>
+      buildCompactMissionContext({
+        screen: 'terrain3d',
+        currentLocation: { lat: -4.68, lon: 137.40 },
+      }),
+  }
+
+  it('ejecuta herramientas de Nivel 1 (Consulta) de forma inmediata sin confirmación', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'getCurrentMissionContext',
+      input: {},
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.securityLevel).toBe(1)
+    expect(result.requiresConfirmation).toBeFalsy()
+    expect(result.output).toHaveProperty('systemName', 'ARES-NAV TACTICAL SYSTEM')
+  })
+
+  it('ejecuta herramientas de Nivel 2 (Visualización) y activa callbacks reales de la app', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'focusGeographicTarget',
+      input: {
+        lat: -4.68,
+        lon: 137.40,
+        height: 25,
+        durationSeconds: 2.5,
+        targetName: 'Mount Sharp Boxwork',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.securityLevel).toBe(2)
+    expect(mockHandlers.focusCamera).toHaveBeenCalledWith({
+      lat: -4.68,
+      lon: 137.40,
+      height: 25,
+      duration: 2.5,
+    })
+    expect(result.output.status).toBe('CAMERA_TRANSITION_DISPATCHED')
+  })
+
+  it('solicita confirmación para herramientas de Nivel 3 (Modificación de waypoints)', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'createMissionWaypoint',
+      input: {
+        stopId: 'P',
+        lat: -4.685,
+        lon: 137.395,
+        name: 'Afloramiento Boxwork',
+      },
+    })
+
+    expect(result.securityLevel).toBe(3)
+    expect(result.requiresConfirmation).toBe(true)
+    expect(result.pendingConfirmationId).toBeDefined()
+    expect(result.confirmationMessage).toContain('P')
+
+    // Confirmar la acción
+    const confirmResult = await engine.confirmPendingAction(result.pendingConfirmationId!, true)
+    expect(confirmResult.success).toBe(true)
+    expect(mockHandlers.setWaypoint).toHaveBeenCalledWith('P', [137.395, -4.685], 'Afloramiento Boxwork')
+  })
+
+  it('cancela la acción si el usuario decide abortar', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'createMissionWaypoint',
+      input: {
+        stopId: 'B',
+        lat: -4.75,
+        lon: 137.38,
+      },
+    })
+
+    expect(result.requiresConfirmation).toBe(true)
+    const cancelResult = await engine.confirmPendingAction(result.pendingConfirmationId!, false)
+    expect(cancelResult.success).toBe(false)
+    expect(cancelResult.output.status).toBe('CANCELLED_BY_ASTRONAUT')
+  })
+
+  it('valida parámetros con Zod y rechaza coordenadas inválidas', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'focusGeographicTarget',
+      input: {
+        lat: 95.0, // Latitud fuera de rango (-90 a 90)
+        lon: 137.40,
+      },
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.output.error).toBe('INVALID_PARAMETERS')
+  })
+
+  it('mantiene compatibilidad con calculate_mars_distance usando Rm = 3,389.5 km', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const result = await engine.executeTool({
+      tool: 'calculate_mars_distance',
+      input: {
+        lat1: 18.42,
+        lon1: 77.45,
+        lat2: 18.51,
+        lon2: 77.30,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.output.mars_radius_km).toBe(3389.5)
+    expect(result.output.distance_km).toBeCloseTo(9.959, 1)
+  })
+})

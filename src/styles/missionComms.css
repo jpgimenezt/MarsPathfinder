@@ -1,0 +1,696 @@
+/**
+ * ARES MISSION COMMS - Aerospace / Martian Mission Control Styling
+ * Paleta Oficial:
+ * - Space Black: #090E14
+ * - Deep Graphite: #111B25
+ * - Martian Copper: #D77B50
+ * - Telemetry Cyan: #63D4E5
+ * - Ice White: #E8EDF2
+ * - Titanium Grey: #82919E
+ * - Warning Amber: #E9B85C
+ */
+
+:root {
+  --color-space-black: #090E14;
+  --color-deep-graphite: #111B25;
+  --color-martian-copper: #D77B50;
+  --color-telemetry-cyan: #63D4E5;
+  --color-ice-white: #E8EDF2;
+  --color-titanium-grey: #82919E;
+  --color-warning-amber: #E9B85C;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* =========================================================
+   TRIGGER FLOTANTE HUD (FAB) MISSION COMMS
+   ========================================================= */
+.ares-comms-fab-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(9, 14, 20, 0.95), rgba(17, 27, 37, 0.9));
+  border: 1.5px solid var(--color-telemetry-cyan);
+  border-radius: 40px;
+  padding: 8px 18px 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 212, 229, 0.25);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  color: var(--color-ice-white);
+  font-family: var(--font-mono);
+}
+
+.ares-comms-fab-trigger:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: #a5f3fc;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 28px rgba(99, 212, 229, 0.45);
+}
+
+.ares-comms-fab-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  border-radius: 40px;
+  border: 1px solid var(--color-telemetry-cyan);
+  opacity: 0.6;
+  animation: comms-radar-ping 2.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes comms-radar-ping {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+.ares-comms-fab-core {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ares-comms-fab-labels {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.ares-comms-fab-badge {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--color-telemetry-cyan);
+  font-weight: 700;
+}
+
+.ares-comms-fab-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-ice-white);
+}
+
+/* =========================================================
+   OVERLAY MODAL DE MISSION COMMS
+   ========================================================= */
+.ares-comms-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(9, 14, 20, 0.82);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: comms-fade-in 0.25s ease-out;
+  padding: 16px;
+}
+
+@keyframes comms-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ares-comms-panel {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  height: 90vh;
+  max-height: 840px;
+  background: var(--color-space-black);
+  border: 1.5px solid rgba(99, 212, 229, 0.4);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 40px rgba(99, 212, 229, 0.15);
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* Retícula de esquinas FUI */
+.ares-comms-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--color-telemetry-cyan);
+  pointer-events: none;
+  z-index: 10;
+}
+.ares-comms-corner.top-left { top: 6px; left: 6px; border-top: 2px solid; border-left: 2px solid; }
+.ares-comms-corner.top-right { top: 6px; right: 6px; border-top: 2px solid; border-right: 2px solid; }
+.ares-comms-corner.bottom-left { bottom: 6px; left: 6px; border-bottom: 2px solid; border-left: 2px solid; }
+.ares-comms-corner.bottom-right { bottom: 6px; right: 6px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* =========================================================
+   HEADER PANEL ARES MISSION COMMS
+   ========================================================= */
+.ares-comms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--color-deep-graphite);
+  border-bottom: 1.5px solid rgba(99, 212, 229, 0.3);
+  position: relative;
+}
+
+.ares-comms-header-title-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ares-comms-logo-ring {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-telemetry-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(99, 212, 229, 0.25) 0%, rgba(9, 14, 20, 0.8) 70%);
+  position: relative;
+}
+
+.ares-comms-eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--color-martian-copper);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ares-comms-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-ice-white);
+}
+
+.ares-comms-title span {
+  color: var(--color-telemetry-cyan);
+}
+
+.ares-comms-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =========================================================
+   BADGES DE ESTADO REAL DEL SISTEMA
+   ========================================================= */
+.ares-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+.ares-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Estados */
+.ares-status-badge.VOICE_OFFLINE {
+  background: rgba(130, 145, 158, 0.15);
+  border-color: var(--color-titanium-grey);
+  color: var(--color-titanium-grey);
+}
+.ares-status-badge.VOICE_OFFLINE .ares-status-dot { background: var(--color-titanium-grey); }
+
+.ares-status-badge.CONNECTING,
+.ares-status-badge.RECONNECTING {
+  background: rgba(233, 184, 92, 0.15);
+  border-color: var(--color-warning-amber);
+  color: var(--color-warning-amber);
+}
+.ares-status-badge.CONNECTING .ares-status-dot,
+.ares-status-badge.RECONNECTING .ares-status-dot {
+  background: var(--color-warning-amber);
+  animation: comms-blink 0.8s infinite;
+}
+
+.ares-status-badge.LISTENING {
+  background: rgba(99, 212, 229, 0.15);
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-telemetry-cyan);
+}
+.ares-status-badge.LISTENING .ares-status-dot {
+  background: var(--color-telemetry-cyan);
+  box-shadow: 0 0 8px var(--color-telemetry-cyan);
+  animation: comms-breathe 1.5s infinite;
+}
+
+.ares-status-badge.PROCESSING {
+  background: rgba(215, 123, 80, 0.15);
+  border-color: var(--color-martian-copper);
+  color: var(--color-martian-copper);
+}
+.ares-status-badge.PROCESSING .ares-status-dot {
+  background: var(--color-martian-copper);
+  animation: comms-blink 0.5s infinite;
+}
+
+.ares-status-badge.SPEAKING {
+  background: rgba(99, 212, 229, 0.25);
+  border-color: var(--color-ice-white);
+  color: var(--color-ice-white);
+  box-shadow: 0 0 10px rgba(99, 212, 229, 0.3);
+}
+.ares-status-badge.SPEAKING .ares-status-dot {
+  background: #ffffff;
+  box-shadow: 0 0 10px #ffffff;
+}
+
+.ares-status-badge.TOOL_EXECUTION {
+  background: rgba(233, 184, 92, 0.25);
+  border-color: var(--color-warning-amber);
+  color: var(--color-warning-amber);
+}
+.ares-status-badge.TOOL_EXECUTION .ares-status-dot {
+  background: var(--color-warning-amber);
+  animation: comms-blink 0.3s infinite;
+}
+
+.ares-status-badge.ERROR {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ff6666;
+}
+.ares-status-badge.ERROR .ares-status-dot { background: #ff4444; }
+
+@keyframes comms-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes comms-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+
+.ares-comms-close-btn {
+  background: transparent;
+  border: 1px solid rgba(130, 145, 158, 0.4);
+  color: var(--color-ice-white);
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ares-comms-close-btn:hover {
+  border-color: var(--color-telemetry-cyan);
+  background: rgba(99, 212, 229, 0.1);
+}
+
+/* =========================================================
+   BARRA DE CONTROLES DE VOZ Y TELEMETRÍA
+   ========================================================= */
+.ares-comms-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(17, 27, 37, 0.7);
+  border-bottom: 1px solid rgba(99, 212, 229, 0.2);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ares-comms-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ares-comms-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+}
+
+.ares-comms-action-btn.primary {
+  background: linear-gradient(135deg, rgba(99, 212, 229, 0.25), rgba(99, 212, 229, 0.1));
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-ice-white);
+}
+.ares-comms-action-btn.primary:hover {
+  background: var(--color-telemetry-cyan);
+  color: var(--color-space-black);
+  box-shadow: 0 0 15px rgba(99, 212, 229, 0.4);
+}
+
+.ares-comms-action-btn.active-listening {
+  background: var(--color-telemetry-cyan);
+  color: var(--color-space-black);
+  border-color: #ffffff;
+  box-shadow: 0 0 15px rgba(99, 212, 229, 0.6);
+}
+
+.ares-comms-action-btn.stop {
+  background: rgba(255, 68, 68, 0.15);
+  border-color: #ff5555;
+  color: #ff7777;
+}
+.ares-comms-action-btn.stop:hover {
+  background: #ff4444;
+  color: #ffffff;
+}
+
+.ares-comms-action-btn.toggle {
+  background: transparent;
+  border-color: rgba(130, 145, 158, 0.4);
+  color: var(--color-titanium-grey);
+}
+.ares-comms-action-btn.toggle.active {
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-telemetry-cyan);
+  background: rgba(99, 212, 229, 0.12);
+}
+
+.ares-comms-setting-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--color-titanium-grey);
+}
+
+.ares-comms-select {
+  background: var(--color-deep-graphite);
+  border: 1px solid rgba(99, 212, 229, 0.3);
+  color: var(--color-ice-white);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.ares-comms-volume-slider {
+  width: 70px;
+  accent-color: var(--color-telemetry-cyan);
+  cursor: pointer;
+}
+
+/* =========================================================
+   CANVAS DE VISUALIZACIÓN DINÁMICA DE AUDIO
+   ========================================================= */
+.ares-comms-visualizer-container {
+  padding: 10px 20px;
+  background: rgba(9, 14, 20, 0.9);
+  border-bottom: 1px solid rgba(99, 212, 229, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ares-comms-visualizer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--color-titanium-grey);
+}
+
+.ares-comms-waveform-canvas {
+  width: 100%;
+  height: 52px;
+  background: rgba(17, 27, 37, 0.5);
+  border: 1px solid rgba(99, 212, 229, 0.2);
+  border-radius: 6px;
+  display: block;
+}
+
+/* =========================================================
+   ÁREA DE TRANSCRIPCIÓN Y CHAT CONCURRENTE
+   ========================================================= */
+.ares-comms-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ares-comms-msg-row {
+  display: flex;
+  gap: 12px;
+  max-width: 88%;
+}
+
+.ares-comms-msg-row.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.ares-comms-msg-row.assistant {
+  align-self: flex-start;
+}
+
+.ares-comms-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+
+.ares-comms-msg-row.user .ares-comms-avatar {
+  background: rgba(215, 123, 80, 0.15);
+  border-color: var(--color-martian-copper);
+  color: var(--color-martian-copper);
+}
+
+.ares-comms-msg-row.assistant .ares-comms-avatar {
+  background: rgba(99, 212, 229, 0.15);
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-telemetry-cyan);
+}
+
+.ares-comms-bubble {
+  background: var(--color-deep-graphite);
+  border: 1px solid rgba(99, 212, 229, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--color-ice-white);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.ares-comms-msg-row.user .ares-comms-bubble {
+  background: rgba(215, 123, 80, 0.1);
+  border-color: rgba(215, 123, 80, 0.35);
+}
+
+.ares-comms-msg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  font-size: 0.68rem;
+  color: var(--color-titanium-grey);
+}
+
+.ares-comms-msg-sender {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.ares-comms-msg-row.user .ares-comms-msg-sender {
+  color: var(--color-martian-copper);
+}
+.ares-comms-msg-row.assistant .ares-comms-msg-sender {
+  color: var(--color-telemetry-cyan);
+}
+
+/* =========================================================
+   CARD DE CONFIRMACIÓN DE SEGURIDAD (NIVEL 3 Y 4)
+   ========================================================= */
+.ares-comms-confirmation-card {
+  margin: 10px 0;
+  padding: 12px 16px;
+  background: rgba(233, 184, 92, 0.12);
+  border: 1.5px solid var(--color-warning-amber);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: comms-card-pulse 2s infinite;
+}
+
+@keyframes comms-card-pulse {
+  0%, 100% { border-color: var(--color-warning-amber); }
+  50% { border-color: #ffe082; }
+}
+
+.ares-confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-warning-amber);
+  letter-spacing: 0.1em;
+}
+
+.ares-confirmation-prompt {
+  font-size: 0.88rem;
+  color: var(--color-ice-white);
+  font-weight: 600;
+}
+
+.ares-confirmation-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ares-confirm-btn {
+  background: var(--color-warning-amber);
+  color: var(--color-space-black);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ares-confirm-btn:hover {
+  background: #fff;
+}
+
+.ares-abort-btn {
+  background: transparent;
+  color: var(--color-titanium-grey);
+  border: 1px solid rgba(130, 145, 158, 0.4);
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.ares-abort-btn:hover {
+  border-color: #ff5555;
+  color: #ff7777;
+}
+
+/* =========================================================
+   BARRA DE ENTRADA HÍBRIDA (TEXTO + VOZ)
+   ========================================================= */
+.ares-comms-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: var(--color-deep-graphite);
+  border-top: 1px solid rgba(99, 212, 229, 0.2);
+}
+
+.ares-comms-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--color-space-black);
+  border: 1px solid rgba(99, 212, 229, 0.3);
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+.ares-comms-prefix {
+  color: var(--color-telemetry-cyan);
+  font-size: 1rem;
+  margin-right: 8px;
+}
+
+.ares-comms-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-ice-white);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 10px 0;
+}
+
+.ares-comms-input::placeholder {
+  color: var(--color-titanium-grey);
+}
+
+.ares-comms-send-btn {
+  background: var(--color-telemetry-cyan);
+  color: var(--color-space-black);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.ares-comms-send-btn:hover:not(:disabled) {
+  background: #a5f3fc;
+  box-shadow: 0 0 12px rgba(99, 212, 229, 0.4);
+}
+
+.ares-comms-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   FOOTER TELEMETRÍA Y STATUS
+   ========================================================= */
+.ares-comms-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: var(--color-space-black);
+  border-top: 1px solid rgba(99, 212, 229, 0.15);
+  font-size: 0.68rem;
+  color: var(--color-titanium-grey);
+}

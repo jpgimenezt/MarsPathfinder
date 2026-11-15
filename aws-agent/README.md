@@ -121,3 +121,19 @@ async function askMarsAgent(question: string) {
   return data;
 }
 ```
+
+---
+
+## 6. ARES MISSION COMMS — Copiloto de Voz en Tiempo Real (Amazon Nova 2.5 Sonic)
+
+Además del agente serverless HTTP, la plataforma integra **ARES MISSION COMMS**, un copiloto de voz bidireccional en tiempo real para interacción speech-to-speech con el astronauta en superficie:
+
+- **Modelo de Voz:** `amazon.nova-2-5-sonic` (Amazon Bedrock Runtime, región `us-west-2` / `us-east-1`).
+- **Protocolo:** `InvokeModelWithBidirectionalStream` (HTTP/2 Event Stream persistente).
+- **Audio:** 16kHz PCM mono de entrada (micrófono con Web Audio API) y 24kHz PCM mono de salida (voces `carlos` y `lupe`).
+- **Herramientas Dinámicas:** 14 herramientas operacionales clasificadas en 4 niveles de seguridad (reorientación de cámara 3D, activación de capas orbitales, trazado de waypoints, tour guiado y cálculo de distancias con $R_M = 3,389.5\text{ km}$).
+- **Documentación Completa:** Consultar [`docs/ARES_MISSION_COMMS_NOVA_SONIC.md`](../docs/ARES_MISSION_COMMS_NOVA_SONIC.md).
+- **Ejecución Local del Voice Gateway:**
+  ```bash
+  npm run voice:gateway
+  ```

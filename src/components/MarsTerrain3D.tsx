@@ -87,6 +87,12 @@ interface MarsTerrain3DProps {
   onSwitchToGlobal?: () => void
   onSwitchToJezero2D?: () => void
   initialDive?: boolean
+  focusTarget?: { lat: number; lon: number; height?: number } | null
+  activeLayerOverride?: TerrainLayerType | null
+  isComparisonOpenOverride?: boolean | null
+  isDataCenterOpenOverride?: boolean | null
+  isTourActiveOverride?: boolean | null
+  onTourStateChange?: (active: boolean, paused: boolean, stopIdx: number) => void
 }
 
 interface EdlFlightTelemetry {
@@ -124,6 +130,12 @@ export function MarsTerrain3D({
   onSwitchToGlobal,
   onSwitchToJezero2D,
   initialDive = false,
+  focusTarget,
+  activeLayerOverride,
+  isComparisonOpenOverride,
+  isDataCenterOpenOverride,
+  isTourActiveOverride,
+  onTourStateChange,
 }: MarsTerrain3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
@@ -153,6 +165,44 @@ export function MarsTerrain3D({
   const [currentDiscoveryStopIndex, setCurrentDiscoveryStopIndex] = useState(0)
   const [isDiscoveryPaused, setIsDiscoveryPaused] = useState(false)
   const [isCleanViewMode, setIsCleanViewMode] = useState(false)
+
+  // Sincronización de overrides provenientes de ARES MISSION COMMS
+  useEffect(() => {
+    if (focusTarget && controlsRef.current && cameraRef.current) {
+      const { x, z } = geoToTerrainPosition(focusTarget.lon, focusTarget.lat)
+      const elev = (getGaleElevation(focusTarget.lon, focusTarget.lat) + 4500) * ELEVATION_SCALE
+      controlsRef.current.target.set(x, elev + 2, z)
+      cameraRef.current.position.set(x + 12, elev + (focusTarget.height ? focusTarget.height * ELEVATION_SCALE : 14), z + 16)
+    }
+  }, [focusTarget])
+
+  useEffect(() => {
+    if (activeLayerOverride && activeLayerOverride !== activeLayer) {
+      setActiveLayer(activeLayerOverride)
+    }
+  }, [activeLayerOverride, activeLayer])
+
+  useEffect(() => {
+    if (isComparisonOpenOverride !== undefined && isComparisonOpenOverride !== null) {
+      setIsMissionComparisonOpen(isComparisonOpenOverride)
+    }
+  }, [isComparisonOpenOverride])
+
+  useEffect(() => {
+    if (isDataCenterOpenOverride !== undefined && isDataCenterOpenOverride !== null) {
+      setIsDataCenterOpen(isDataCenterOpenOverride)
+    }
+  }, [isDataCenterOpenOverride])
+
+  useEffect(() => {
+    if (isTourActiveOverride !== undefined && isTourActiveOverride !== null) {
+      setIsDiscoveryTourActive(isTourActiveOverride)
+    }
+  }, [isTourActiveOverride])
+
+  useEffect(() => {
+    onTourStateChange?.(isDiscoveryTourActive, isDiscoveryPaused, currentDiscoveryStopIndex)
+  }, [isDiscoveryTourActive, isDiscoveryPaused, currentDiscoveryStopIndex, onTourStateChange])
 
   const isDiscoveryTourActiveRef = useRef(isDiscoveryTourActive)
   isDiscoveryTourActiveRef.current = isDiscoveryTourActive

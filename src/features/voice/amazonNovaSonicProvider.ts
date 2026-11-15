@@ -1,0 +1,591 @@
+/**
+ * ARES MISSION COMMS - Amazon Nova 2.5 Sonic Voice Provider
+ * Implementación de VoiceProvider para streaming de voz bidireccional speech-to-speech
+ * Conecta con ARES Voice Gateway a través de WebSocket seguro y Web Audio API
+ */
+
+import type {
+  VoiceProvider,
+  VoiceState,
+  VoiceConfig,
+  VoiceEventListener,
+  TranscriptEvent,
+  AudioVisualizerData,
+} from './voiceProvider'
+
+// Worklet de audio para captura y conversión a PCM 16kHz 16-bit mono
+const PCM_WORKLET_CODE = `
+class PcmCaptureProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.bufferSize = 2048;
+    this.buffer = new Float32Array(this.bufferSize);
+    this.bytesWritten = 0;
+  }
+
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    if (!input || input.length === 0) return true;
+    const channelData = input[0];
+
+    for (let i = 0; i < channelData.length; i++) {
+      this.buffer[this.bytesWritten++] = channelData[i];
+      if (this.bytesWritten >= this.bufferSize) {
+        this.flush();
+      }
+    }
+    return true;
+  }
+
+  flush() {
+    // Convertir Float32 a Int16 Linear PCM
+    const pcm16 = new Int16Array(this.bytesWritten);
+    for (let i = 0; i < this.bytesWritten; i++) {
+      const s = Math.max(-1, Math.min(1, this.buffer[i]));
+      pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+
+    this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
+    this.buffer = new Float32Array(this.bufferSize);
+    this.bytesWritten = 0;
+  }
+}
+registerProcessor('pcm-capture-processor', PcmCaptureProcessor);
+`
+
+export class AmazonNovaSonicProvider implements VoiceProvider {
+  public id = 'amazon-nova-2-5-sonic'
+  public name = 'Amazon Nova 2.5 Sonic (Speech-to-Speech)'
+  public state: VoiceState = 'VOICE_OFFLINE'
+  public config: VoiceConfig
+
+  private ws: WebSocket | null = null
+  private listeners: VoiceEventListener[] = []
+  private missionContext: Record<string, unknown> = {}
+
+  // Web Audio Contexts & Nodos
+  private audioCtx: AudioContext | null = null
+  private mediaStream: MediaStream | null = null
+  private sourceNode: MediaStreamAudioSourceNode | null = null
+  private workletNode: AudioWorkletNode | null = null
+  private analyserUser: AnalyserNode | null = null
+  private analyserAssistant: AnalyserNode | null = null
+  private visualizerInterval: any = null
+
+  // Cola de reproducción de voz sintetizada de ARES (24kHz)
+  private playbackCtx: AudioContext | null = null
+  private nextPlayTime = 0
+  private activeAudioSources: AudioBufferSourceNode[] = []
+
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 3
+  private manualDisconnect = false
+
+  constructor(initialConfig?: Partial<VoiceConfig>) {
+    this.config = {
+      voiceId: initialConfig?.voiceId || 'carlos',
+      endpointUrl:
+        initialConfig?.endpointUrl ||
+        (typeof window !== 'undefined'
+          ? `ws://${window.location.hostname}:8088/voice`
+          : 'ws://localhost:8088/voice'),
+      interactionMode: initialConfig?.interactionMode || 'PUSH_TO_TALK',
+      volume: initialConfig?.volume ?? 1.0,
+      isMuted: initialConfig?.isMuted ?? false,
+      turnDetectionSensitivity: initialConfig?.turnDetectionSensitivity || 'HIGH',
+    }
+  }
+
+  public async connect(): Promise<void> {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return
+    }
+
+    this.manualDisconnect = false
+    this.setState('CONNECTING')
+
+    return new Promise((resolve, reject) => {
+      try {
+        console.log(`[NOVA SONIC PROVIDER] Conectando a ${this.config.endpointUrl}...`)
+        this.ws = new WebSocket(this.config.endpointUrl)
+
+        this.ws.onopen = () => {
+          console.log('[NOVA SONIC PROVIDER] Enlace WebSocket establecido.')
+          this.reconnectAttempts = 0
+
+          // Enviar inicialización de sesión
+          this.sendWsMessage({
+            type: 'init',
+            voiceId: this.config.voiceId,
+            initialContext: this.missionContext,
+          })
+
+          this.setState('LISTENING')
+          resolve()
+        }
+
+        this.ws.onmessage = async event => {
+          this.handleIncomingMessage(event.data)
+        }
+
+        this.ws.onerror = err => {
+          console.warn('[NOVA SONIC PROVIDER] Error en canal WebSocket:', err)
+          this.notifyError({
+            message: 'No se pudo contactar el ARES Voice Gateway en ' + this.config.endpointUrl,
+            code: 'GATEWAY_UNREACHABLE',
+          })
+          this.setState('ERROR')
+          reject(err)
+        }
+
+        this.ws.onclose = () => {
+          console.log('[NOVA SONIC PROVIDER] Canal WebSocket cerrado.')
+          this.cleanupAudio()
+
+          if (!this.manualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++
+            this.setState('RECONNECTING')
+            setTimeout(() => this.connect(), 2000 * this.reconnectAttempts)
+          } else {
+            this.setState('VOICE_OFFLINE')
+          }
+        }
+      } catch (err: unknown) {
+        this.setState('ERROR')
+        const error = err instanceof Error ? err : new Error(String(err))
+        this.notifyError({ message: error.message, code: 'CONNECTION_FAILED' })
+        reject(error)
+      }
+    })
+  }
+
+  public async disconnect(): Promise<void> {
+    this.manualDisconnect = true
+    this.stopAudioCapture()
+    this.cleanupAudio()
+
+    if (this.ws) {
+      this.sendWsMessage({ type: 'close' })
+      this.ws.close()
+      this.ws = null
+    }
+
+    this.setState('VOICE_OFFLINE')
+  }
+
+  public async startListening(): Promise<void> {
+    if (this.config.isMuted) return
+    await this.initAudioCapture()
+    this.setState('LISTENING')
+  }
+
+  public async stopListening(): Promise<void> {
+    this.stopAudioCapture()
+    this.sendWsMessage({ type: 'end_audio_turn' })
+    if (this.state === 'LISTENING') {
+      this.setState('PROCESSING')
+    }
+  }
+
+  public mute(muted: boolean): void {
+    this.config.isMuted = muted
+    if (muted) {
+      this.stopAudioCapture()
+    }
+  }
+
+  public setVolume(volume: number): void {
+    this.config.volume = Math.max(0, Math.min(1, volume))
+  }
+
+  public interrupt(): void {
+    // Detener reproducción inmediata de audio de ARES
+    for (const source of this.activeAudioSources) {
+      try {
+        source.stop()
+      } catch {}
+    }
+    this.activeAudioSources = []
+    this.nextPlayTime = 0
+
+    // Notificar al gateway que se interrumpió el turno
+    this.sendWsMessage({ type: 'interrupt' })
+    this.setState('LISTENING')
+  }
+
+  public async sendTextMessage(text: string): Promise<void> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      await this.connect()
+    }
+
+    this.sendWsMessage({
+      type: 'text_message',
+      text,
+    })
+    this.setState('PROCESSING')
+  }
+
+  public updateMissionContext(context: Record<string, unknown>): void {
+    this.missionContext = context
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.sendWsMessage({
+        type: 'update_context',
+        context,
+      })
+    }
+  }
+
+  public updateConfig(newConfig: Partial<VoiceConfig>): void {
+    this.config = { ...this.config, ...newConfig }
+    if (newConfig.voiceId && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      // Reinicializar sesión con la nueva voz
+      this.sendWsMessage({
+        type: 'init',
+        voiceId: this.config.voiceId,
+        initialContext: this.missionContext,
+      })
+    }
+  }
+
+  public subscribe(listener: VoiceEventListener): () => void {
+    this.listeners.push(listener)
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener)
+    }
+  }
+
+  // ==========================================
+  // MANEJO DE AUDIO WEB AUDIO API Y WORKLETS
+  // ==========================================
+
+  private async initAudioCapture(): Promise<void> {
+    if (this.workletNode) return // Ya inicializado
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Navegador sin soporte de captura de micrófono (getUserMedia no disponible).')
+      }
+
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 16000,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
+
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
+      this.audioCtx = new AudioCtxClass({ sampleRate: 16000 })
+      if (this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume()
+      }
+
+      // Cargar AudioWorklet para procesamiento a 16kHz
+      const blob = new Blob([PCM_WORKLET_CODE], { type: 'application/javascript' })
+      const workletUrl = URL.createObjectURL(blob)
+      await this.audioCtx.audioWorklet.addModule(workletUrl)
+      URL.revokeObjectURL(workletUrl)
+
+      this.sourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream)
+      this.workletNode = new AudioWorkletNode(this.audioCtx, 'pcm-capture-processor')
+
+      // Analizador de nivel de voz del usuario
+      this.analyserUser = this.audioCtx.createAnalyser()
+      this.analyserUser.fftSize = 64
+      this.sourceNode.connect(this.analyserUser)
+      this.sourceNode.connect(this.workletNode)
+      this.workletNode.connect(this.audioCtx.destination)
+
+      this.workletNode.port.onmessage = event => {
+        if (this.config.isMuted) return
+        const pcmBuffer = event.data as ArrayBuffer
+        const base64 = this.arrayBufferToBase64(pcmBuffer)
+
+        this.sendWsMessage({
+          type: 'audio_chunk',
+          pcmBase64: base64,
+        })
+      }
+
+      this.startVisualizerPump()
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      this.notifyError({
+        message: `Error accediendo al micrófono: ${error.message}`,
+        code: 'MIC_ACCESS_DENIED',
+      })
+      this.setState('ERROR')
+    }
+  }
+
+  private stopAudioCapture(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop())
+      this.mediaStream = null
+    }
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.disconnect()
+      } catch {}
+      this.sourceNode = null
+    }
+    if (this.workletNode) {
+      try {
+        this.workletNode.disconnect()
+      } catch {}
+      this.workletNode = null
+    }
+  }
+
+  private cleanupAudio(): void {
+    this.stopAudioCapture()
+    if (this.visualizerInterval) {
+      clearInterval(this.visualizerInterval)
+      this.visualizerInterval = null
+    }
+    if (this.audioCtx) {
+      try {
+        this.audioCtx.close()
+      } catch {}
+      this.audioCtx = null
+    }
+    if (this.playbackCtx) {
+      try {
+        this.playbackCtx.close()
+      } catch {}
+      this.playbackCtx = null
+    }
+    this.activeAudioSources = []
+    this.nextPlayTime = 0
+  }
+
+  /**
+   * Reproducción progresiva de audio recibido de ARES (PCM 24kHz 16-bit mono)
+   */
+  private async enqueueSynthesizedAudio(pcmBase64: string): Promise<void> {
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
+      if (!this.playbackCtx) {
+        this.playbackCtx = new AudioCtxClass({ sampleRate: 24000 })
+        this.analyserAssistant = this.playbackCtx.createAnalyser()
+        this.analyserAssistant.fftSize = 64
+        this.analyserAssistant.connect(this.playbackCtx.destination)
+        this.startVisualizerPump()
+      }
+
+      if (this.playbackCtx.state === 'suspended') {
+        await this.playbackCtx.resume()
+      }
+
+      const pcmBytes = this.base64ToArrayBuffer(pcmBase64)
+      const int16Array = new Int16Array(pcmBytes)
+      const float32Array = new Float32Array(int16Array.length)
+
+      for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / (int16Array[i] < 0 ? 0x8000 : 0x7fff)
+      }
+
+      const audioBuffer = this.playbackCtx.createBuffer(1, float32Array.length, 24000)
+      audioBuffer.copyToChannel(float32Array, 0)
+
+      const source = this.playbackCtx.createBufferSource()
+      source.buffer = audioBuffer
+
+      // Control de volumen
+      const gainNode = this.playbackCtx.createGain()
+      gainNode.gain.value = this.config.volume
+      source.connect(gainNode)
+
+      if (this.analyserAssistant) {
+        gainNode.connect(this.analyserAssistant)
+      } else {
+        gainNode.connect(this.playbackCtx.destination)
+      }
+
+      const currentTime = this.playbackCtx.currentTime
+      const startTime = Math.max(currentTime, this.nextPlayTime)
+      source.start(startTime)
+
+      this.nextPlayTime = startTime + audioBuffer.duration
+      this.activeAudioSources.push(source)
+
+      source.onended = () => {
+        this.activeAudioSources = this.activeAudioSources.filter(s => s !== source)
+        if (this.activeAudioSources.length === 0 && this.state === 'SPEAKING') {
+          // Si estamos en modo Hands-Free, volver automáticamente a escuchar
+          if (this.config.interactionMode === 'HANDS_FREE') {
+            this.setState('LISTENING')
+            this.startListening()
+          } else {
+            this.setState('LISTENING')
+          }
+        }
+      }
+    } catch (err: unknown) {
+      console.warn('[NOVA SONIC PROVIDER] Error reproduciendo chunk de audio:', err)
+    }
+  }
+
+  // ==========================================
+  // DISPATCHER DE MENSAJES Y EVENTOS
+  // ==========================================
+
+  private async handleIncomingMessage(raw: any): Promise<void> {
+    try {
+      const data = typeof raw === 'string' ? JSON.parse(raw) : raw
+      if (!data || !data.type) return
+
+      switch (data.type) {
+        case 'state_change': {
+          this.setState(data.state)
+          break
+        }
+
+        case 'audio_chunk': {
+          if (data.pcmBase64) {
+            this.setState('SPEAKING')
+            await this.enqueueSynthesizedAudio(data.pcmBase64)
+          }
+          break
+        }
+
+        case 'transcript': {
+          this.notifyTranscript({
+            id: `tr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            role: data.role || 'assistant',
+            text: data.text || '',
+            isFinal: Boolean(data.isFinal),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          })
+          break
+        }
+
+        case 'tool_call': {
+          this.setState('TOOL_EXECUTION')
+          let toolOutput: Record<string, unknown> = {}
+
+          // Notificar al listener de herramientas del frontend
+          for (const l of this.listeners) {
+            if (l.onToolCall) {
+              toolOutput = await l.onToolCall(data.tool, data.input, data.toolUseId)
+            }
+          }
+
+          // Enviar resultado de vuelta al gateway
+          this.sendWsMessage({
+            type: 'tool_result',
+            toolUseId: data.toolUseId,
+            output: toolOutput,
+          })
+          break
+        }
+
+        case 'error': {
+          this.notifyError({
+            message: data.message || 'Error en ARES Voice Gateway',
+            code: data.code,
+          })
+          this.setState('ERROR')
+          break
+        }
+      }
+    } catch (e: unknown) {
+      console.error('[NOVA SONIC PROVIDER] Error al decodificar mensaje entrante:', e)
+    }
+  }
+
+  private startVisualizerPump(): void {
+    if (this.visualizerInterval) return
+
+    const userBuffer = new Uint8Array(32)
+    const assistantBuffer = new Uint8Array(32)
+
+    this.visualizerInterval = setInterval(() => {
+      let userLevel = 0
+      let assistantLevel = 0
+      let source: 'user' | 'assistant' | 'idle' = 'idle'
+      let activeFreq: Uint8Array | undefined = undefined
+
+      if (this.analyserUser && (this.state === 'LISTENING' || this.state === 'CONNECTING')) {
+        this.analyserUser.getByteFrequencyData(userBuffer)
+        let sum = 0
+        for (let i = 0; i < userBuffer.length; i++) sum += userBuffer[i]
+        userLevel = sum / (userBuffer.length * 255)
+        if (userLevel > 0.05) {
+          source = 'user'
+          activeFreq = userBuffer
+        }
+      }
+
+      if (this.analyserAssistant && this.state === 'SPEAKING') {
+        this.analyserAssistant.getByteFrequencyData(assistantBuffer)
+        let sum = 0
+        for (let i = 0; i < assistantBuffer.length; i++) sum += assistantBuffer[i]
+        assistantLevel = sum / (assistantBuffer.length * 255)
+        if (assistantLevel > 0.02) {
+          source = 'assistant'
+          activeFreq = assistantBuffer
+        }
+      }
+
+      const visualData: AudioVisualizerData = {
+        userLevel,
+        assistantLevel,
+        frequencyData: activeFreq,
+        source,
+      }
+
+      for (const l of this.listeners) {
+        l.onAudioLevel?.(visualData)
+      }
+    }, 50)
+  }
+
+  private setState(newState: VoiceState): void {
+    if (this.state === newState) return
+    this.state = newState
+    for (const l of this.listeners) {
+      l.onStateChange?.(newState)
+    }
+  }
+
+  private notifyTranscript(event: TranscriptEvent): void {
+    for (const l of this.listeners) {
+      l.onTranscript?.(event)
+    }
+  }
+
+  private notifyError(err: { message: string; code?: string; fatal?: boolean }): void {
+    for (const l of this.listeners) {
+      l.onError?.(err)
+    }
+  }
+
+  private sendWsMessage(msg: Record<string, unknown>): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(msg))
+    }
+  }
+
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    let binary = ''
+    const bytes = new Uint8Array(buffer)
+    const len = bytes.byteLength
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    return window.btoa(binary)
+  }
+
+  private base64ToArrayBuffer(base64: string): ArrayBuffer {
+    const binaryString = window.atob(base64)
+    const len = binaryString.length
+    const bytes = new Uint8Array(len)
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    return bytes.buffer
+  }
+}
