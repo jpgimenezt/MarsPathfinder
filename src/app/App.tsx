@@ -326,6 +326,7 @@ export function App() {
               onSwitchToJezero2D={openJezero}
               focusTarget={focusTarget}
               activeLayerOverride={activeLayer3DOverride}
+              onLayerChange={layer => setActiveLayer3DOverride(layer)}
               isComparisonOpenOverride={isComparisonOpenOverride}
               isDataCenterOpenOverride={isDataCenterOpenOverride}
               isTourActiveOverride={isTourActiveOverride}

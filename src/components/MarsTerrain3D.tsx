@@ -89,6 +89,7 @@ interface MarsTerrain3DProps {
   initialDive?: boolean
   focusTarget?: { lat: number; lon: number; height?: number } | null
   activeLayerOverride?: TerrainLayerType | null
+  onLayerChange?: (layer: TerrainLayerType) => void
   isComparisonOpenOverride?: boolean | null
   isDataCenterOpenOverride?: boolean | null
   isTourActiveOverride?: boolean | null
@@ -132,6 +133,7 @@ export function MarsTerrain3D({
   initialDive = false,
   focusTarget,
   activeLayerOverride,
+  onLayerChange,
   isComparisonOpenOverride,
   isDataCenterOpenOverride,
   isTourActiveOverride,
@@ -139,6 +141,7 @@ export function MarsTerrain3D({
 }: MarsTerrain3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
+  const lastAppliedOverrideRef = useRef<TerrainLayerType | null>(null)
   const [cameraMode, setCameraMode] = useState<CameraViewMode>('orbit')
   const [leftTab, setLeftTab] = useState<'layers' | 'camera' | 'colony'>('layers')
   const [isLeftDockCollapsed, setIsLeftDockCollapsed] = useState(false)
@@ -176,11 +179,13 @@ export function MarsTerrain3D({
     }
   }, [focusTarget])
 
+  // Sincronización de capa científica con compuerta para no bloquear la selección manual en la UI
   useEffect(() => {
-    if (activeLayerOverride && activeLayerOverride !== activeLayer) {
+    if (activeLayerOverride && activeLayerOverride !== lastAppliedOverrideRef.current) {
+      lastAppliedOverrideRef.current = activeLayerOverride
       setActiveLayer(activeLayerOverride)
     }
-  }, [activeLayerOverride, activeLayer])
+  }, [activeLayerOverride])
 
   useEffect(() => {
     if (isComparisonOpenOverride !== undefined && isComparisonOpenOverride !== null) {
@@ -1669,7 +1674,11 @@ export function MarsTerrain3D({
                     key={key}
                     type="button"
                     className={`layer-select-btn ${active ? 'active' : ''}`}
-                    onClick={() => setActiveLayer(key)}
+                    onClick={() => {
+                      setActiveLayer(key)
+                      lastAppliedOverrideRef.current = key
+                      onLayerChange?.(key)
+                    }}
                   >
                     <span className="layer-btn-title">{meta.name.split(' (')[0]}</span>
                     <span className="layer-btn-sub">{meta.instrument.split(' ')[0]} · {meta.mission.split(' ')[0]}</span>
@@ -1686,7 +1695,11 @@ export function MarsTerrain3D({
                     key={key}
                     type="button"
                     className={`layer-select-btn ${active ? 'active' : ''}`}
-                    onClick={() => setActiveLayer(key)}
+                    onClick={() => {
+                      setActiveLayer(key)
+                      lastAppliedOverrideRef.current = key
+                      onLayerChange?.(key)
+                    }}
                   >
                     <span className="layer-btn-title">{meta.name.split(' (')[0]}</span>
                     <span className="layer-btn-sub">{meta.instrument.split(' ')[0]} · {meta.mission.split(' ')[0]}</span>
@@ -1703,7 +1716,11 @@ export function MarsTerrain3D({
                     key={key}
                     type="button"
                     className={`layer-select-btn ${active ? 'active' : ''}`}
-                    onClick={() => setActiveLayer(key)}
+                    onClick={() => {
+                      setActiveLayer(key)
+                      lastAppliedOverrideRef.current = key
+                      onLayerChange?.(key)
+                    }}
                   >
                     <span className="layer-btn-title">{meta.name.split(' (')[0]}</span>
                     <span className="layer-btn-sub">{meta.instrument.split(' ')[0]} · {meta.mission.split(' ')[0]}</span>

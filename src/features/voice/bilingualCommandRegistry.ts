@@ -76,8 +76,8 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     tool: 'toggleScientificLayer',
     params: { layerId: 'optical', enabled: true },
     phrases: {
-      en: ['show real satellite photo', 'orbital satellite photo', 'optical layer', 'satellite imagery', 'show optical photography', 'real satellite photo'],
-      es: ['mostrar fotografia satelital real', 'fotografia satelital real', 'activar fotografia orbital', 'capa optica', 'foto satelital', 'fotografia orbital', 'mostrar foto real', 'activar foto satelital', 'foto orbital satelital'],
+      en: ['show real satellite photo', 'orbital satellite photo', 'optical layer', 'satellite imagery', 'show optical photography', 'real satellite photo', 'previous layer', 'back to previous', 'reset layer', 'base layer'],
+      es: ['mostrar fotografia satelital real', 'fotografia satelital real', 'activar fotografia orbital', 'capa optica', 'foto satelital', 'fotografia orbital', 'mostrar foto real', 'activar foto satelital', 'foto orbital satelital', 'volver a la anterior', 'capa anterior', 'volver a la foto real', 'quitar capa', 'sacar capa', 'restablecer capa', 'volver al mapa original', 'capa base'],
     },
   },
   {
@@ -412,29 +412,59 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'focusGeographicTarget', params: { targetName: 'Delta de Jezero' } }
   }
 
-  // Fotografía satelital real / óptica
-  if (norm.includes('satelit') || norm.includes('orbital') || norm.includes('foto real') || norm.includes('optic')) {
+  // Fotografía satelital real / óptica / volver a la anterior
+  if (
+    norm.includes('satelit') ||
+    norm.includes('orbital') ||
+    norm.includes('foto real') ||
+    norm.includes('optic') ||
+    norm.includes('volver a la anterior') ||
+    norm.includes('capa anterior') ||
+    norm.includes('volver a la foto') ||
+    norm.includes('sacar capa') ||
+    norm.includes('quitar capa') ||
+    norm.includes('mapa base') ||
+    norm.includes('capa base')
+  ) {
     return { tool: 'toggleScientificLayer', params: { layerId: 'optical', enabled: true } }
+  }
+
+  // Desactivar / apagar capas explícitamente
+  const isDeactivation = norm.includes('desactiv') || norm.includes('apag') || norm.includes('quit') || norm.includes('ocult')
+
+  // Capa térmica / THEMIS
+  if (norm.includes('themis') || norm.includes('temis') || norm.includes('termic')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'themis', enabled: !isDeactivation } }
+  }
+
+  // Relieve MOLA / Elevación
+  if (norm.includes('mola') || norm.includes('relieve') || norm.includes('altimetr') || (norm.includes('elevacion') && !norm.includes('que'))) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'mola', enabled: !isDeactivation } }
+  }
+
+  // Mosaico CTX
+  if (norm.includes('ctx') || norm.includes('mosaico')) {
+    return { tool: 'toggleScientificLayer', params: { layerId: 'ctx', enabled: !isDeactivation } }
   }
 
   // Capas geológicas
   if (norm.includes('geolog')) {
-    return { tool: 'toggleScientificLayer', params: { layerId: 'geology', enabled: true } }
+    return { tool: 'toggleScientificLayer', params: { layerId: 'geology', enabled: !isDeactivation } }
   }
 
   // Minerales / Espectral / CRISM
   if (norm.includes('mineral') || norm.includes('espectral') || norm.includes('crism')) {
-    return { tool: 'toggleScientificLayer', params: { layerId: 'spectral', enabled: true } }
+    return { tool: 'toggleScientificLayer', params: { layerId: 'spectral', enabled: !isDeactivation } }
   }
 
   // Pendientes / Riesgo
   if (norm.includes('pendient') || norm.includes('slope')) {
-    return { tool: 'toggleScientificLayer', params: { layerId: 'slope', enabled: true } }
+    return { tool: 'toggleScientificLayer', params: { layerId: 'slope', enabled: !isDeactivation } }
   }
 
   // Radiación
   if (norm.includes('radiac') || norm.includes('dosimetr')) {
-    return { tool: 'toggleScientificLayer', params: { layerId: 'radiation', enabled: true } }
+    return { tool: 'toggleScientificLayer', params: { layerId: 'radiation', enabled: !isDeactivation } }
   }
 
   // Bradbury Landing / Base LZ-1
