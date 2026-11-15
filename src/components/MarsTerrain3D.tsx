@@ -71,6 +71,7 @@ import {
 import type { StopId } from '../features/route/routePlan'
 import {
   CURIOSITY_HISTORICAL_PATH,
+  curiosityWaypointTitle,
   type CuriosityTraversePoint,
 } from '../features/science/curiosityPathData'
 import {
@@ -2286,7 +2287,7 @@ export function MarsTerrain3D({
             {/* 4. Vista de Hito de la Travesía de Curiosity (MSL Heritage) */}
             {selectedCuriosityWaypoint && (
               <>
-                <h3 className="drawer-title">{selectedCuriosityWaypoint.name}</h3>
+                <h3 className="drawer-title">{curiosityWaypointTitle(selectedCuriosityWaypoint, language)}</h3>
                 <p className="drawer-sub">
                   Sol {selectedCuriosityWaypoint.sol} · {ui('tour coordinates and dates unverified against the rover record', 'coordenadas y fechas del recorrido sin verificar contra el registro del rover')}
                 </p>
@@ -2337,7 +2338,7 @@ export function MarsTerrain3D({
                       onClick={() => {
                         onSelectScienceStop(
                           [selectedCuriosityWaypoint.lon, selectedCuriosityWaypoint.lat],
-                          `Curiosity Sol ${selectedCuriosityWaypoint.sol}: ${selectedCuriosityWaypoint.name.split(' (')[0]}`,
+                          `Curiosity Sol ${selectedCuriosityWaypoint.sol}: ${curiosityWaypointTitle(selectedCuriosityWaypoint, language).split(' (')[0]}`,
                         )
                       }}
                     >
