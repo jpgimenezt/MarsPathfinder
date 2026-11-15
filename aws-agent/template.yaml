@@ -10,12 +10,6 @@ Parameters:
     Default: "us.amazon.nova-pro-v1:0"
     Description: "Foundation model ID / Inference profile on Amazon Bedrock"
 
-  AresAuthToken:
-    Type: String
-    Default: "ares-tactical-2026"
-    NoEcho: true
-    Description: "Shared security token for x-ares-origin-token header verification"
-
 Resources:
   # -------------------------------------------------------------
   # S3 Bucket for Knowledge Base documents
@@ -88,23 +82,25 @@ Resources:
       Environment:
         Variables:
           BEDROCK_MODEL_ID: !Ref FoundationModel
-          ARES_AUTH_TOKEN: !Ref AresAuthToken
       FunctionUrlConfig:
         AuthType: NONE
         Cors:
           AllowOrigins:
             - "https://ares-route.vercel.app"
             - "https://mars-pathfinder.vercel.app"
+            - "https://jpgimenezt.github.io"
             - "http://localhost:5173"
+            - "http://localhost:4173"
             - "http://localhost:3000"
             - "http://localhost:8088"
+            - "http://127.0.0.1:5173"
+            - "http://127.0.0.1:4173"
           AllowMethods:
             - "GET"
             - "POST"
             - "OPTIONS"
           AllowHeaders:
             - "content-type"
-            - "x-ares-origin-token"
             - "authorization"
           MaxAge: 86400
 

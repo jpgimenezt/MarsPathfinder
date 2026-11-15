@@ -26,12 +26,16 @@ export const GATEWAY_CONFIG: GatewayConfig = {
     ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
     : [
         'http://localhost:5173',
+        'http://localhost:4173',
         'http://localhost:3000',
         'http://localhost:8088',
         'http://127.0.0.1:5173',
+        'http://127.0.0.1:4173',
         'https://ares-route.vercel.app',
         'https://mars-pathfinder.vercel.app',
         'https://*.vercel.app',
+        'https://jpgimenezt.github.io',
+        'https://*.github.io',
       ],
   sampleRateInput: 16000, // 16kHz PCM para entrada de micrófono
   sampleRateOutput: 24000, // 24kHz PCM para salida de voz sintetizada de Nova Sonic

@@ -7,9 +7,6 @@ export const AWS_AGENT_ENDPOINT =
   import.meta.env.VITE_AWS_AGENT_ENDPOINT ||
   'https://laf33lrf26heqguui3pe3zqjje0rrnaw.lambda-url.us-east-2.on.aws/'
 
-export const ARES_AUTH_TOKEN =
-  import.meta.env.VITE_ARES_AUTH_TOKEN || 'ares-tactical-2026'
-
 export interface ToolCallExecution {
   tool: string
   input: Record<string, unknown>
@@ -46,7 +43,6 @@ export async function queryMarsAgent(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-ares-origin-token': ARES_AUTH_TOKEN,
       },
       signal: controller.signal,
       body: JSON.stringify({

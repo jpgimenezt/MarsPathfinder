@@ -98,6 +98,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   const regionChangeHandler = useRef(onRegionChange)
   regionChangeHandler.current = onRegionChange
   const dragOrigin = useRef<MarsPoint | null>(null)
+  const redrawRouteRef = useRef<(() => void) | null>(null)
+  const suggestedRouteRef = useRef(suggestedRoute)
+  suggestedRouteRef.current = suggestedRoute
   const skipClick = useRef(false)
   const handler = useRef(onPlace)
   const moveHandler = useRef(onMove)
@@ -173,14 +176,24 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
         if (!first || !last) continue
         const curvedCoords = calculateObstacleAvoidanceRoute(first, last, 28)
         const segment = new Feature({ geometry: new LineString(curvedCoords.map(p => [p[0], p[1]])) })
-        segment.setStyle([
-          new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
-          new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
-          new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
-        ])
+        if (suggestedRouteRef.current) {
+          // Conservar trazado manual como referencia visual (baseline)
+          segment.setStyle([
+            new Style({ stroke: new Stroke({ color: 'rgba(15, 23, 42, 0.75)', width: 7 }) }),
+            new Style({ stroke: new Stroke({ color: 'rgba(245, 158, 11, 0.65)', width: 2.5, lineDash: [8, 8] }) }),
+          ])
+        } else {
+          // Trazado manual activo
+          segment.setStyle([
+            new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
+          ])
+        }
         vectors.current.addFeature(segment)
       }
     }
+    redrawRouteRef.current = redrawRoute
     points.current.on('changefeature', redrawRoute)
     const jezero = createJezeroView()
     localView.current = jezero
@@ -381,7 +394,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
 
   useEffect(() => {
     suggestedVectors.current.clear()
-    routeLayer.current?.setVisible(scope === 'jezero' && !suggestedRoute)
+    // Conservar SIEMPRE el trazado manual visible como referencia en Jezero
+    routeLayer.current?.setVisible(scope === 'jezero')
+    redrawRouteRef.current?.()
     if (!suggestedRoute) return
     function addLine(points: MarsPoint[], color: string, dashed = false) {
       if (points.length < 2) return
