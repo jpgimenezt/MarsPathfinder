@@ -27,6 +27,7 @@ import { loadWmts } from '../features/map/wmtsSources'
 import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitInitialJezero, fitJezero, fitPlanningRegion, zoomAvailability } from '../features/map/viewNavigation'
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
+import { calculateObstacleAvoidanceRoute } from '../features/route/terrainPathfinder'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
 export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
@@ -161,13 +162,15 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     function redrawRoute() {
       vectors.current.clear()
       for (const [from, to] of [['A', 'P'], ['P', 'B']] as [StopId, StopId][]) {
-        const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates()
-        const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates()
+        const first = pointFeatures.current.get(from)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
+        const last = pointFeatures.current.get(to)?.getGeometry()?.getCoordinates() as MarsPoint | undefined
         if (!first || !last) continue
-        const segment = new Feature({ geometry: new LineString([first, last]) })
+        const curvedCoords = calculateObstacleAvoidanceRoute(first, last, 28)
+        const segment = new Feature({ geometry: new LineString(curvedCoords.map(p => [p[0], p[1]])) })
         segment.setStyle([
-          new Style({ stroke: new Stroke({ color: '#17242c', width: 9, lineCap: 'round', lineJoin: 'round' }) }),
-          new Style({ stroke: new Stroke({ color: '#ffcb84', width: 4, lineCap: 'round', lineJoin: 'round' }) }),
+          new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
+          new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
+          new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
         ])
         vectors.current.addFeature(segment)
       }

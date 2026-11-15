@@ -378,6 +378,8 @@ export function App() {
               onLayerChange={layer => setActiveLayer3DOverride(layer)}
               isComparisonOpenOverride={isComparisonOpenOverride}
               isDataCenterOpenOverride={isDataCenterOpenOverride}
+              onDataCenterClose={() => setIsDataCenterOpenOverride(null)}
+              onComparisonClose={() => setIsComparisonOpenOverride(null)}
               isTourActiveOverride={isTourActiveOverride}
               onTourStateChange={(active, paused, stopIdx) => setTourStatus({ active, paused, stopIdx })}
               tacticalCommand={tacticalCommand3D}

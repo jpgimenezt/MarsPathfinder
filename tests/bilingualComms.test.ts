@@ -128,6 +128,9 @@ describe('Bilingual Mission Comms & Language Detection', () => {
     // 5. [LZ-1 BASE]
     expect(resolveBilingualTool('enfocar base LZ-1')?.tool).toBe('focusBaseLZ1')
     expect(resolveBilingualTool('focus lz-1 base')?.tool).toBe('focusBaseLZ1')
+    expect(resolveBilingualTool('base')?.tool).toBe('focusBaseLZ1')
+    expect(resolveBilingualTool('ir a la base')?.tool).toBe('focusBaseLZ1')
+    expect(resolveBilingualTool('abrir base')?.tool).toBe('focusBaseLZ1')
 
     // 6. [PANORAMA]
     expect(resolveBilingualTool('ver panorama 360')?.tool).toBe('triggerPanoramaColony')
@@ -136,6 +139,8 @@ describe('Bilingual Mission Comms & Language Detection', () => {
     // 7. [DATOS NASA] / [CENTRO CIENTÍFICO ARES]
     expect(resolveBilingualTool('abrir datos NASA')?.tool).toBe('openDataCenter')
     expect(resolveBilingualTool('abrir centro científico ARES')?.tool).toBe('openDataCenter')
+    expect(resolveBilingualTool('abrir datos')?.tool).toBe('openDataCenter')
+    expect(resolveBilingualTool('datos')?.tool).toBe('openDataCenter')
 
     // 8. [FOTOS RAW] / [INTELIGENCIA DE SUPERFICIE]
     expect(resolveBilingualTool('ver fotos raw')?.tool).toBe('openSurfaceIntelligence')
@@ -143,7 +148,13 @@ describe('Bilingual Mission Comms & Language Detection', () => {
 
     // 9. [GLOBO 3D] y [JEZERO 2D]
     expect(resolveBilingualTool('globo 3d')?.tool).toBe('switchScreenView')
+    expect(resolveBilingualTool('globo 3d')?.params).toEqual({ screen: 'globe' })
+    expect(resolveBilingualTool('abrir globo 3d')?.params).toEqual({ screen: 'globe' })
+    expect(resolveBilingualTool('ir al globo')?.params).toEqual({ screen: 'globe' })
     expect(resolveBilingualTool('jezero 2d')?.tool).toBe('switchScreenView')
+    expect(resolveBilingualTool('jezero 2d')?.params).toEqual({ screen: 'map' })
+    expect(resolveBilingualTool('abrir jezero 2d')?.params).toEqual({ screen: 'map' })
+    expect(resolveBilingualTool('ir a jezero')?.params).toEqual({ screen: 'map' })
 
     // 10. [LIMPIAR]
     expect(resolveBilingualTool('modo pantalla limpia')?.tool).toBe('setCleanViewMode')

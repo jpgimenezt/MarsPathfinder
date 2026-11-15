@@ -62,6 +62,11 @@ import {
 } from '../features/colony/colonyCatalog'
 import { resolveAssetUrl } from '../utils/assetUrl'
 import { marsDistance, type MarsPoint } from '../features/route/marsDistance'
+import {
+  calculateObstacleAvoidanceRoute,
+  calculateSecondaryExploratoryCorridor,
+  calculatePolylineMeters,
+} from '../features/route/terrainPathfinder'
 import type { StopId } from '../features/route/routePlan'
 import {
   CURIOSITY_HISTORICAL_PATH,
@@ -98,6 +103,8 @@ interface MarsTerrain3DProps {
   onLayerChange?: (layer: TerrainLayerType) => void
   isComparisonOpenOverride?: boolean | null
   isDataCenterOpenOverride?: boolean | null
+  onDataCenterClose?: () => void
+  onComparisonClose?: () => void
   isTourActiveOverride?: boolean | null
   onTourStateChange?: (active: boolean, paused: boolean, stopIdx: number) => void
   tacticalCommand?: Tactical3DCommand | null
@@ -143,11 +150,14 @@ export function MarsTerrain3D({
   onLayerChange,
   isComparisonOpenOverride,
   isDataCenterOpenOverride,
+  onDataCenterClose,
+  onComparisonClose,
   isTourActiveOverride,
   onTourStateChange,
   tacticalCommand,
 }: MarsTerrain3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const isCameraAnimatingRef = useRef(false)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
   const lastAppliedOverrideRef = useRef<TerrainLayerType | null>(null)
   const [cameraMode, setCameraMode] = useState<CameraViewMode>('orbit')
@@ -268,7 +278,8 @@ export function MarsTerrain3D({
     if (routePointsList.length < 2) return 0
     let total = 0
     for (let i = 1; i < routePointsList.length; i++) {
-      total += marsDistance(routePointsList[i - 1].point, routePointsList[i].point)
+      const segCoords = calculateObstacleAvoidanceRoute(routePointsList[i - 1].point, routePointsList[i].point, 32)
+      total += calculatePolylineMeters(segCoords)
     }
     return total
   }, [routePointsList])
@@ -304,7 +315,8 @@ export function MarsTerrain3D({
       const p1 = routePointsList[i - 1]
       const p2 = routePointsList[i]
 
-      const horizM = marsDistance(p1.point, p2.point)
+      const segCoords = calculateObstacleAvoidanceRoute(p1.point, p2.point, 32)
+      const horizM = calculatePolylineMeters(segCoords)
       const elev1 = getGaleElevation(p1.point[0], p1.point[1])
       const elev2 = getGaleElevation(p2.point[0], p2.point[1])
       const dz = elev2 - elev1
@@ -842,7 +854,10 @@ export function MarsTerrain3D({
 
       const currentMode = cameraModeRef.current
 
-      if (isDiscoveryTourActiveRef.current) {
+      if (isCameraAnimatingRef.current) {
+        // La cámara está siendo interpolada activamente por una secuencia cinemática (Dive EDL, Ascenso a Órbita, Foco LZ-1 o Panorama)
+        // Omitimos controls.update() para que el amortiguamiento de OrbitControls no anule el movimiento de la cámara
+      } else if (isDiscoveryTourActiveRef.current) {
         const stop = MISSION_DISCOVERY_STOPS[currentDiscoveryStopIndexRef.current]
         if (stop) {
           const { x, z } = geoToTerrainPosition(stop.coordinates.lon, stop.coordinates.lat)
@@ -861,7 +876,7 @@ export function MarsTerrain3D({
 
             camera.position.lerp(new Vector3(camX, camY, camZ), 0.04)
             controls.target.lerp(targetLook, 0.05)
-            controls.update()
+            camera.lookAt(controls.target)
           }
         }
       } else if (currentMode === 'fly') {
@@ -957,7 +972,8 @@ export function MarsTerrain3D({
     }
   }, [routeViewMode])
 
-  // Actualización de ruta EVA 3D (filamento holográfico fino que abraza el relieve sin atravesar la base)
+  // Actualización de ruta EVA 3D: Travesía no lineal con evasión de obstáculos y doble filamento luminoso
+  // Estilo inspirado en los mapas de travesía de Perseverance y Curiosity de la NASA (ref. canónica de misión)
   useEffect(() => {
     if (!routeGroupRef.current) return
     const group = routeGroupRef.current
@@ -969,46 +985,72 @@ export function MarsTerrain3D({
 
     if (routePointsList.length < 2) return
 
-    const sampled3DPoints: Vector3[] = []
+    const primary3DPoints: Vector3[] = []
+    const secondary3DPoints: Vector3[] = []
+
     for (let i = 0; i < routePointsList.length - 1; i++) {
       const p1 = routePointsList[i].point
       const p2 = routePointsList[i + 1].point
-      const steps = 30
 
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps
-        const lon = p1[0] + t * (p2[0] - p1[0])
-        const lat = p1[1] + t * (p2[1] - p1[1])
+      // 1. Ruta principal óptima: rodea relieves escarpados, paredes de cráter y pendientes críticas (>15°)
+      const optimalCoords = calculateObstacleAvoidanceRoute(p1, p2, 40)
+      for (let s = 0; s < optimalCoords.length; s++) {
+        if (i > 0 && s === 0) continue
+        const [lon, lat] = optimalCoords[s]
         const { x, z } = geoToTerrainPosition(lon, lat)
         const elev = getGaleElevation(lon, lat)
-        // Abraza estrechamente la superficie del relieve con 0.12 unidades de tolerancia
-        const y = (elev + 4500) * ELEVATION_SCALE + 0.12
-        sampled3DPoints.push(new Vector3(x, y, z))
+        const y = (elev + 4500) * ELEVATION_SCALE + 0.14
+        primary3DPoints.push(new Vector3(x, y, z))
+      }
+
+      // 2. Corredor exploratorio secundario / travesía previa (estilo Perseverance Traverse NASA/JPL)
+      const secCoords = calculateSecondaryExploratoryCorridor(p1, p2, 28)
+      for (let s = 0; s < secCoords.length; s++) {
+        if (i > 0 && s === 0) continue
+        const [lon, lat] = secCoords[s]
+        const { x, z } = geoToTerrainPosition(lon, lat)
+        const elev = getGaleElevation(lon, lat)
+        const y = (elev + 4500) * ELEVATION_SCALE + 0.10
+        secondary3DPoints.push(new Vector3(x, y, z))
       }
     }
 
-    if (sampled3DPoints.length >= 2) {
-      const curve = new CatmullRomCurve3(sampled3DPoints)
-      // Núcleo central luminoso blanco fino (radio 0.045)
-      const coreTubeGeo = new TubeGeometry(curve, sampled3DPoints.length, 0.045, 6, false)
-      const coreMat = new MeshBasicMaterial({ color: 0xffffff })
-      group.add(new Mesh(coreTubeGeo, coreMat))
+    if (primary3DPoints.length >= 2) {
+      const primaryCurve = new CatmullRomCurve3(primary3DPoints)
 
-      // Envoltura táctica holográfica coloreada delgada (radio 0.09)
-      const haloTubeGeo = new TubeGeometry(curve, sampled3DPoints.length, 0.09, 6, false)
-      const haloMat = new MeshBasicMaterial({
-        color: walkbackAssessment.status === 'CRÍTICO' ? 0xef4444 : 0x00f0ff,
+      // A. Casing exterior táctico dorado/ámbar (#f59e0b) que destaca nítidamente sobre el terreno marciano
+      const outerColor = walkbackAssessment.status === 'CRÍTICO' ? 0xef4444 : 0xf59e0b
+      const outerTubeGeo = new TubeGeometry(primaryCurve, primary3DPoints.length * 2, 0.082, 8, false)
+      const outerMat = new MeshBasicMaterial({
+        color: outerColor,
         transparent: true,
-        opacity: 0.45,
+        opacity: 0.88,
       })
-      group.add(new Mesh(haloTubeGeo, haloMat))
+      group.add(new Mesh(outerTubeGeo, outerMat))
 
-      // Balizas de Trazabilidad Kilométrica sutiles en el suelo cada 1.0 km
+      // B. Núcleo central luminoso cian brillante (#00f0ff)
+      const innerTubeGeo = new TubeGeometry(primaryCurve, primary3DPoints.length * 2, 0.035, 6, false)
+      const innerMat = new MeshBasicMaterial({ color: 0x00f0ff })
+      group.add(new Mesh(innerTubeGeo, innerMat))
+
+      // C. Corredor alternativo / travesía secundaria (faint cyan estilo NASA traverse)
+      if (secondary3DPoints.length >= 2) {
+        const secCurve = new CatmullRomCurve3(secondary3DPoints)
+        const secTubeGeo = new TubeGeometry(secCurve, secondary3DPoints.length * 2, 0.024, 6, false)
+        const secMat = new MeshBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.45,
+        })
+        group.add(new Mesh(secTubeGeo, secMat))
+      }
+
+      // D. Balizas circulares de hitos de navegación (círculos azules/cian con aro oscuro en el suelo)
       let accumMeters = 0
       let nextMilestoneKm = 1
-      for (let s = 1; s < sampled3DPoints.length; s++) {
-        const pA = sampled3DPoints[s - 1]
-        const pB = sampled3DPoints[s]
+      for (let s = 1; s < primary3DPoints.length; s++) {
+        const pA = primary3DPoints[s - 1]
+        const pB = primary3DPoints[s]
         const uA = (pA.x / TERRAIN_WIDTH) + 0.5
         const vA = (pA.z / TERRAIN_HEIGHT) + 0.5
         const lonA = REGION_BOUNDS.minLon + uA * (REGION_BOUNDS.maxLon - REGION_BOUNDS.minLon)
@@ -1026,16 +1068,22 @@ export function MarsTerrain3D({
           mGroup.position.copy(pB)
           mGroup.name = `route-milestone-${nextMilestoneKm}km`
 
-          // Anillo sutil rasante en el suelo
-          const mRingGeo = new RingGeometry(0.35, 0.5, 16)
-          mRingGeo.rotateX(-Math.PI / 2)
-          mRingGeo.translate(0, 0.04, 0)
-          mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85, side: DoubleSide })))
+          // Disco circular oscuro de contraste
+          const mBaseGeo = new RingGeometry(0.38, 0.52, 20)
+          mBaseGeo.rotateX(-Math.PI / 2)
+          mBaseGeo.translate(0, 0.045, 0)
+          mGroup.add(new Mesh(mBaseGeo, new MeshBasicMaterial({ color: 0x0f172a, side: DoubleSide })))
 
-          // Marcador holográfico compacto (0.35 m en lugar de poste de 1.8 m)
-          const mPrismGeo = new OctahedronGeometry(0.12, 0)
-          mPrismGeo.translate(0, 0.35, 0)
-          mGroup.add(new Mesh(mPrismGeo, new MeshBasicMaterial({ color: 0x00f0ff })))
+          // Anillo cian luminiscente rasante en el suelo (360° indicator)
+          const mRingGeo = new RingGeometry(0.24, 0.38, 20)
+          mRingGeo.rotateX(-Math.PI / 2)
+          mRingGeo.translate(0, 0.05, 0)
+          mGroup.add(new Mesh(mRingGeo, new MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.9, side: DoubleSide })))
+
+          // Punto central de baliza táctica
+          const mCenterDot = new OctahedronGeometry(0.10, 0)
+          mCenterDot.translate(0, 0.22, 0)
+          mGroup.add(new Mesh(mCenterDot, new MeshBasicMaterial({ color: 0x00f0ff })))
 
           group.add(mGroup)
           nextMilestoneKm++
@@ -1043,11 +1091,8 @@ export function MarsTerrain3D({
       }
     }
 
-    let stopAccumDistance = 0
-    routePointsList.forEach((stop, idx) => {
-      if (idx > 0) {
-        stopAccumDistance += marsDistance(routePointsList[idx - 1].point, stop.point)
-      }
+    // Paradas / Waypoints A, P, B con distintivos acordes a la foto de referencia (START, WAYPOINT, TARGET)
+    routePointsList.forEach((stop) => {
       const { x, z } = geoToTerrainPosition(stop.point[0], stop.point[1])
       const elev = getGaleElevation(stop.point[0], stop.point[1])
       const y = (elev + 4500) * ELEVATION_SCALE
@@ -1056,23 +1101,30 @@ export function MarsTerrain3D({
       waypointGroup.position.set(x, y, z)
       waypointGroup.name = `waypoint-stop-${stop.id}`
 
-      const colorHex = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xef4444
+      // A: START (verde #10b981), P: WAYPOINT (ámbar #f59e0b), B: TARGET (coral #f97316)
+      const colorHex = stop.id === 'A' ? 0x10b981 : stop.id === 'P' ? 0xf59e0b : 0xf97316
 
-      // Base táctica compacta en el regolito (escala científica proporcionada)
-      const baseGeo = new CylinderGeometry(0.35, 0.42, 0.12, 8)
+      // Base táctica compacta en el regolito
+      const baseGeo = new CylinderGeometry(0.35, 0.42, 0.12, 12)
       const baseMesh = new Mesh(baseGeo, new MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 }))
       baseMesh.castShadow = true
       baseMesh.receiveShadow = true
       baseMesh.position.y = 0.06
       waypointGroup.add(baseMesh)
 
-      // Anillo concéntrico rasante de adquisición de objetivo en el suelo
-      const distRingGeo = new RingGeometry(0.75, 0.95, 24)
-      distRingGeo.rotateX(-Math.PI / 2)
-      distRingGeo.translate(0, 0.04, 0)
-      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85, side: DoubleSide })))
+      // Anillo concéntrico exterior oscuro
+      const borderRingGeo = new RingGeometry(0.85, 1.05, 28)
+      borderRingGeo.rotateX(-Math.PI / 2)
+      borderRingGeo.translate(0, 0.04, 0)
+      waypointGroup.add(new Mesh(borderRingGeo, new MeshBasicMaterial({ color: 0x0f172a, side: DoubleSide })))
 
-      // Micro-sensor vertical de telemetría (altura compacta 0.55 m en lugar de poste de 3.4 m)
+      // Anillo concéntrico rasante de adquisición de objetivo en el suelo (START 360° / TARGET 360°)
+      const distRingGeo = new RingGeometry(0.65, 0.85, 28)
+      distRingGeo.rotateX(-Math.PI / 2)
+      distRingGeo.translate(0, 0.045, 0)
+      waypointGroup.add(new Mesh(distRingGeo, new MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.9, side: DoubleSide })))
+
+      // Micro-sensor vertical de telemetría
       const pylonGeo = new CylinderGeometry(0.04, 0.05, 0.55, 6)
       pylonGeo.translate(0, 0.35, 0)
       const pylonMesh = new Mesh(pylonGeo, new MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 }))
@@ -1086,7 +1138,7 @@ export function MarsTerrain3D({
       // Retícula holográfica compacta en la cima (altura total 0.85 m)
       const diamondGeo = new OctahedronGeometry(0.14, 0)
       diamondGeo.translate(0, 0.82, 0)
-      waypointGroup.add(new Mesh(diamondGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })))
+      waypointGroup.add(new Mesh(diamondGeo, new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 })))
 
       group.add(waypointGroup)
     })
@@ -1120,6 +1172,19 @@ export function MarsTerrain3D({
     }
   }, [])
 
+  const skipCinematic = useCallback(() => {
+    if (stopDiveAnimRef.current) {
+      stopDiveAnimRef.current()
+      stopDiveAnimRef.current = null
+    }
+    isCameraAnimatingRef.current = false
+    setIsCinematicPlaying(false)
+    if (controlsRef.current) {
+      controlsRef.current.enabled = true
+      controlsRef.current.update()
+    }
+  }, [])
+
   // Foco en descubrimiento científico
   const focusOnDiscovery = useCallback((disc: ScientificDiscovery) => {
     skipCinematic()
@@ -1138,7 +1203,7 @@ export function MarsTerrain3D({
     camera.position.set(x - 18, y + 20, z + 26)
     camera.lookAt(x, y, z)
     controls.update()
-  }, [])
+  }, [skipCinematic])
 
   // Foco en el Sitio Candidato Principal LZ-1
   const focusOnLandingSite = useCallback(() => {
@@ -1151,6 +1216,11 @@ export function MarsTerrain3D({
     const controls = controlsRef.current
     if (!camera || !controls) return
 
+    isCameraAnimatingRef.current = true
+    controls.enabled = false
+    setIsDiscoveryTourActive(false)
+    isDiscoveryTourActiveRef.current = false
+
     const { x: landingX, z: landingZ } = geoToTerrainPosition(
       PRIMARY_LANDING_SITE.coordinates.lon,
       PRIMARY_LANDING_SITE.coordinates.lat
@@ -1160,10 +1230,9 @@ export function MarsTerrain3D({
     const target = new Vector3(landingX, landingY + 1.2, landingZ)
     const eye = new Vector3(landingX - 18, landingY + 8.5, landingZ + 22)
 
-    controls.enabled = false
     const startPos = camera.position.clone()
     const startTarget = controls.target.clone()
-    const durationMs = 1200
+    const durationMs = 1400
     const start = performance.now()
 
     const anim = (now: number) => {
@@ -1174,10 +1243,12 @@ export function MarsTerrain3D({
       camera.position.lerpVectors(startPos, eye, ease)
       const curTarget = new Vector3().lerpVectors(startTarget, target, ease)
       camera.lookAt(curTarget)
+      controls.target.copy(curTarget)
 
       if (t < 1) {
         requestAnimationFrame(anim)
       } else {
+        isCameraAnimatingRef.current = false
         controls.enabled = true
         controls.target.copy(target)
         controls.update()
@@ -1185,7 +1256,7 @@ export function MarsTerrain3D({
     }
 
     requestAnimationFrame(anim)
-  }, [])
+  }, [skipCinematic])
 
   // Foco en módulo específico de la colonia
   const focusOnColonyModule = useCallback((mod: HabitatModuleConfig) => {
@@ -1215,10 +1286,16 @@ export function MarsTerrain3D({
 
   // Recorrido panorámico de la Colonia Marciana Base Alfa
   const tourColony = useCallback(() => {
+    skipCinematic()
     setColonyVisible(true)
     const camera = cameraRef.current
     const controls = controlsRef.current
     if (!camera || !controls) return
+
+    isCameraAnimatingRef.current = true
+    controls.enabled = false
+    setIsDiscoveryTourActive(false)
+    isDiscoveryTourActiveRef.current = false
 
     const { x: landingX, z: landingZ } = geoToTerrainPosition(
       PRIMARY_LANDING_SITE.coordinates.lon,
@@ -1226,7 +1303,6 @@ export function MarsTerrain3D({
     )
     const landingY = (PRIMARY_LANDING_SITE.elevationMeters + 4500) * ELEVATION_SCALE
 
-    controls.enabled = false
     const durationMs = 4500
     const start = performance.now()
 
@@ -1240,19 +1316,22 @@ export function MarsTerrain3D({
       const eyeY = landingY + 11 + Math.sin(t * Math.PI) * 4
 
       camera.position.set(eyeX, eyeY, eyeZ)
-      camera.lookAt(landingX, landingY + 1.5, landingZ)
+      const lookTarget = new Vector3(landingX, landingY + 1.5, landingZ)
+      camera.lookAt(lookTarget)
+      controls.target.copy(lookTarget)
 
       if (t < 1) {
         requestAnimationFrame(step)
       } else {
+        isCameraAnimatingRef.current = false
         controls.enabled = true
-        controls.target.set(landingX, landingY + 1.5, landingZ)
+        controls.target.copy(lookTarget)
         controls.update()
       }
     }
 
     requestAnimationFrame(step)
-  }, [])
+  }, [skipCinematic])
 
   // Secuencia de Descenso Continuo Google Earth (Orbital Dive) con foco estricto en LZ-1
   const playGoogleEarthDive = useCallback(() => {
@@ -1261,9 +1340,11 @@ export function MarsTerrain3D({
     if (!camera || !controls) return
 
     setIsCinematicPlaying(true)
+    isCameraAnimatingRef.current = true
     controls.enabled = false
     closeInspector()
     setIsDiscoveryTourActive(false)
+    isDiscoveryTourActiveRef.current = false
 
     const { x: landingX, z: landingZ } = geoToTerrainPosition(
       PRIMARY_LANDING_SITE.coordinates.lon,
@@ -1275,6 +1356,7 @@ export function MarsTerrain3D({
     const targetLanding = new Vector3(landingX, landingY, landingZ)
     camera.position.copy(spacePos)
     camera.lookAt(targetLanding)
+    controls.target.copy(targetLanding)
 
     const endPos = new Vector3(landingX - 18, landingY + 8.5, landingZ + 22)
     const endTarget = new Vector3(landingX, landingY + 1.2, landingZ)
@@ -1282,11 +1364,12 @@ export function MarsTerrain3D({
     let isStopped = false
     stopDiveAnimRef.current = () => {
       isStopped = true
+      isCameraAnimatingRef.current = false
       setIsCinematicPlaying(false)
       camera.position.copy(endPos)
       camera.lookAt(endTarget)
-      controls.enabled = true
       controls.target.copy(endTarget)
+      controls.enabled = true
       controls.update()
       setShowLandingBriefing(true)
     }
@@ -1308,6 +1391,7 @@ export function MarsTerrain3D({
       const currentTarget = new Vector3()
       currentTarget.lerpVectors(targetLanding, endTarget, ease)
       camera.lookAt(currentTarget)
+      controls.target.copy(currentTarget)
 
       const altKm = Math.round(24500 * (1 - ease) + 0.14)
       const altStr = altKm > 100 ? `${altKm.toLocaleString()} km` : `${(altKm * 1000).toLocaleString()} m`
@@ -1333,9 +1417,10 @@ export function MarsTerrain3D({
       if (rawT < 1) {
         requestAnimationFrame(step)
       } else {
+        isCameraAnimatingRef.current = false
         setIsCinematicPlaying(false)
-        controls.enabled = true
         controls.target.copy(endTarget)
+        controls.enabled = true
         controls.update()
         setShowLandingBriefing(true)
       }
@@ -1350,7 +1435,11 @@ export function MarsTerrain3D({
     const controls = controlsRef.current
     if (!camera || !controls) return
 
+    skipCinematic()
+    isCameraAnimatingRef.current = true
     controls.enabled = false
+    setIsDiscoveryTourActive(false)
+    isDiscoveryTourActiveRef.current = false
     const startPos = camera.position.clone()
 
     const { x: landingX, z: landingZ } = geoToTerrainPosition(
@@ -1373,10 +1462,12 @@ export function MarsTerrain3D({
 
       camera.position.lerpVectors(startPos, targetSpace, ease)
       camera.lookAt(targetCenter)
+      controls.target.copy(targetCenter)
 
       if (progress < 1) {
         requestAnimationFrame(step)
       } else {
+        isCameraAnimatingRef.current = false
         controls.enabled = true
         controls.target.copy(targetCenter)
         controls.update()
@@ -1384,7 +1475,7 @@ export function MarsTerrain3D({
     }
 
     requestAnimationFrame(step)
-  }, [])
+  }, [skipCinematic])
 
   useEffect(() => {
     if (initialDive) {
@@ -1394,12 +1485,6 @@ export function MarsTerrain3D({
       return () => clearTimeout(timer)
     }
   }, [initialDive, playGoogleEarthDive])
-
-  const skipCinematic = useCallback(() => {
-    if (stopDiveAnimRef.current) {
-      stopDiveAnimRef.current()
-    }
-  }, [])
 
   const closeInspector = () => {
     setSelectedDiscovery(null)
@@ -1430,6 +1515,10 @@ export function MarsTerrain3D({
       case 'SOBREVUELO':
         closeInspector()
         setIsCinematicPlaying(false)
+        isCameraAnimatingRef.current = false
+        isDiscoveryTourActiveRef.current = true
+        isDiscoveryPausedRef.current = false
+        currentDiscoveryStopIndexRef.current = Number(tacticalCommand.params?.startIndex ?? 0)
         setIsDiscoveryTourActive(true)
         setCurrentDiscoveryStopIndex(Number(tacticalCommand.params?.startIndex ?? 0))
         setIsDiscoveryPaused(false)
@@ -1616,6 +1705,10 @@ export function MarsTerrain3D({
             onClick={() => {
               closeInspector()
               setIsCinematicPlaying(false)
+              isCameraAnimatingRef.current = false
+              isDiscoveryTourActiveRef.current = true
+              isDiscoveryPausedRef.current = false
+              currentDiscoveryStopIndexRef.current = 0
               setIsDiscoveryTourActive(true)
               setCurrentDiscoveryStopIndex(0)
               setIsDiscoveryPaused(false)
@@ -2495,7 +2588,7 @@ export function MarsTerrain3D({
       {/* Modales Científicos y de Inteligencia Multimisión */}
       <AresScientificDataCenterModal
         isOpen={isDataCenterOpen}
-        onClose={() => setIsDataCenterOpen(false)}
+        onClose={() => { setIsDataCenterOpen(false); onDataCenterClose?.() }}
       />
 
       <MarsSurfaceIntelligenceModal
@@ -2513,7 +2606,7 @@ export function MarsTerrain3D({
 
       <MissionPathComparisonModal
         isOpen={isMissionComparisonOpen}
-        onClose={() => setIsMissionComparisonOpen(false)}
+        onClose={() => { setIsMissionComparisonOpen(false); onComparisonClose?.() }}
         evaDistanceKm={totalRouteMeters / 1000}
         evaHours={routeTelemetry ? routeTelemetry.segments.reduce((acc, s) => acc + s.estWalkHours, 0) : 0}
       />

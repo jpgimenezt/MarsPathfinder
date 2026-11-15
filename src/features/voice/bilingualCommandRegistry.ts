@@ -28,16 +28,16 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     tool: 'focusBaseLZ1',
     params: {},
     phrases: {
-      en: ['focus bradbury landing', 'look at lz-1', 'center on base alpha', 'lz-1 base', 'bradbury landing', 'focus lz-1 base'],
-      es: ['enfoca bradbury landing', 'enfocar base lz 1', 'enfocar base lz-1', 'ir a bradbury', 'centrar en la base', 'base lz-1', 'base lz 1', 'sitio de aterrizaje bradbury', 'lz-1 base'],
+      en: ['base', 'go to base', 'open base', 'focus base', 'center on base', 'lz-1 base', 'base lz-1', 'lz1 base', 'lz-1', 'lz1', 'landing site lz-1', 'bradbury base', 'base alpha', 'focus bradbury landing'],
+      es: ['base', 'ir a la base', 'abrir base', 'centrar en la base', 'ver base', 'lz-1 base', 'lz-1', 'lz 1', 'base lz-1', 'base lz 1', 'lz1 base', 'sitio base', 'volver a la base', 'base alfa', 'enfocar base lz-1', 'enfocar base lz 1', 'sitio de aterrizaje bradbury', 'bradbury landing'],
     },
   },
   {
     tool: 'focusGeographicTarget',
     params: { targetName: 'Delta de Jezero' },
     phrases: {
-      en: ['focus on jezero delta', 'look at jezero', 'jezero delta', 'go to jezero'],
-      es: ['enfocá el delta de jezero', 'ir a jezero', 'delta de jezero', 'mirar jezero'],
+      en: ['focus on jezero delta', 'look at jezero delta', 'jezero delta', 'mineral delta'],
+      es: ['enfocá el delta de jezero', 'delta de jezero', 'mirar delta de jezero', 'minerales del delta'],
     },
   },
   {
@@ -52,24 +52,24 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     tool: 'switchScreenView',
     params: { screen: 'terrain3d' },
     phrases: {
-      en: ['switch to gale 3d', 'show 3d terrain', 'view gale crater', 'gale 3d view', '3d terrain'],
-      es: ['cambiar a gale 3d', 'ver terreno 3d', 'ir a gale 3d', 'terreno 3d', 'vista 3d de gale', 'volver al terreno 3d'],
+      en: ['switch to gale 3d', 'gale 3d', 'gale', 'open gale 3d', 'open 3d terrain', 'show 3d terrain', 'view gale crater', 'gale 3d view', '3d terrain', 'terrain 3d'],
+      es: ['gale 3d', 'gale', 'abrir gale 3d', 'abrir gale', 'ir a gale 3d', 'ir a gale', 'cambiar a gale 3d', 'ver terreno 3d', 'ir a terreno 3d', 'terreno 3d', 'vista 3d de gale', 'volver al terreno 3d', 'volver a 3d'],
     },
   },
   {
     tool: 'switchScreenView',
     params: { screen: 'globe' },
     phrases: {
-      en: ['switch to globe', 'orbital globe view', 'view mars globe', 'planet globe', '3d globe'],
-      es: ['cambiar a globo orbital', 'globo orbital', 'ver globo', 'planeta marte 3d', 'globo 3d', 'vista global'],
+      en: ['switch to globe', 'globe 3d', 'globe', 'open globe', 'open 3d globe', 'view mars globe', 'orbital globe view', 'planet globe', '3d globe'],
+      es: ['globo 3d', 'globo', 'abrir globo 3d', 'abrir globo', 'ir a globo 3d', 'ir al globo', 'ver globo', 'ver globo 3d', 'cambiar a globo orbital', 'globo orbital', 'planeta marte 3d', 'vista global', 'pantalla globo', 'modo globo'],
     },
   },
   {
     tool: 'switchScreenView',
     params: { screen: 'map' },
     phrases: {
-      en: ['switch to jezero 2d', 'jezero map', '2d map view', 'jezero crater 2d'],
-      es: ['cambiar a jezero 2d', 'mapa 2d', 'ir a jezero', 'mapa de jezero', 'vista 2d'],
+      en: ['switch to jezero 2d', 'jezero 2d', 'jezero', 'open jezero 2d', 'open jezero', 'go to jezero 2d', 'jezero map', '2d map view', 'jezero crater 2d', '2d map', 'open map'],
+      es: ['jezero 2d', 'jezero', 'abrir jezero 2d', 'abrir jezero', 'ir a jezero 2d', 'ir a jezero', 'mapa jezero', 'mapa jezero 2d', 'cambiar a jezero 2d', 'mapa 2d', 'mapa de jezero', 'vista 2d', 'ver jezero 2d', 'ver jezero', 'pantalla jezero', 'abrir mapa'],
     },
   },
   {
@@ -255,8 +255,8 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     tool: 'openDataCenter',
     params: { open: true },
     phrases: {
-      en: ['nasa data', 'open nasa data', 'ares scientific data center', 'scientific data center', 'open data center', 'scientific center'],
-      es: ['datos nasa', 'abrir datos nasa', 'fuentes nasa', 'catalogo nasa', 'catálogo nasa', 'centro cientifico ares', 'centro científico ares', 'centro cientifico', 'centro científico', 'abrir centro cientifico', 'abrir centro científico'],
+      en: ['nasa data', 'data', 'open data', 'open nasa data', 'show data', 'ares scientific data center', 'scientific data center', 'open data center', 'scientific center'],
+      es: ['datos nasa', 'datos', 'abrir datos', 'abrir datos nasa', 'mostrar datos', 'ver datos', 'ver datos nasa', 'fuentes nasa', 'catalogo nasa', 'catálogo nasa', 'centro cientifico ares', 'centro científico ares', 'centro cientifico', 'centro científico', 'abrir centro cientifico', 'abrir centro científico', 'centro de datos', 'abrir centro de datos'],
     },
   },
   {
@@ -412,6 +412,11 @@ export function repairAcousticHallucinations(rawText: string): string {
 
   // 11. Correcciones para Sobrevuelo y Panorama:
   text = text.replace(/\bsobre\s+vuelo(s)?\b/gi, 'sobrevuelo')
+
+  // 12. Correcciones para pantallas y modos:
+  text = text.replace(/\b(?:globo\s+(?:tres\s+d(?:e)?|3\s*d(?:e)?))\b/gi, 'globo 3d')
+  text = text.replace(/\b(?:jezero\s+(?:dos\s+d(?:e)?|2\s*d(?:e)?))\b/gi, 'jezero 2d')
+  text = text.replace(/\b(?:gale\s+(?:tres\s+d(?:e)?|3\s*d(?:e)?))\b/gi, 'gale 3d')
 
   return text
 }
@@ -569,10 +574,10 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
   if (norm.includes('globo') || norm.includes('globe') || norm.includes('planeta 3d')) {
     return { tool: 'switchScreenView', params: { screen: 'globe' } }
   }
-  if ((norm.includes('jezero') || norm.includes('mapa')) && (norm.includes('2d') || norm.includes('map'))) {
+  if (norm.includes('jezero') || (norm.includes('mapa') && !norm.includes('mola')) || norm.includes('2d')) {
     return { tool: 'switchScreenView', params: { screen: 'map' } }
   }
-  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver'))) {
+  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver') || norm.includes('ir'))) {
     return { tool: 'switchScreenView', params: { screen: 'terrain3d' } }
   }
 
@@ -581,8 +586,8 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'focusGeographicTarget', params: { targetName: 'Mount Sharp' } }
   }
 
-  // Jezero Delta
-  if (norm.includes('delta') || (norm.includes('jezero') && !norm.includes('2d'))) {
+  // Jezero Delta (solo enfoque geológico específico si no es solicitud de pantalla mapa)
+  if (norm.includes('delta') && !norm.includes('jezero 2d') && !norm.includes('mapa')) {
     return { tool: 'focusGeographicTarget', params: { targetName: 'Delta de Jezero' } }
   }
 
@@ -641,9 +646,9 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'toggleScientificLayer', params: { layerId: 'radiation', enabled: !isDeactivation } }
   }
 
-  // Bradbury Landing / Base LZ-1
-  if (norm.includes('bradbury') || norm.includes('lz-1') || norm.includes('lz 1') || norm.includes('base alfa')) {
-    return { tool: 'focusGeographicTarget', params: { targetName: 'Bradbury Landing' } }
+  // Base LZ-1 Bradbury / Base Alfa / Bradbury Landing
+  if (norm.includes('base') || norm.includes('lz-1') || norm.includes('lz 1') || norm.includes('lz1') || norm.includes('bradbury')) {
+    return { tool: 'focusBaseLZ1', params: {} }
   }
 
   // Vera Rubin Ridge / Hematita
@@ -657,12 +662,12 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
   }
 
   // Cambiar a Terreno Gale 3D
-  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver'))) {
+  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver') || norm.includes('ir'))) {
     return { tool: 'switchScreenView', params: { screen: 'terrain3d' } }
   }
 
   // Cambiar a Jezero 2D
-  if ((norm.includes('jezero') || norm.includes('mapa')) && (norm.includes('2d') || norm.includes('mapa'))) {
+  if (norm.includes('jezero') || ((norm.includes('mapa') || norm.includes('2d')) && !norm.includes('mola'))) {
     return { tool: 'switchScreenView', params: { screen: 'map' } }
   }
 
@@ -682,7 +687,7 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
   }
 
   // Simulación / Tour / Sobrevuelo
-  if (norm.includes('sobrevuelo') || norm.includes('flyover')) {
+  if (norm.includes('sobrevuelo') || norm.includes('flyover') || norm.includes('tour') || norm.includes('recorrido')) {
     return { tool: 'startDiscoveryTour', params: { startIndex: 0 } }
   }
 
@@ -701,18 +706,11 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'triggerOrbitAscent', params: {} }
   }
 
-
-
   // Pestañas de la consola táctica (debe evaluarse antes que Base LZ-1)
   if (norm.includes('pestana') || norm.includes('tab')) {
     if (norm.includes('capa')) return { tool: 'setTacticalDockTab', params: { tab: 'layers' } }
     if (norm.includes('camara') || norm.includes('camera')) return { tool: 'setTacticalDockTab', params: { tab: 'camera' } }
     if (norm.includes('base') || norm.includes('coloni') || norm.includes('alfa')) return { tool: 'setTacticalDockTab', params: { tab: 'colony' } }
-  }
-
-  // Base LZ-1 Bradbury
-  if (norm.includes('lz-1') || norm.includes('lz 1') || (norm.includes('base') && (norm.includes('alfa') || norm.includes('lz') || norm.includes('bradbury')))) {
-    return { tool: 'focusBaseLZ1', params: {} }
   }
 
   // Panorama 360 / Colonia
@@ -721,7 +719,7 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
   }
 
   // Datos NASA / Centro Científico ARES
-  if ((norm.includes('datos') && norm.includes('nasa')) || (norm.includes('centro') && norm.includes('cientific'))) {
+  if (norm.includes('datos') || (norm.includes('centro') && norm.includes('cientific'))) {
     return { tool: 'openDataCenter', params: { open: true } }
   }
 
