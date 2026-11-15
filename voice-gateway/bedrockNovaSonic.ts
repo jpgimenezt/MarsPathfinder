@@ -85,7 +85,7 @@ export class BedrockNovaSonicSession {
                     temperature: 0.3,
                   },
                   turnDetectionConfiguration: {
-                    endpointingSensitivity: 'MEDIUM',
+                    endpointingSensitivity: 'LOW',
                   },
                 },
               },

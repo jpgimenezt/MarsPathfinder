@@ -176,11 +176,16 @@ wss.on('connection', (ws: WebSocket, req) => {
               })
             },
             onError: err => {
-              console.error(`[ARES VOICE GATEWAY] Error en sesión Bedrock:`, err.message)
+              const isExpired =
+                err.message?.toLowerCase().includes('expired') || (err as any).name === 'ExpiredTokenException'
+              const friendlyMessage = isExpired
+                ? "⚠️ [SESIÓN AWS EXPIRADA]: Tus credenciales temporales de Amazon Bedrock han caducado. Ejecuta 'aws login' en tu terminal para reactivar el streaming de Nova Sonic."
+                : err.message
+              console.error(`[ARES VOICE GATEWAY] Error en sesión Bedrock:`, friendlyMessage)
               send({
                 type: 'error',
-                message: err.message,
-                code: (err as any).name || 'BEDROCK_STREAM_ERROR',
+                message: friendlyMessage,
+                code: isExpired ? 'AWS_CREDENTIALS_EXPIRED' : (err as any).name || 'BEDROCK_STREAM_ERROR',
               })
               send({ type: 'state_change', state: 'ERROR' })
               send({ type: 'conversation_state', state: 'error' })
@@ -198,8 +203,8 @@ wss.on('connection', (ws: WebSocket, req) => {
             send({ type: 'conversation_state', state: 'awaiting_user' })
             resetSessionTimer()
 
-            // Saludo táctico inicial bilingüe de ARES Copilot con síntesis de voz inmediata
-            if (message.greet !== false) {
+            // Saludo táctico solo si el cliente lo solicita explícitamente (evita colisiones con síntesis local)
+            if (message.greet === true) {
               const greetingText =
                 language === 'en'
                   ? 'Astronaut connected to ARES tactical channel. Acknowledge link established briefly in English and state you are standing by for mission navigation and surface science orders.'

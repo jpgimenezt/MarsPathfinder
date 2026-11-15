@@ -44,6 +44,7 @@ import {
   checkLanguageSwitchCommand,
   resolveBilingualTool,
 } from '../features/voice/bilingualCommandRegistry'
+import { resolveMissionKnowledge } from '../features/science/missionKnowledgeResolver'
 import '../styles/missionComms.css'
 
 interface PendingConfirmationState {
@@ -188,6 +189,13 @@ export function AresMissionCommsModal({
   const textInputRef = useRef<HTMLInputElement | null>(null)
   const subtitleTimeoutRef = useRef<any>(null)
   const inputId = useId()
+
+  // Referencias estables para evitar re-render thrashing en el detector de voz
+  const transcriptsRef = useRef<TranscriptEvent[]>(transcripts)
+  transcriptsRef.current = transcripts
+  const responseLanguageRef = useRef<SupportedLanguage>(responseLanguage)
+  responseLanguageRef.current = responseLanguage
+  const executeCommandRef = useRef<((cmd: string) => Promise<void>) | null>(null)
 
   // Sincronizar isOpen de props con el modo de presentación
   useEffect(() => {
@@ -337,11 +345,21 @@ export function AresMissionCommsModal({
 
         showSubtitle(actionText, 'assistant', 5000)
 
-        // Síntesis auditiva en el idioma de respuesta configurado
+        // Síntesis auditiva con protección anti-eco
+        wakeWordDetectorRef.current?.setSpeakingLock(true)
         speakLocalSpeech(actionText, responseLanguage, {
-          onStart: () => setConversationState('speaking'),
+          onStart: () => {
+            setConversationState('speaking')
+            wakeWordDetectorRef.current?.setSpeakingLock(true)
+          },
           onEnd: () => {
-            // Regresa a escuchar para preguntas de seguimiento consecutivas (Sección 5 y 6)
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
+            setConversationState('awaiting_user')
+            setPresentationMode('orb')
+            setCurrentExecutionInfo(null)
+          },
+          onError: () => {
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
             setConversationState('awaiting_user')
             setPresentationMode('orb')
             setCurrentExecutionInfo(null)
@@ -351,7 +369,49 @@ export function AresMissionCommsModal({
         return
       }
 
-      // 4. Si Nova Sonic está activo en streaming, enviar por WebSocket
+      // 4. Resolución científica rápida de NASA / Curiosity / Gale / Boxwork (< 50ms)
+      const missionScience = resolveMissionKnowledge(commandText, responseLanguageRef.current)
+      if (missionScience) {
+        setPresentationMode('orb')
+        setConversationState('speaking')
+
+        setTranscripts(prev => [
+          ...prev,
+          {
+            id: `science-${Date.now()}`,
+            role: 'assistant',
+            text: missionScience.summaryText,
+            isFinal: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          },
+        ])
+
+        showSubtitle(
+          missionScience.spokenSummary.slice(0, 160) + (missionScience.spokenSummary.length > 160 ? '...' : ''),
+          'assistant',
+          7000
+        )
+
+        wakeWordDetectorRef.current?.setSpeakingLock(true)
+        speakLocalSpeech(missionScience.spokenSummary, responseLanguageRef.current, {
+          onStart: () => {
+            setConversationState('speaking')
+            wakeWordDetectorRef.current?.setSpeakingLock(true)
+          },
+          onEnd: () => {
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
+            setConversationState('awaiting_user')
+            wakeWordDetectorRef.current?.setCommandMode(true)
+          },
+          onError: () => {
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
+            setConversationState('awaiting_user')
+          },
+        })
+        return
+      }
+
+      // 5. Si Nova Sonic está activo en streaming, enviar por WebSocket
       if (providerRef.current && voiceState === 'LISTENING') {
         try {
           await providerRef.current.sendTextMessage(commandText)
@@ -359,16 +419,16 @@ export function AresMissionCommsModal({
         } catch {}
       }
 
-      // 5. Fallback a agente serverless con contexto conversacional histórico completo
-      showSubtitle(responseLanguage === 'en' ? 'Consulting mission telemetry...' : 'Consultando telemetría de misión...', 'assistant', 3000)
+      // 6. Fallback a agente serverless con timeout estricto de 10s (sin bloqueos de 2 minutos)
+      showSubtitle(responseLanguage === 'en' ? 'Consulting orbital satellite telemetry...' : 'Consultando telemetría de satélite en órbita...', 'assistant', 3000)
 
       try {
-        const historyPayload = transcripts
+        const historyPayload = transcriptsRef.current
           .filter(t => t.id !== 'init-msg')
-          .slice(-8)
+          .slice(-6)
           .map(t => ({ role: t.role, content: t.text }))
 
-        const res = await queryMarsAgent(commandText, historyPayload)
+        const res = await queryMarsAgent(commandText, historyPayload, 10000)
         const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
 
         setTranscripts(prev => [
@@ -383,19 +443,33 @@ export function AresMissionCommsModal({
         ])
 
         showSubtitle(cleanReply.slice(0, 160) + (cleanReply.length > 160 ? '...' : ''), 'assistant', 6500)
-        speakLocalSpeech(cleanReply, responseLanguage, {
-          onStart: () => setConversationState('speaking'),
-          onEnd: () => setConversationState('awaiting_user'),
+        wakeWordDetectorRef.current?.setSpeakingLock(true)
+        speakLocalSpeech(cleanReply, responseLanguageRef.current, {
+          onStart: () => {
+            setConversationState('speaking')
+            wakeWordDetectorRef.current?.setSpeakingLock(true)
+          },
+          onEnd: () => {
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
+            setConversationState('awaiting_user')
+          },
+          onError: () => {
+            wakeWordDetectorRef.current?.setSpeakingLock(false)
+            setConversationState('awaiting_user')
+          },
         })
       } catch {
         setConversationState('standby')
       }
     },
-    [responseLanguage, transcripts, voiceState, showSubtitle]
+    [responseLanguage, voiceState, showSubtitle]
   )
 
+  // Mantener referencia actualizada de executeTacticalCommand para el detector sin causar remounts
+  executeCommandRef.current = executeTacticalCommand
+
   // ==========================================
-  // CONFIGURAR DETECTOR DE VOZ CONTINUA
+  // CONFIGURAR DETECTOR DE VOZ CONTINUA (STABLE LIFECYCLE)
   // ==========================================
   useEffect(() => {
     if (!wakeWordDetectorRef.current) {
@@ -407,23 +481,24 @@ export function AresMissionCommsModal({
     const unsubscribeWake = detector.subscribe((event: WakeWordEvent) => {
       console.log(`[WAKE ACTIVATION] Frase: "${event.phrase}". Comando adjunto: "${event.trailingCommand || ''}"`)
 
-      // El despertar NO altera el idioma de respuesta elegido por el usuario (Sección 3)
+      // El despertar NO altera el idioma de respuesta elegido por el usuario
       setPresentationMode('orb')
       setConversationState('listening')
       setConnectionState('connected')
 
+      const curLang = responseLanguageRef.current
       showSubtitle(
-        responseLanguage === 'en' ? '● ARES Listening... Ask your question or command.' : '● ARES a la escucha... Di tu orden o pregunta.',
+        curLang === 'en' ? '● ARES Listening... Ask your question or command.' : '● ARES a la escucha... Di tu orden o pregunta.',
         'assistant',
         4000
       )
 
-      // Si el usuario dijo el comando en la misma frase ("Hey ARES, enfoca Mount Sharp")
+      // Si el usuario dijo el comando en la misma frase ("Hola ARES, necesito que analices...")
       if (event.trailingCommand && event.trailingCommand.trim().length > 1) {
-        executeTacticalCommand(event.trailingCommand.trim())
+        executeCommandRef.current?.(event.trailingCommand.trim())
       } else {
         // Respuesta vocal inmediata de ARES al detectar el saludo de activación
-        const ackText = responseLanguage === 'en'
+        const ackText = curLang === 'en'
           ? 'ARES online. Standing by for navigation, mapping, or science analysis.'
           : 'ARES en línea. A la escucha para órdenes de navegación, cartografía o análisis científico.'
 
@@ -438,11 +513,23 @@ export function AresMissionCommsModal({
           },
         ])
         showSubtitle(ackText, 'assistant', 4500)
-        speakLocalSpeech(ackText, responseLanguage, {
-          onStart: () => setConversationState('speaking'),
+
+        // Bloqueo anti-eco durante la respuesta vocal para evitar triple auto-activación
+        detector.setSpeakingLock(true)
+        speakLocalSpeech(ackText, curLang, {
+          onStart: () => {
+            setConversationState('speaking')
+            detector.setSpeakingLock(true)
+          },
           onEnd: () => {
+            detector.setSpeakingLock(false)
             setConversationState('listening')
-            wakeWordDetectorRef.current?.setCommandMode(true)
+            detector.setCommandMode(true)
+          },
+          onError: () => {
+            detector.setSpeakingLock(false)
+            setConversationState('listening')
+            detector.setCommandMode(true)
           },
         })
       }
@@ -454,13 +541,13 @@ export function AresMissionCommsModal({
       handleInterrupt()
     })
 
-    // Escucha continua de comandos (no se corta tras 10 segundos, Sección 6)
+    // Escucha continua de comandos
     const unsubscribeCommand = detector.subscribeCommand((command: string) => {
       console.log(`[CONTINUOUS VOICE COMMAND CAPTURED] "${command}"`)
-      executeTacticalCommand(command)
+      executeCommandRef.current?.(command)
     })
 
-    // Desconexión explícita por voz ("Cerrar comunicaciones", Sección 12 Escenario G)
+    // Desconexión explícita por voz ("Cerrar comunicaciones")
     const unsubscribeDisconnect = detector.subscribeDisconnect(() => {
       handleDisconnect()
     })
@@ -478,7 +565,7 @@ export function AresMissionCommsModal({
       unsubscribeDisconnect()
       detector.stop()
     }
-  }, [isWakeWordActive, responseLanguage, executeTacticalCommand, handleDisconnect, showSubtitle])
+  }, [isWakeWordActive, handleInterrupt, handleDisconnect, showSubtitle])
 
   // Inicializar proveedor de voz Nova Sonic (en segundo plano)
   useEffect(() => {
@@ -495,6 +582,11 @@ export function AresMissionCommsModal({
     const unsubscribe = provider.subscribe({
       onStateChange: state => {
         setVoiceState(state)
+        if (state === 'SPEAKING') {
+          wakeWordDetectorRef.current?.setSpeakingLock(true)
+        } else if (state === 'LISTENING' || state === 'VOICE_OFFLINE') {
+          wakeWordDetectorRef.current?.setSpeakingLock(false)
+        }
       },
       onConnectionStateChange: connState => {
         setConnectionState(connState)

@@ -7,6 +7,7 @@ import { ToolExecutionEngine, type AppActionHandlers } from '../src/features/age
 import { buildCompactMissionContext } from '../src/features/agent/missionContext'
 import { AmazonNovaSonicProvider } from '../src/features/voice/amazonNovaSonicProvider'
 import { LocalWakeWordDetector, matchWakeWordPhonetic } from '../src/features/voice/wakeWordDetector'
+import { resolveMissionKnowledge } from '../src/features/science/missionKnowledgeResolver'
 
 describe('ARES MISSION COMMS — Conversational Engine & Continuity (Scenarios A - G)', () => {
   let mockHandlers: AppActionHandlers
@@ -322,6 +323,60 @@ describe('ARES MISSION COMMS — Conversational Engine & Continuity (Scenarios A
         const res = matchWakeWordPhonetic(phrase)
         expect(res, `Falso positivo detectado en: "${phrase}"`).toBeNull()
       }
+    })
+  })
+
+  // =========================================================================
+  // SCENARIO I: Resolución científica instantánea (<50ms) y Anti-Echo
+  // "descubrimientos de Curiosity", "boxwork", "estratigrafía" sin latencia de 2 minutos
+  // =========================================================================
+  describe('Escenario I: Fast Mission Science Resolver y Supresión de Eco', () => {
+    it('resuelve consultas complejas sobre la misión Curiosity en < 50ms con datos oficiales de NASA', () => {
+      const query = 'ARES, contame los principales descubrimientos científicos de Curiosity en Gale Crater'
+      const start = performance.now()
+      const res = resolveMissionKnowledge(query, 'es')
+      const elapsed = performance.now() - start
+
+      expect(elapsed).toBeLessThan(50)
+      expect(res).not.toBeNull()
+      expect(res?.topic).toBe('CURIOSITY_DISCOVERIES')
+      expect(res?.summaryText).toContain('Yellowknife')
+      expect(res?.summaryText).toContain('Glen Torridon')
+      expect(res?.spokenSummary).toBeDefined()
+      expect(res?.citations.length).toBeGreaterThan(0)
+    })
+
+    it('resuelve consultas geológicas sobre formaciones boxwork en Mount Sharp', () => {
+      const query = '¿Qué son las formaciones boxwork en Mount Sharp?'
+      const res = resolveMissionKnowledge(query, 'es')
+
+      expect(res).not.toBeNull()
+      expect(res?.topic).toBe('BOXWORK_FORMATIONS')
+      expect(res?.summaryText).toContain('sulfato')
+      expect(res?.citations[0]).toContain('NASA')
+    })
+
+    it('soporta consultas científicas en inglés con respuesta en inglés', () => {
+      const query = 'Tell me about Curiosity discoveries in Gale Crater'
+      const res = resolveMissionKnowledge(query, 'en')
+
+      expect(res).not.toBeNull()
+      expect(res?.topic).toBe('CURIOSITY_DISCOVERIES')
+      expect(res?.spokenSummary).toContain('Curiosity confirmed Gale Crater')
+    })
+
+    it('gestiona correctamente el bloqueo de habla (Anti-Echo / Self-Mute Guard)', () => {
+      const detector = new LocalWakeWordDetector()
+      expect(detector.getSpeakingLock()).toBe(false)
+
+      // Activar bloqueo de habla (asistente hablando)
+      detector.setSpeakingLock(true)
+      expect(detector.getSpeakingLock()).toBe(true)
+
+      // Desactivar bloqueo de habla
+      detector.setSpeakingLock(false)
+      // Debe mantener el bloqueo durante el período de gracia acústico
+      expect(detector.getSpeakingLock()).toBe(true)
     })
   })
 })

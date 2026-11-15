@@ -12,7 +12,6 @@
  */
 
 import type { SupportedLanguage } from '../i18n/commsTranslations'
-import { resolveBilingualTool } from './bilingualCommandRegistry'
 
 export interface WakeWordEvent {
   phrase: string
@@ -108,8 +107,36 @@ export class LocalWakeWordDetector {
   private lastEmittedCommand = ''
   private lastEmittedCommandTime = 0
 
+  // Búfer y protección anti-eco / self-mute para evitar auto-activación con los propios altavoces
+  private isAssistantSpeaking = false
+  private speakingLockReleaseTimer: any = null
+  private userSpeechSettleTimer: any = null
+
   constructor() {
     this.setupRecognition()
+  }
+
+  /**
+   * Bloqueo atómico contra auto-activación por eco acústico mientras el asistente habla.
+   * Incluye un período de gracia de 800ms tras finalizar el habla.
+   */
+  public setSpeakingLock(speaking: boolean): void {
+    if (this.speakingLockReleaseTimer) {
+      clearTimeout(this.speakingLockReleaseTimer)
+      this.speakingLockReleaseTimer = null
+    }
+
+    if (speaking) {
+      this.isAssistantSpeaking = true
+    } else {
+      this.speakingLockReleaseTimer = setTimeout(() => {
+        this.isAssistantSpeaking = false
+      }, 800)
+    }
+  }
+
+  public getSpeakingLock(): boolean {
+    return this.isAssistantSpeaking
   }
 
   public isSupported(): boolean {
@@ -170,7 +197,19 @@ export class LocalWakeWordDetector {
     const trimmed = text.trim()
     if (!trimmed) return
 
-    // 0. Detección inmediata de comando vocal de interrupción (Barge-In)
+    // 0. Comprobar bloqueo por habla del asistente (Anti-Echo / Self-Mute Guard)
+    // Evita que los altavoces de la computadora auto-activen el wake word
+    if (this.isAssistantSpeaking) {
+      // Pero permitir explícitamente órdenes deliberadas de interrupción (Barge-In)
+      const interruptMatch = trimmed.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
+      if (interruptMatch) {
+        console.log(`[VOICE INTERRUPT DETECTED] Interrupción confirmada durante habla: "${trimmed}"`)
+        this.emitInterrupt()
+      }
+      return
+    }
+
+    // 0b. Detección normal de comando vocal de interrupción (Barge-In)
     const interruptMatch = trimmed.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
     if (interruptMatch) {
       console.log(`[VOICE INTERRUPT DETECTED] Interrupción por comando vocal: "${trimmed}"`)
@@ -191,17 +230,22 @@ export class LocalWakeWordDetector {
         this.triggerWake(wakeResult.wakePhrase, wakeResult.detectedLanguage, wakeResult.trailingCommand)
       }
 
-      // Si viene con comando adjunto (ej: "Hey ARES enfoca Mount Sharp" o "eiares activa themis")
+      // Si viene con comando adjunto (ej: "Hola ARES, necesito que analices esta región...")
       if (wakeResult.trailingCommand && wakeResult.trailingCommand.length > 2) {
         const cmd = wakeResult.trailingCommand
-        const isResolved = resolveBilingualTool(cmd) !== null
-        // Emitir si es final O si ya resolvimos semánticamente una herramienta táctica válida
-        if (isFinal || isResolved) {
-          if (cmd !== this.lastEmittedCommand || now - this.lastEmittedCommandTime > 2500) {
-            this.lastEmittedCommand = cmd
-            this.lastEmittedCommandTime = now
-            this.emitCommand(cmd, wakeResult.detectedLanguage)
-          }
+
+        if (this.userSpeechSettleTimer) {
+          clearTimeout(this.userSpeechSettleTimer)
+          this.userSpeechSettleTimer = null
+        }
+
+        if (isFinal) {
+          this.dispatchCommandSafely(cmd, wakeResult.detectedLanguage)
+        } else {
+          // Ventana de asentamiento (1,200 ms): permite formular oraciones compuestas con pausas naturales
+          this.userSpeechSettleTimer = setTimeout(() => {
+            this.dispatchCommandSafely(cmd, wakeResult.detectedLanguage)
+          }, 1200)
         }
       }
       return
@@ -216,15 +260,28 @@ export class LocalWakeWordDetector {
 
     // 3. Si estamos en modo de escucha de comando activo tras el despertar (conversación continua)
     if (this.isCommandListening && trimmed.length > 2) {
-      const now = Date.now()
-      const isResolved = resolveBilingualTool(trimmed) !== null
-      if (isFinal || isResolved) {
-        if (trimmed !== this.lastEmittedCommand || now - this.lastEmittedCommandTime > 2500) {
-          this.lastEmittedCommand = trimmed
-          this.lastEmittedCommandTime = now
-          this.emitCommand(trimmed, this.currentLanguage)
-        }
+      if (this.userSpeechSettleTimer) {
+        clearTimeout(this.userSpeechSettleTimer)
+        this.userSpeechSettleTimer = null
       }
+
+      if (isFinal) {
+        this.dispatchCommandSafely(trimmed, this.currentLanguage)
+      } else {
+        // Pausa natural de 1,200 ms antes de enviar comando en progreso
+        this.userSpeechSettleTimer = setTimeout(() => {
+          this.dispatchCommandSafely(trimmed, this.currentLanguage)
+        }, 1200)
+      }
+    }
+  }
+
+  private dispatchCommandSafely(command: string, language: SupportedLanguage): void {
+    const now = Date.now()
+    if (command !== this.lastEmittedCommand || now - this.lastEmittedCommandTime > 2000) {
+      this.lastEmittedCommand = command
+      this.lastEmittedCommandTime = now
+      this.emitCommand(command, language)
     }
   }
 
