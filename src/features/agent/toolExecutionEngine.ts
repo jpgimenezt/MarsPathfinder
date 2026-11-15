@@ -61,6 +61,16 @@ export interface AppActionHandlers {
   setCleanViewMode?: (active: boolean) => void
   triggerSimContingency?: (contingencyType: string) => void
   getContextSnapshot: () => CompactMissionContext
+
+  // Control táctico de botones HUD / Consola
+  openGuidedTour?: (open: boolean) => void
+  triggerEdlDescent?: () => void
+  triggerOrbitAscent?: () => void
+  focusBaseLZ1?: () => void
+  triggerPanoramaColony?: () => void
+  setRouteViewMode?: (mode: 'both' | 'eva' | 'curiosity' | 'toggle') => void
+  setTacticalDockCollapsed?: (collapsed: boolean | 'toggle') => void
+  setTacticalDockTab?: (tab: 'layers' | 'camera' | 'colony') => void
 }
 
 // ==========================================
@@ -130,6 +140,40 @@ export const ActivateMissionSimulationSchema = z.object({
 
 export const TriggerMissionContingencySchema = z.object({
   contingencyType: z.enum(['RADIO_LOSS', 'SUIT_LEAK_MINOR', 'BATTERY_LOW', 'SLOPE_HAZARD']).describe('Tipo de contingencia de entrenamiento'),
+})
+
+// Control táctico por voz de botones HUD y Consola
+export const OpenGuidedTourSchema = z.object({
+  open: z.boolean().optional().default(true).describe('Abrir o cerrar la guía interactiva'),
+})
+
+export const TriggerEDLDescentSchema = z.object({})
+
+export const TriggerOrbitAscentSchema = z.object({})
+
+export const FocusBaseLZ1Schema = z.object({})
+
+export const TriggerPanoramaColonySchema = z.object({})
+
+export const SetCleanViewModeSchema = z.object({
+  active: z.boolean().optional().default(true).describe('Activar modo pantalla limpia'),
+})
+
+export const SetRouteViewModeSchema = z.object({
+  mode: z.enum(['both', 'eva', 'curiosity', 'toggle']).optional().default('toggle').describe('Modo de visualización de rutas'),
+})
+
+export const SetTacticalDockCollapsedSchema = z.object({
+  collapsed: z.boolean().optional().describe('Estado de colapso deseado'),
+  toggle: z.boolean().optional().default(true).describe('Alternar si collapsed no se especifica'),
+})
+
+export const SetTacticalDockTabSchema = z.object({
+  tab: z.enum(['layers', 'camera', 'colony']).describe('Pestaña de la consola a activar'),
+})
+
+export const OpenDataCenterSchema = z.object({
+  open: z.boolean().optional().default(true).describe('Abrir catálogo de datos NASA'),
 })
 
 // Herramientas heredadas de aws-agent para compatibilidad total
@@ -275,6 +319,78 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     schema: TriggerMissionContingencySchema,
     requiresConfirmation: true,
     confirmationPrompt: (args: any) => `¿Simular contingencia de entrenamiento: ${args.contingencyType}?`,
+  },
+
+  // Herramientas de control directo de botones HUD y Consola Táctica
+  openGuidedTour: {
+    name: 'openGuidedTour',
+    description: 'Abre o cierra la guía interactiva paso a paso de ARES.',
+    securityLevel: 2,
+    schema: OpenGuidedTourSchema,
+    requiresConfirmation: false,
+  },
+  triggerEDLDescent: {
+    name: 'triggerEDLDescent',
+    description: 'Inicia la animación y secuencia cinemática de descenso orbital EDL hacia la Base LZ-1.',
+    securityLevel: 2,
+    schema: TriggerEDLDescentSchema,
+    requiresConfirmation: false,
+  },
+  triggerOrbitAscent: {
+    name: 'triggerOrbitAscent',
+    description: 'Asciende la cámara a órbita espacial alta de Marte.',
+    securityLevel: 2,
+    schema: TriggerOrbitAscentSchema,
+    requiresConfirmation: false,
+  },
+  focusBaseLZ1: {
+    name: 'focusBaseLZ1',
+    description: 'Enfoca la cámara en el Sitio Candidato Principal LZ-1 Base Bradbury.',
+    securityLevel: 2,
+    schema: FocusBaseLZ1Schema,
+    requiresConfirmation: false,
+  },
+  triggerPanoramaColony: {
+    name: 'triggerPanoramaColony',
+    description: 'Inicia el recorrido panorámico de 360 grados por la Colonia Marciana Base Alfa.',
+    securityLevel: 2,
+    schema: TriggerPanoramaColonySchema,
+    requiresConfirmation: false,
+  },
+  setCleanViewMode: {
+    name: 'setCleanViewMode',
+    description: 'Activa o desactiva la pantalla completa limpia sin paneles distractores.',
+    securityLevel: 2,
+    schema: SetCleanViewModeSchema,
+    requiresConfirmation: false,
+  },
+  setRouteViewMode: {
+    name: 'setRouteViewMode',
+    description: 'Alterna o define el modo de visualización de rutas (ambas, solo eva o solo curiosity).',
+    securityLevel: 2,
+    schema: SetRouteViewModeSchema,
+    requiresConfirmation: false,
+  },
+  setTacticalDockCollapsed: {
+    name: 'setTacticalDockCollapsed',
+    description: 'Colapsa o expande la Consola de Control Táctico izquierdo.',
+    securityLevel: 2,
+    schema: SetTacticalDockCollapsedSchema,
+    requiresConfirmation: false,
+  },
+  setTacticalDockTab: {
+    name: 'setTacticalDockTab',
+    description: 'Cambia entre las pestañas de la consola táctica (Capas Científicas, Cámara o Base Alfa 3D).',
+    securityLevel: 2,
+    schema: SetTacticalDockTabSchema,
+    requiresConfirmation: false,
+  },
+  openDataCenter: {
+    name: 'openDataCenter',
+    description: 'Abre el catálogo centralizado de datos científicos de NASA (MOLA, CTX, CRISM, THEMIS).',
+    securityLevel: 2,
+    schema: OpenDataCenterSchema,
+    requiresConfirmation: false,
   },
 
   // Compatibilidad con las 4 herramientas originales de aws-agent
@@ -661,6 +777,88 @@ export class ToolExecutionEngine {
         return {
           status: 'SURFACE_INTELLIGENCE_OPENED',
           message: 'Catálogo de inteligencia de superficie abierto.',
+        }
+      }
+
+      case 'openGuidedTour': {
+        this.handlers.openGuidedTour?.(input.open ?? true)
+        return {
+          status: 'GUIDED_TOUR_DISPATCHED',
+          message: 'Guía interactiva de ARES iniciada.',
+        }
+      }
+
+      case 'triggerEDLDescent': {
+        this.handlers.triggerEdlDescent?.()
+        return {
+          status: 'EDL_DESCENT_DISPATCHED',
+          message: 'Secuencia de descenso orbital EDL iniciada.',
+        }
+      }
+
+      case 'triggerOrbitAscent': {
+        this.handlers.triggerOrbitAscent?.()
+        return {
+          status: 'ORBIT_ASCENT_DISPATCHED',
+          message: 'Ascendiendo a órbita espacial alta de Marte.',
+        }
+      }
+
+      case 'focusBaseLZ1': {
+        this.handlers.focusBaseLZ1?.()
+        return {
+          status: 'BASE_LZ1_FOCUSED',
+          message: 'Enfocando Sitio Candidato Principal LZ-1 Base Bradbury.',
+        }
+      }
+
+      case 'triggerPanoramaColony': {
+        this.handlers.triggerPanoramaColony?.()
+        return {
+          status: 'PANORAMA_DISPATCHED',
+          message: 'Iniciando recorrido panorámico 360 de la Base Alfa.',
+        }
+      }
+
+      case 'setCleanViewMode': {
+        this.handlers.setCleanViewMode?.(input.active ?? true)
+        return {
+          status: 'CLEAN_VIEW_DISPATCHED',
+          message: 'Modo de pantalla limpia activado. Presiona Esc para restaurar.',
+        }
+      }
+
+      case 'setRouteViewMode': {
+        this.handlers.setRouteViewMode?.(input.mode ?? 'toggle')
+        return {
+          status: 'ROUTE_VIEW_MODE_CHANGED',
+          mode: input.mode ?? 'toggle',
+          message: `Visualización de rutas alternada.`,
+        }
+      }
+
+      case 'setTacticalDockCollapsed': {
+        this.handlers.setTacticalDockCollapsed?.(input.collapsed !== undefined ? input.collapsed : 'toggle')
+        return {
+          status: 'DOCK_COLLAPSE_CHANGED',
+          message: 'Consola de control táctico actualizada.',
+        }
+      }
+
+      case 'setTacticalDockTab': {
+        this.handlers.setTacticalDockTab?.(input.tab)
+        return {
+          status: 'DOCK_TAB_CHANGED',
+          tab: input.tab,
+          message: `Pestaña cambiada a ${input.tab === 'layers' ? 'Capas Científicas' : input.tab === 'camera' ? 'Cámara' : 'Base Alfa'}.`,
+        }
+      }
+
+      case 'openDataCenter': {
+        this.handlers.openDataCenterModal?.(input.open ?? true)
+        return {
+          status: 'DATA_CENTER_OPENED',
+          message: 'Abriendo catálogo centralizado de datos científicos NASA.',
         }
       }
 

@@ -25,11 +25,11 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     },
   },
   {
-    tool: 'focusGeographicTarget',
-    params: { targetName: 'Bradbury Landing' },
+    tool: 'focusBaseLZ1',
+    params: {},
     phrases: {
-      en: ['focus bradbury landing', 'look at lz-1', 'center on base alpha', 'lz-1 base', 'bradbury landing'],
-      es: ['enfoca bradbury landing', 'enfocar base lz 1', 'ir a bradbury', 'centrar en la base', 'base lz-1', 'sitio de aterrizaje bradbury'],
+      en: ['focus bradbury landing', 'look at lz-1', 'center on base alpha', 'lz-1 base', 'bradbury landing', 'focus lz-1 base'],
+      es: ['enfoca bradbury landing', 'enfocar base lz 1', 'enfocar base lz-1', 'ir a bradbury', 'centrar en la base', 'base lz-1', 'base lz 1', 'sitio de aterrizaje bradbury', 'lz-1 base'],
     },
   },
   {
@@ -137,11 +137,11 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     },
   },
   {
-    tool: 'activateMissionSimulation',
-    params: { scenario: 'DESCENT_EDL' },
+    tool: 'triggerEDLDescent',
+    params: {},
     phrases: {
-      en: ['start mission simulation', 'simulate edl descent', 'edl descent simulation', 'simulate landing'],
-      es: ['iniciar simulación de descenso edl', 'iniciar simulacion de descenso edl', 'simulación de descenso edl', 'simular descenso', 'descenso edl'],
+      en: ['start mission simulation', 'simulate edl descent', 'edl descent simulation', 'simulate landing', 'edl descent'],
+      es: ['iniciar simulación de descenso edl', 'iniciar simulacion de descenso edl', 'simulación de descenso edl', 'simular descenso', 'descenso edl', 'aterrizaje edl'],
     },
   },
   {
@@ -220,6 +220,134 @@ export const BILINGUAL_MISSION_COMMANDS: CommandMapping[] = [
     },
   },
   {
+    tool: 'openGuidedTour',
+    params: { open: true },
+    phrases: {
+      en: ['open guide', 'start guide', 'guided tour', 'interactive guide', 'help tour', 'start tutorial', 'guide'],
+      es: ['abrir guia', 'abrir guía', 'iniciar guia', 'iniciar guía', 'guia interactiva', 'guía interactiva', 'recorrido guiado', 'tour guiado', 'guia', 'guía', 'tutorial', 'ayuda interactiva'],
+    },
+  },
+  {
+    tool: 'triggerEDLDescent',
+    params: {},
+    phrases: {
+      en: ['edl descent', 'start edl descent', 'simulate landing', 'landing descent', 'simulate edl', 'descent sequence', 'entry descent landing'],
+      es: ['descenso edl', 'iniciar descenso edl', 'descenso', 'iniciar descenso', 'simular aterrizaje', 'secuencia de descenso', 'aterrizaje edl', 'simulacion de descenso', 'simulación de descenso'],
+    },
+  },
+  {
+    tool: 'triggerOrbitAscent',
+    params: {},
+    phrases: {
+      en: ['orbit view', 'orbit', 'ascend to orbit', 'space orbit', 'high orbit camera'],
+      es: ['orbita', 'órbita', 'vista orbita', 'vista órbita', 'ascender a orbita', 'ascender a órbita', 'camara orbita', 'cámara órbita', 'ver orbita', 'ver órbita', 'volver a orbita'],
+    },
+  },
+  {
+    tool: 'triggerPanoramaColony',
+    params: {},
+    phrases: {
+      en: ['panorama', 'panoramic view', 'colony panorama', 'tour colony', '360 panorama', 'base panorama'],
+      es: ['panorama', 'vista panorama', 'panoramica', 'panorámica', 'recorrido panoramico', 'recorrido panorámico', 'ver panorama', 'panorama de la base', 'panorama 360'],
+    },
+  },
+  {
+    tool: 'openDataCenter',
+    params: { open: true },
+    phrases: {
+      en: ['nasa data', 'open nasa data', 'ares scientific data center', 'scientific data center', 'open data center', 'scientific center'],
+      es: ['datos nasa', 'abrir datos nasa', 'fuentes nasa', 'catalogo nasa', 'catálogo nasa', 'centro cientifico ares', 'centro científico ares', 'centro cientifico', 'centro científico', 'abrir centro cientifico', 'abrir centro científico'],
+    },
+  },
+  {
+    tool: 'openSurfaceIntelligence',
+    params: { open: true },
+    phrases: {
+      en: ['raw photos', 'open raw photos', 'raw images', 'surface intelligence', 'surface catalog', 'curiosity raw photos', 'perseverance photos'],
+      es: ['fotos raw', 'ver fotos raw', 'abrir fotos raw', 'fotografias raw', 'fotografías raw', 'imagenes raw', 'imágenes raw', 'inteligencia de superficie', 'abrir inteligencia de superficie', 'catalogo de superficie', 'catálogo de superficie'],
+    },
+  },
+  {
+    tool: 'setCleanViewMode',
+    params: { active: true },
+    phrases: {
+      en: ['clean view', 'clear screen', 'clean screen', 'clear hud', 'hide interface', 'clean hud'],
+      es: ['limpiar', 'pantalla limpia', 'limpiar pantalla', 'modo limpio', 'limpiar hud', 'ocultar interfaz', 'ocultar paneles', 'limpiar vista'],
+    },
+  },
+  {
+    tool: 'setRouteViewMode',
+    params: { mode: 'both' },
+    phrases: {
+      en: ['show both routes', 'both routes view', 'all routes', 'view both routes'],
+      es: ['vista ambas rutas', 'ver ambas rutas', 'ambas rutas', 'mostrar ambas rutas', 'todas las rutas'],
+    },
+  },
+  {
+    tool: 'setRouteViewMode',
+    params: { mode: 'eva' },
+    phrases: {
+      en: ['only eva route', 'eva route only', 'show eva route', 'only ares route'],
+      es: ['solo ruta eva', 'solo ruta ares', 'ver ruta eva', 'ver solo ares', 'solo eva', 'solo ares'],
+    },
+  },
+  {
+    tool: 'setRouteViewMode',
+    params: { mode: 'curiosity' },
+    phrases: {
+      en: ['only curiosity', 'curiosity route only', 'show curiosity traverse'],
+      es: ['solo curiosity', 'ver solo curiosity', 'solo ruta curiosity', 'ver trayectoria curiosity'],
+    },
+  },
+  {
+    tool: 'setRouteViewMode',
+    params: { mode: 'toggle' },
+    phrases: {
+      en: ['toggle routes', 'toggle route view', 'switch routes view'],
+      es: ['alternar rutas', 'cambiar vista de rutas', 'cambiar ruta', 'alternar ruta'],
+    },
+  },
+  {
+    tool: 'setTacticalDockCollapsed',
+    params: { collapsed: true },
+    phrases: {
+      en: ['collapse dock', 'collapse tactical dock', 'hide tactical console', 'close tactical dock', 'collapse console'],
+      es: ['colapsar consola', 'cerrar consola', 'ocultar consola tactica', 'ocultar consola táctica', 'colapsar panel tactico', 'colapsar panel táctico', 'cerrar panel tactico', 'cerrar panel táctico', 'colapsar consola tactica', 'colapsar consola táctica'],
+    },
+  },
+  {
+    tool: 'setTacticalDockCollapsed',
+    params: { collapsed: false },
+    phrases: {
+      en: ['expand dock', 'expand tactical dock', 'show tactical console', 'open tactical dock', 'expand console'],
+      es: ['expandir consola', 'abrir consola', 'mostrar consola tactica', 'mostrar consola táctica', 'expandir panel tactico', 'expandir panel táctico', 'abrir panel tactico', 'abrir panel táctico', 'expandir consola tactica', 'expandir consola táctica'],
+    },
+  },
+  {
+    tool: 'setTacticalDockTab',
+    params: { tab: 'layers' },
+    phrases: {
+      en: ['layers tab', 'scientific layers tab', 'show layers tab', 'open layers tab'],
+      es: ['pestana capas', 'pestaña capas', 'pestana capas cientificas', 'pestaña capas científicas', 'capas cientificas', 'capas científicas', 'ver capas cientificas', 'ver capas científicas', 'abrir capas'],
+    },
+  },
+  {
+    tool: 'setTacticalDockTab',
+    params: { tab: 'camera' },
+    phrases: {
+      en: ['camera tab', 'camera controls tab', 'show camera tab', 'open camera tab'],
+      es: ['pestana camara', 'pestaña cámara', 'controles de camara', 'controles de cámara', 'ajustes de camara', 'ajustes de cámara', 'abrir camara', 'abrir cámara'],
+    },
+  },
+  {
+    tool: 'setTacticalDockTab',
+    params: { tab: 'colony' },
+    phrases: {
+      en: ['base alpha tab', 'colony tab', 'base alpha 3d tab', 'habitat modules tab'],
+      es: ['pestana base alfa', 'pestaña base alfa', 'base alfa 3d', 'panel base alfa', 'modulos de base alfa', 'módulos de base alfa', 'ver colonia 3d'],
+    },
+  },
+  {
     tool: 'explainSelectedRegion',
     params: {},
     phrases: {
@@ -275,6 +403,15 @@ export function repairAcousticHallucinations(rawText: string): string {
   // 8. Correcciones para Curiosity / Perseverance:
   text = text.replace(/(?<=(?:ruta|comparar|vs|versus|trayecto)\s+)(?:curiositi|curiosite|curiosidad)\b/gi, 'Curiosity')
   text = text.replace(/(?<=(?:misi[oó]n|rover|fotos|delta)\s+)(?:perseverans|perseverancia)\b/gi, 'Perseverance')
+
+  // 9. Correcciones para EDL (Descenso):
+  text = text.replace(/\b(?:e\s*d\s*l|e\s+de\s+ele|ede\s*ele|e\s+d\s+l|edel)\b/gi, 'EDL')
+
+  // 10. Correcciones para LZ-1 Base:
+  text = text.replace(/\b(?:l\s*z\s*1|l\s*z\s*-?\s*1|ele\s*zeta\s*(?:uno|1)|elce\s*uno|elezeta\s*(?:uno|1))\b/gi, 'LZ-1')
+
+  // 11. Correcciones para Sobrevuelo y Panorama:
+  text = text.replace(/\bsobre\s+vuelo(s)?\b/gi, 'sobrevuelo')
 
   return text
 }
@@ -387,12 +524,38 @@ export function detectTextLanguage(text: string): SupportedLanguage {
 export function resolveBilingualTool(rawText: string): { tool: string; params?: Record<string, unknown> } | null {
   const norm = normalizeCommandText(rawText)
 
-  // 1. Coincidencia exacta o por subcadena sobre el registro bilingüe
+  // 1. Prioridad absoluta: Pestañas de la consola táctica si el usuario dice 'pestaña' o 'tab'
+  if (norm.includes('pestana') || norm.includes('tab')) {
+    if (norm.includes('capa')) return { tool: 'setTacticalDockTab', params: { tab: 'layers' } }
+    if (norm.includes('camara') || norm.includes('camera')) return { tool: 'setTacticalDockTab', params: { tab: 'camera' } }
+    if (norm.includes('base') || norm.includes('coloni') || norm.includes('alfa')) return { tool: 'setTacticalDockTab', params: { tab: 'colony' } }
+  }
+
+  // 2. Coincidencia exacta sobre el registro bilingüe
   for (const mapping of BILINGUAL_MISSION_COMMANDS) {
     const allPhrases = [...mapping.phrases.en, ...mapping.phrases.es]
     for (const phrase of allPhrases) {
       const normPhrase = normalizeCommandText(phrase)
-      if (norm === normPhrase || norm.includes(normPhrase)) {
+      if (norm === normPhrase) {
+        return {
+          tool: mapping.tool,
+          params: mapping.params,
+        }
+      }
+    }
+  }
+
+  // 3. Coincidencia por subcadena ordenada (frases más largas primero)
+  const sortedMappings = [...BILINGUAL_MISSION_COMMANDS].sort((a, b) => {
+    const maxA = Math.max(...[...a.phrases.en, ...a.phrases.es].map(p => normalizeCommandText(p).length))
+    const maxB = Math.max(...[...b.phrases.en, ...b.phrases.es].map(p => normalizeCommandText(p).length))
+    return maxB - maxA
+  })
+  for (const mapping of sortedMappings) {
+    const allPhrases = [...mapping.phrases.en, ...mapping.phrases.es].sort((p1, p2) => p2.length - p1.length)
+    for (const phrase of allPhrases) {
+      const normPhrase = normalizeCommandText(phrase)
+      if (norm.includes(normPhrase)) {
         return {
           tool: mapping.tool,
           params: mapping.params,
@@ -402,13 +565,24 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
   }
 
   // 2. Comprensión semántica por combinaciones de palabras clave
+  // Cambiar pantallas (Globo 3D, Jezero 2D, Gale 3D)
+  if (norm.includes('globo') || norm.includes('globe') || norm.includes('planeta 3d')) {
+    return { tool: 'switchScreenView', params: { screen: 'globe' } }
+  }
+  if ((norm.includes('jezero') || norm.includes('mapa')) && (norm.includes('2d') || norm.includes('map'))) {
+    return { tool: 'switchScreenView', params: { screen: 'map' } }
+  }
+  if ((norm.includes('gale') || norm.includes('terreno')) && (norm.includes('3d') || norm.includes('volver'))) {
+    return { tool: 'switchScreenView', params: { screen: 'terrain3d' } }
+  }
+
   // Mount Sharp
   if ((norm.includes('mount') || norm.includes('monte') || norm.includes('aeolis')) && norm.includes('sharp')) {
     return { tool: 'focusGeographicTarget', params: { targetName: 'Mount Sharp' } }
   }
 
   // Jezero Delta
-  if (norm.includes('jezero') || norm.includes('delta')) {
+  if (norm.includes('delta') || (norm.includes('jezero') && !norm.includes('2d'))) {
     return { tool: 'focusGeographicTarget', params: { targetName: 'Delta de Jezero' } }
   }
 
@@ -507,6 +681,84 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'toggleScientificLayer', params: { layerId: 'ctx', enabled: true } }
   }
 
+  // Simulación / Tour / Sobrevuelo
+  if (norm.includes('sobrevuelo') || norm.includes('flyover')) {
+    return { tool: 'startDiscoveryTour', params: { startIndex: 0 } }
+  }
+
+  // Guía interactiva
+  if (norm.includes('guia') || norm.includes('guide') || norm.includes('tutorial')) {
+    return { tool: 'openGuidedTour', params: { open: true } }
+  }
+
+  // Descenso EDL
+  if (norm.includes('edl') || (norm.includes('descens') && !norm.includes('ascens')) || norm.includes('aterrizaj')) {
+    return { tool: 'triggerEDLDescent', params: {} }
+  }
+
+  // Ascenso a Órbita / Vista Órbita
+  if ((norm.includes('orbit') || norm.includes('orbita')) && !norm.includes('satelit') && !norm.includes('globo')) {
+    return { tool: 'triggerOrbitAscent', params: {} }
+  }
+
+
+
+  // Pestañas de la consola táctica (debe evaluarse antes que Base LZ-1)
+  if (norm.includes('pestana') || norm.includes('tab')) {
+    if (norm.includes('capa')) return { tool: 'setTacticalDockTab', params: { tab: 'layers' } }
+    if (norm.includes('camara') || norm.includes('camera')) return { tool: 'setTacticalDockTab', params: { tab: 'camera' } }
+    if (norm.includes('base') || norm.includes('coloni') || norm.includes('alfa')) return { tool: 'setTacticalDockTab', params: { tab: 'colony' } }
+  }
+
+  // Base LZ-1 Bradbury
+  if (norm.includes('lz-1') || norm.includes('lz 1') || (norm.includes('base') && (norm.includes('alfa') || norm.includes('lz') || norm.includes('bradbury')))) {
+    return { tool: 'focusBaseLZ1', params: {} }
+  }
+
+  // Panorama 360 / Colonia
+  if (norm.includes('panorama') || norm.includes('panoramic')) {
+    return { tool: 'triggerPanoramaColony', params: {} }
+  }
+
+  // Datos NASA / Centro Científico ARES
+  if ((norm.includes('datos') && norm.includes('nasa')) || (norm.includes('centro') && norm.includes('cientific'))) {
+    return { tool: 'openDataCenter', params: { open: true } }
+  }
+
+  // Fotos RAW / Inteligencia de Superficie
+  if ((norm.includes('foto') && norm.includes('raw')) || (norm.includes('inteligencia') && norm.includes('superficie')) || norm.includes('catalogo de superficie')) {
+    return { tool: 'openSurfaceIntelligence', params: { open: true } }
+  }
+
+  // Modo Limpiar / Pantalla limpia
+  if (norm.includes('limpiar') || norm.includes('pantalla limpia') || norm.includes('modo limpio') || norm.includes('clean view') || norm.includes('clear screen')) {
+    return { tool: 'setCleanViewMode', params: { active: true } }
+  }
+
+  // Modos de vista de rutas (Ambas / Solo EVA / Solo Curiosity)
+  if (norm.includes('ambas rutas') || norm.includes('both routes') || norm.includes('ver ambas rutas') || norm.includes('vista ambas rutas')) {
+    return { tool: 'setRouteViewMode', params: { mode: 'both' } }
+  }
+  if (norm.includes('solo ruta eva') || norm.includes('solo eva') || norm.includes('solo ares') || norm.includes('solo ruta ares') || norm.includes('ver solo ares') || norm.includes('ver ruta eva')) {
+    return { tool: 'setRouteViewMode', params: { mode: 'eva' } }
+  }
+  if (norm.includes('solo curiosity') || norm.includes('solo ruta curiosity') || norm.includes('ver solo curiosity')) {
+    return { tool: 'setRouteViewMode', params: { mode: 'curiosity' } }
+  }
+  if (norm.includes('alternar ruta') || norm.includes('cambiar vista de ruta') || norm.includes('toggle route')) {
+    return { tool: 'setRouteViewMode', params: { mode: 'toggle' } }
+  }
+
+  // Colapsar o expandir consola de control táctico
+  if ((norm.includes('colaps') || norm.includes('cerrar') || norm.includes('ocultar')) && (norm.includes('consola') || norm.includes('panel tactico') || norm.includes('dock'))) {
+    return { tool: 'setTacticalDockCollapsed', params: { collapsed: true } }
+  }
+  if ((norm.includes('expand') || norm.includes('abrir') || norm.includes('mostrar')) && (norm.includes('consola') || norm.includes('panel tactico') || norm.includes('dock'))) {
+    return { tool: 'setTacticalDockCollapsed', params: { collapsed: false } }
+  }
+
+
+
   // Simulación / Tour
   if ((norm.includes('inici') || norm.includes('start') || norm.includes('comenz') || norm.includes('lanz')) &&
       (norm.includes('simula') || norm.includes('tour') || norm.includes('recorr'))) {
@@ -525,9 +777,8 @@ export function resolveBilingualTool(rawText: string): { tool: string; params?: 
     return { tool: 'previewEVARoute', params: { mode: 'FOOT' } }
   }
 
-  // Comparar rutas
-  if ((norm.includes('compar') || norm.includes('curiosity')) &&
-      (norm.includes('ruta') || norm.includes('route') || norm.includes('ambas') || norm.includes('both'))) {
+  // Comparar misiones / rutas
+  if (norm.includes('compar') || (norm.includes('curiosity') && (norm.includes('ruta') || norm.includes('vs')))) {
     return { tool: 'compareMissionRoutes', params: { showModal: true } }
   }
 

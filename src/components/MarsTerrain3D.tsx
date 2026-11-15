@@ -81,6 +81,12 @@ import {
 
 export type CameraViewMode = 'orbit' | 'pan' | 'firstPerson' | 'fly'
 
+export interface Tactical3DCommand {
+  id: number
+  action: string
+  params?: Record<string, unknown>
+}
+
 interface MarsTerrain3DProps {
   currentStops?: Partial<Record<StopId, MarsPoint | null>>
   onSelectScienceStop?: (point: MarsPoint, name: string) => void
@@ -94,6 +100,7 @@ interface MarsTerrain3DProps {
   isDataCenterOpenOverride?: boolean | null
   isTourActiveOverride?: boolean | null
   onTourStateChange?: (active: boolean, paused: boolean, stopIdx: number) => void
+  tacticalCommand?: Tactical3DCommand | null
 }
 
 interface EdlFlightTelemetry {
@@ -138,6 +145,7 @@ export function MarsTerrain3D({
   isDataCenterOpenOverride,
   isTourActiveOverride,
   onTourStateChange,
+  tacticalCommand,
 }: MarsTerrain3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
@@ -1408,6 +1416,82 @@ export function MarsTerrain3D({
     selectedCuriosityWaypoint ||
     selectedObservationProfile
   )
+
+  // Despacho táctico de comandos provenientes del Copiloto de Voz ARES
+  const lastExecutedCommandIdRef = useRef<number>(0)
+  useEffect(() => {
+    if (!tacticalCommand || tacticalCommand.id === lastExecutedCommandIdRef.current) return
+    lastExecutedCommandIdRef.current = tacticalCommand.id
+
+    switch (tacticalCommand.action) {
+      case 'GUIDED_TOUR':
+        setIsGuidedTourOpen(Boolean(tacticalCommand.params?.open ?? true))
+        break
+      case 'SOBREVUELO':
+        closeInspector()
+        setIsCinematicPlaying(false)
+        setIsDiscoveryTourActive(true)
+        setCurrentDiscoveryStopIndex(Number(tacticalCommand.params?.startIndex ?? 0))
+        setIsDiscoveryPaused(false)
+        break
+      case 'DESCENSO_EDL':
+        playGoogleEarthDive()
+        break
+      case 'ORBITA':
+        playGoogleEarthAscent()
+        break
+      case 'BASE_LZ1':
+        focusOnLandingSite()
+        break
+      case 'PANORAMA':
+        tourColony()
+        break
+      case 'DATOS_NASA':
+        setIsDataCenterOpen(Boolean(tacticalCommand.params?.open ?? true))
+        break
+      case 'FOTOS_RAW':
+        setIsSurfaceIntelligenceOpen(Boolean(tacticalCommand.params?.open ?? true))
+        break
+      case 'LIMPIAR':
+        setIsCleanViewMode(Boolean(tacticalCommand.params?.active ?? true))
+        break
+      case 'COMPARAR_MISIONES':
+        setIsMissionComparisonOpen(Boolean(tacticalCommand.params?.open ?? true))
+        break
+      case 'ROUTE_VIEW_MODE': {
+        const mode = tacticalCommand.params?.mode
+        if (mode === 'both' || mode === 'eva' || mode === 'curiosity') {
+          setRouteViewMode(mode)
+        } else {
+          setRouteViewMode(prev => (prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both'))
+        }
+        break
+      }
+      case 'TOGGLE_DOCK': {
+        const collapsed = tacticalCommand.params?.collapsed
+        if (typeof collapsed === 'boolean') {
+          setIsLeftDockCollapsed(collapsed)
+        } else {
+          setIsLeftDockCollapsed(prev => !prev)
+        }
+        break
+      }
+      case 'SET_DOCK_TAB': {
+        const tab = tacticalCommand.params?.tab as 'layers' | 'camera' | 'colony'
+        if (tab) {
+          setLeftTab(tab)
+          setIsLeftDockCollapsed(false)
+        }
+        break
+      }
+    }
+  }, [
+    tacticalCommand,
+    playGoogleEarthDive,
+    playGoogleEarthAscent,
+    focusOnLandingSite,
+    tourColony,
+  ])
 
   // Sincronizar clases globales para evitar superposiciones de UI
   useEffect(() => {

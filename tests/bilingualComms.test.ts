@@ -107,4 +107,74 @@ describe('Bilingual Mission Comms & Language Detection', () => {
       expect(es.states[st]).toBeDefined()
     }
   })
+
+  it('resolves voice commands for all top HUD actions and tactical dock buttons', () => {
+    // 1. [GUÍA]
+    expect(resolveBilingualTool('abrir guía')?.tool).toBe('openGuidedTour')
+    expect(resolveBilingualTool('start guided tour')?.tool).toBe('openGuidedTour')
+
+    // 2. [SOBREVUELO]
+    expect(resolveBilingualTool('iniciar sobrevuelo')?.tool).toBe('startDiscoveryTour')
+    expect(resolveBilingualTool('flyover mode')?.tool).toBe('startDiscoveryTour')
+
+    // 3. [DESCENSO EDL]
+    expect(resolveBilingualTool('descenso EDL')?.tool).toBe('triggerEDLDescent')
+    expect(resolveBilingualTool('simulate landing descent')?.tool).toBe('triggerEDLDescent')
+
+    // 4. [ÓRBITA]
+    expect(resolveBilingualTool('ascender a órbita')?.tool).toBe('triggerOrbitAscent')
+    expect(resolveBilingualTool('orbit view')?.tool).toBe('triggerOrbitAscent')
+
+    // 5. [LZ-1 BASE]
+    expect(resolveBilingualTool('enfocar base LZ-1')?.tool).toBe('focusBaseLZ1')
+    expect(resolveBilingualTool('focus lz-1 base')?.tool).toBe('focusBaseLZ1')
+
+    // 6. [PANORAMA]
+    expect(resolveBilingualTool('ver panorama 360')?.tool).toBe('triggerPanoramaColony')
+    expect(resolveBilingualTool('colony panorama')?.tool).toBe('triggerPanoramaColony')
+
+    // 7. [DATOS NASA] / [CENTRO CIENTÍFICO ARES]
+    expect(resolveBilingualTool('abrir datos NASA')?.tool).toBe('openDataCenter')
+    expect(resolveBilingualTool('abrir centro científico ARES')?.tool).toBe('openDataCenter')
+
+    // 8. [FOTOS RAW] / [INTELIGENCIA DE SUPERFICIE]
+    expect(resolveBilingualTool('ver fotos raw')?.tool).toBe('openSurfaceIntelligence')
+    expect(resolveBilingualTool('abrir inteligencia de superficie')?.tool).toBe('openSurfaceIntelligence')
+
+    // 9. [GLOBO 3D] y [JEZERO 2D]
+    expect(resolveBilingualTool('globo 3d')?.tool).toBe('switchScreenView')
+    expect(resolveBilingualTool('jezero 2d')?.tool).toBe('switchScreenView')
+
+    // 10. [LIMPIAR]
+    expect(resolveBilingualTool('modo pantalla limpia')?.tool).toBe('setCleanViewMode')
+    expect(resolveBilingualTool('clean hud view')?.tool).toBe('setCleanViewMode')
+
+    // 11. [COMPARAR MISIONES]
+    expect(resolveBilingualTool('comparar misiones')?.tool).toBe('compareMissionRoutes')
+
+    // 12. [VISTA: AMBAS RUTAS]
+    expect(resolveBilingualTool('ver ambas rutas')?.params).toEqual({ mode: 'both' })
+    expect(resolveBilingualTool('solo ruta eva')?.params).toEqual({ mode: 'eva' })
+    expect(resolveBilingualTool('solo curiosity')?.params).toEqual({ mode: 'curiosity' })
+    expect(resolveBilingualTool('alternar rutas')?.params).toEqual({ mode: 'toggle' })
+
+    // 13. [◀] / [▶] Consola de Control Táctico
+    expect(resolveBilingualTool('colapsar consola táctica')?.params).toEqual({ collapsed: true })
+    expect(resolveBilingualTool('expandir consola táctica')?.params).toEqual({ collapsed: false })
+
+    // 14. Pestañas de la Consola Táctica
+    expect(resolveBilingualTool('pestaña capas científicas')?.params).toEqual({ tab: 'layers' })
+    expect(resolveBilingualTool('pestaña cámara')?.params).toEqual({ tab: 'camera' })
+    expect(resolveBilingualTool('pestaña base alfa 3d')?.params).toEqual({ tab: 'colony' })
+
+    // 15. Las 8 Capas Científicas completas
+    expect(resolveBilingualTool('fotografía orbital satelital real')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('mosaico controlado CTX gale')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('inercia térmica superficial')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('contexto geológico y estratigrafía')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('unidades mineralógicas y espectrales')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('modelo digital de elevación hipsométrica')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('análisis de pendientes y seguridad de locomoción EVA')?.tool).toBe('toggleScientificLayer')
+    expect(resolveBilingualTool('dosimetría de radiación en superficie')?.tool).toBe('toggleScientificLayer')
+  })
 })

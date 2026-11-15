@@ -67,6 +67,7 @@ export function App() {
     paused: false,
     stopIdx: 0,
   })
+  const [tacticalCommand3D, setTacticalCommand3D] = useState<{ id: number; action: string; params?: Record<string, unknown> } | null>(null)
 
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
@@ -168,6 +169,7 @@ export function App() {
         setFocusTarget({ lat, lon, height })
       },
       toggleLayer: (layerId, enabledVal) => {
+        setScreen('terrain3d')
         const idLower = layerId.toLowerCase()
         if (idLower === 'ctx' || idLower === 'mola' || idLower === 'themis') {
           setEnabled(prev => ({ ...prev, [idLower as LayerId]: enabledVal }))
@@ -191,7 +193,11 @@ export function App() {
         }
       },
       switchScreen: (screenMode: 'terrain3d' | 'globe' | 'map') => {
-        setScreen(screenMode)
+        if (screenMode === 'map') {
+          openJezero()
+        } else {
+          setScreen(screenMode)
+        }
       },
       setWaypoint: (id, point) => {
         dispatch({ type: 'set', id, point })
@@ -202,14 +208,57 @@ export function App() {
       openComparisonModal: open => {
         setScreen('terrain3d')
         setIsComparisonOpenOverride(open)
+        setTacticalCommand3D({ id: Date.now(), action: 'COMPARAR_MISIONES', params: { open } })
       },
       openDataCenterModal: open => {
         setScreen('terrain3d')
         setIsDataCenterOpenOverride(open)
+        setTacticalCommand3D({ id: Date.now(), action: 'DATOS_NASA', params: { open } })
       },
-      startTour: () => {
+      openSurfaceIntelligenceModal: open => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'FOTOS_RAW', params: { open } })
+      },
+      openGuidedTour: (open = true) => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'GUIDED_TOUR', params: { open } })
+      },
+      triggerEdlDescent: () => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'DESCENSO_EDL' })
+      },
+      triggerOrbitAscent: () => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'ORBITA' })
+      },
+      focusBaseLZ1: () => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'BASE_LZ1' })
+      },
+      triggerPanoramaColony: () => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'PANORAMA' })
+      },
+      setCleanViewMode: (active = true) => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'LIMPIAR', params: { active } })
+      },
+      setRouteViewMode: (mode = 'toggle') => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'ROUTE_VIEW_MODE', params: { mode } })
+      },
+      setTacticalDockCollapsed: (collapsed = 'toggle') => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'TOGGLE_DOCK', params: { collapsed } })
+      },
+      setTacticalDockTab: tab => {
+        setScreen('terrain3d')
+        setTacticalCommand3D({ id: Date.now(), action: 'SET_DOCK_TAB', params: { tab } })
+      },
+      startTour: (startIndex = 0) => {
         setScreen('terrain3d')
         setIsTourActiveOverride(true)
+        setTacticalCommand3D({ id: Date.now(), action: 'SOBREVUELO', params: { startIndex } })
       },
       pauseTour: () => {
         setIsTourActiveOverride(prev => !prev)
@@ -226,7 +275,7 @@ export function App() {
         })
       },
     }
-  }, [screen, scope, plan.stops, enabled, tourStatus])
+  }, [screen, scope, plan.stops, enabled, tourStatus, openJezero])
 
   return (
     <div className="app">
@@ -331,6 +380,7 @@ export function App() {
               isDataCenterOpenOverride={isDataCenterOpenOverride}
               isTourActiveOverride={isTourActiveOverride}
               onTourStateChange={(active, paused, stopIdx) => setTourStatus({ active, paused, stopIdx })}
+              tacticalCommand={tacticalCommand3D}
             />
           </Suspense>
         </main>
