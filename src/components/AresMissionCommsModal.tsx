@@ -408,7 +408,7 @@ export function AresMissionCommsModal({
         setConversationState('executing_tool')
         setCurrentExecutionInfo({
           action: resolved.tool,
-          description: `Ejecutando ${resolved.tool}...`,
+          description: `${responseLanguage === 'en' ? 'Executing' : 'Ejecutando'} ${resolved.tool}...`,
         })
 
         const req: ToolExecutionRequest = {
@@ -416,8 +416,21 @@ export function AresMissionCommsModal({
           input: resolved.params || {},
         }
         const res = await toolEngineRef.current.executeTool(req)
+        if (res.pendingConfirmationId) {
+          setPendingConfirm({
+            id: res.pendingConfirmationId,
+            tool: resolved.tool,
+            message: responseLanguage === 'en'
+              ? `Confirm execution of ${resolved.tool}? This changes the proposed plan or simulation.`
+              : `¿Confirmás ejecutar ${resolved.tool}? Se modificará el plan propuesto o la simulación.`,
+            securityLevel: res.securityLevel,
+          })
+          setPresentationMode('compact')
+        }
 
-        const actionText = res.success
+        const actionText = res.pendingConfirmationId
+          ? responseLanguage === 'en' ? 'Waiting for your confirmation.' : 'Esperando tu confirmación.'
+          : res.success
           ? responseLanguage === 'en' ? `Command '${resolved.tool}' completed.` : res.actionPerformed || `Comando '${resolved.tool}' completado.`
           : (responseLanguage === 'en' ? `Could not execute '${resolved.tool}': ${res.output.error || 'Notice'}` : `No se pudo ejecutar '${resolved.tool}': ${res.output.error || 'Aviso táctico'}`)
 
@@ -741,7 +754,20 @@ export function AresMissionCommsModal({
         const res = await toolEngineRef.current.executeTool(req)
 
         const locale = responseLanguageRef.current
-        const summaryText = res.success
+        if (res.pendingConfirmationId) {
+          setPendingConfirm({
+            id: res.pendingConfirmationId,
+            tool,
+            message: locale === 'en'
+              ? `Confirm execution of ${tool}? This changes the proposed plan or simulation.`
+              : `¿Confirmás ejecutar ${tool}? Se modificará el plan propuesto o la simulación.`,
+            securityLevel: res.securityLevel,
+          })
+          setPresentationMode('compact')
+        }
+        const summaryText = res.pendingConfirmationId
+          ? locale === 'en' ? 'Waiting for your confirmation.' : 'Esperando tu confirmación.'
+          : res.success
           ? locale === 'en' ? `Command '${tool}' completed.` : res.actionPerformed || `Comando '${tool}' completado.`
           : locale === 'en' ? `Could not execute '${tool}': ${res.output.error || 'Operation aborted'}` : `No se pudo ejecutar '${tool}': ${res.output.error || 'Operación abortada'}`
 
@@ -759,7 +785,9 @@ export function AresMissionCommsModal({
           },
         ])
 
-        return res.output
+        return res.pendingConfirmationId && locale === 'en'
+          ? { ...res.output, message: `Awaiting explicit user confirmation for ${tool}; do not claim it was executed.` }
+          : res.output
       },
       onError: err => {
         console.warn('[MISSION COMMS PROVIDER] Nota:', err.message)
@@ -775,10 +803,10 @@ export function AresMissionCommsModal({
   // Sincronizar contexto compacto del mapa con ARES
   useEffect(() => {
     if (providerRef.current) {
-      const compact = buildCompactMissionContext(contextInput)
+      const compact = buildCompactMissionContext({ ...contextInput, language })
       providerRef.current.updateMissionContext(compact as unknown as Record<string, unknown>)
     }
-  }, [contextInput])
+  }, [contextInput, language])
 
   // Scroll automático en transcripciones
   useEffect(() => {
@@ -1367,7 +1395,7 @@ export function AresMissionCommsModal({
             {pendingConfirm && (
               <div className="ares-comms-confirmation-card" role="alert">
                 <div className="ares-confirmation-header">
-                  <span>⚠️ [CONFIRMACIÓN TÁCTICA // NIVEL {pendingConfirm.securityLevel}]</span>
+                  <span>⚠️ [{ui('ACTION CONFIRMATION // LEVEL', 'CONFIRMACIÓN DE ACCIÓN // NIVEL')} {pendingConfirm.securityLevel}]</span>
                 </div>
                 <div className="ares-confirmation-prompt">{pendingConfirm.message}</div>
                 <div className="ares-confirmation-actions">

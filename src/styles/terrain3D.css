@@ -2605,20 +2605,3 @@ body.is-clean-view .ares-science-disclaimer-bar {
     padding: 16px;
   }
 }
-.terrain-science-disclaimer {
-  position: absolute;
-  z-index: 120;
-  bottom: 68px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: min(600px, calc(100% - 32px));
-  padding: 7px 12px;
-  color: #fff;
-  background: rgba(7, 19, 25, .93);
-  border: 1px solid #f0af65;
-  border-radius: 6px;
-  font-size: .72rem;
-  line-height: 1.35;
-  text-align: center;
-  pointer-events: none;
-}

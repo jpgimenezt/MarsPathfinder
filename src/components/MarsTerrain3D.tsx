@@ -272,11 +272,11 @@ export function MarsTerrain3D({
   const routePointsList = useMemo(() => {
     if (!currentStops) return []
     const list: { id: StopId; point: MarsPoint; name: string }[] = []
-    if (currentStops.A) list.push({ id: 'A', point: currentStops.A, name: 'Base / Inicio A' })
-    if (currentStops.P) list.push({ id: 'P', point: currentStops.P, name: 'Parada Científica P' })
-    if (currentStops.B) list.push({ id: 'B', point: currentStops.B, name: 'Objetivo B' })
+    if (currentStops.A) list.push({ id: 'A', point: currentStops.A, name: ui('Base / Starting Point A', 'Base / Inicio A') })
+    if (currentStops.P) list.push({ id: 'P', point: currentStops.P, name: ui('Science Stop P', 'Parada Científica P') })
+    if (currentStops.B) list.push({ id: 'B', point: currentStops.B, name: ui('Destination B', 'Objetivo B') })
     return list
-  }, [currentStops])
+  }, [currentStops, language])
 
   const totalRouteMeters = useMemo(() => {
     if (routePointsList.length < 2) return 0
@@ -1627,7 +1627,6 @@ export function MarsTerrain3D({
 
   return (
     <div className="ares-terrain-container" aria-label={language === 'en' ? 'Gale Crater and Mount Sharp 3D explorer' : 'Explorador 3D de Gale Crater y Mount Sharp'}>
-      <p className="terrain-science-disclaimer" role="note">{t('galeWarning')}</p>
       {/* Contenedor del Canvas de Three.js */}
       <div className="ares-canvas-host" ref={containerRef} />
 
@@ -1798,11 +1797,9 @@ export function MarsTerrain3D({
       </header>
 
       {/* Banner de Transparencia Científica Gale 3D */}
-      <div className="ares-science-disclaimer-bar" role="note" aria-label="Aviso científico">
-        <span className="disclaimer-badge">RECONSTRUCCIÓN TOPOGRÁFICA APROXIMADA · MODELO EDUCATIVO</span>
-        <span className="disclaimer-text">
-          El relieve de Gale es una reconstrucción procedural con fines educativos. Las alturas, pendientes y rutas simuladas no constituyen mediciones topográficas verificadas ni evaluaciones de seguridad operacional.
-        </span>
+      <div className="ares-science-disclaimer-bar" role="note" aria-label={ui('Scientific limitation', 'Límite científico')}>
+        <span className="disclaimer-badge">{ui('APPROXIMATE PROCEDURAL TERRAIN · EDUCATIONAL MODEL', 'RECONSTRUCCIÓN PROCEDURAL APROXIMADA · MODELO EDUCATIVO')}</span>
+        <span className="disclaimer-text">{t('galeWarning')}</span>
       </div>
 
       {/* ZONA 2: PANEL DE CONTROL TÁCTICO IZQUIERDO (Acoplado y Colapsable) */}

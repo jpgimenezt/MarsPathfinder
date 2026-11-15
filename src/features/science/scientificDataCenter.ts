@@ -181,7 +181,7 @@ export const ARES_DISCLAIMER_NOTICE =
   'ARES es un proyecto independiente desarrollado para el NASA Space Apps Challenge. ' +
   'No está afiliado, respaldado ni patrocinado por la NASA. Las fuentes y datos científicos se identifican individualmente en la aplicación.'
 
-type LocalizedField = 'name' | 'description' | 'acquisitionDate' | 'publicationDate' | 'resolution' | 'crs' | 'geographicExtent' | 'unitOfMeasure' | 'license' | 'limitations'
+type LocalizedField = 'name' | 'description' | 'organization' | 'mission' | 'instrument' | 'credits' | 'acquisitionDate' | 'publicationDate' | 'resolution' | 'crs' | 'geographicExtent' | 'unitOfMeasure' | 'license' | 'limitations'
 const englishRegistry: Record<string, Partial<Pick<AresDatasetMetadata, LocalizedField>>> = {
   'nasa-trek-gale-ctx': {
     name: 'Gale CTX controlled mosaic (Gale_CTX_BlockAdj_dd)',
@@ -219,6 +219,8 @@ const englishRegistry: Record<string, Partial<Pick<AresDatasetMetadata, Localize
   },
   'usgs-sim-3292-geology': {
     name: 'USGS geologic map of Mars (SIM 3292)',
+    mission: 'USGS–NASA Planetary Geologic Mapping Program',
+    instrument: 'Regional synthesis (MOLA, THEMIS, CTX, HRSC)',
     description: 'Global geologic synthesis. Detailed Gale contacts require a separate local product and spatial verification.',
     acquisitionDate: 'Synthesis of historical observations', publicationDate: '2014 (USGS publication)',
     resolution: 'Global map at 1:20,000,000; not a local Gale map',
@@ -252,6 +254,10 @@ const englishRegistry: Record<string, Partial<Pick<AresDatasetMetadata, Localize
   },
   'ares-topographic-dem': {
     name: 'Gale procedural terrain (NOT a validated DEM)',
+    organization: 'AresRoute (independent educational simulation)',
+    mission: 'Regional MOLA/HRSC context; local mesh is simulated',
+    instrument: 'Procedural geometry, not an altimeter',
+    credits: 'AresRoute simulation; MOLA/HRSC only as historical context',
     description: 'Educational 3D geometry generated from procedural formulas; no georeferenced numerical local DEM was validated for this scene.',
     acquisitionDate: 'Not applicable to procedural geometry',
     publicationDate: '2026-11-15 (prototype)',

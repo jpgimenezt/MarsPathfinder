@@ -281,6 +281,7 @@ export function App() {
       },
       getContextSnapshot: () => {
         return buildCompactMissionContext({
+          language,
           screen,
           scope,
           currentStops: plan.stops,
@@ -291,7 +292,7 @@ export function App() {
         })
       },
     }
-  }, [screen, scope, plan.stops, enabled, tourStatus, openJezero])
+  }, [screen, scope, plan.stops, enabled, tourStatus, openJezero, language])
 
   return (
     <div className="app">

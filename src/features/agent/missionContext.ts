@@ -86,6 +86,7 @@ export interface CompactMissionContext {
 }
 
 export interface MissionContextInput {
+  language?: 'en' | 'es'
   screen: 'terrain3d' | 'globe' | 'map'
   scope?: 'jezero' | 'global'
   currentStops?: Partial<Record<StopId, MarsPoint | null>>
@@ -103,6 +104,7 @@ export interface MissionContextInput {
  * Genera un payload de contexto compacto y estructurado listo para inyectar a ARES
  */
 export function buildCompactMissionContext(input: MissionContextInput): CompactMissionContext {
+  const es = input.language === 'es'
   // 1. Determinar Region Geografica
   let region: 'JEZERO' | 'GALE_MOUNT_SHARP' | 'MARS_GLOBAL' = 'GALE_MOUNT_SHARP'
   if (input.screen === 'globe') {
@@ -114,8 +116,8 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
   // 2. Coordenadas de Referencia
   let centerLat = -4.589
   let centerLon = 137.441
-  let elevationMeters: number | null = -4450
-  let elevationStatus: ProvenanceCategory = 'DERIVED'
+  let elevationMeters: number | null = null
+  let elevationStatus: ProvenanceCategory = 'UNAVAILABLE'
 
   if (region === 'JEZERO') {
     centerLat = 18.38
@@ -125,8 +127,8 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
   } else if (region === 'MARS_GLOBAL') {
     centerLat = 0.0
     centerLon = 0.0
-    elevationMeters = 0
-    elevationStatus = 'OBSERVED' // Referencia MOLA Areoide global
+    elevationMeters = null // A visual hillshade does not give numerical elevation at this point.
+    elevationStatus = 'UNAVAILABLE'
   }
 
   if (input.currentLocation) {
@@ -134,7 +136,7 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
     centerLon = input.currentLocation.lon
     if (input.currentLocation.elev !== undefined) {
       elevationMeters = input.currentLocation.elev
-      elevationStatus = 'DERIVED'
+      elevationStatus = region === 'GALE_MOUNT_SHARP' ? 'SIMULATED' : 'UNAVAILABLE'
     }
   }
 
@@ -169,12 +171,12 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
     },
     {
       id: 'gale_dem',
-      name: 'Gale Crater High-Res Elevation DTM',
-      instrument: 'HRSC / HiRISE Blended Stereo Topography',
-      mission: 'Mars Express / MRO (ESA/NASA)',
+      name: 'Gale procedural terrain — not a verified numeric DTM',
+      instrument: 'Procedural model, not an instrument',
+      mission: 'AresRoute educational simulation (MOLA/HRSC are context only)',
       enabled: region === 'GALE_MOUNT_SHARP',
-      isDemNumeric: true,
-      provenance: 'DERIVED',
+      isDemNumeric: false,
+      provenance: 'SIMULATED',
     },
   ]
 
@@ -201,12 +203,16 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
 
   const hazardsEvaluation =
     region === 'GALE_MOUNT_SHARP'
-      ? 'Topografía de relieve regional derivada (resolución ~50m/px). Obstáculos submétricos no evaluados en campo.'
-      : 'ADVERTENCIA: Sin DEM numérico local en este ROI. Pendientes y obstáculos submétricos no evaluados.'
+      ? es
+        ? 'SIMULATED: terreno procedural sin DEM local validado. Pendientes y obstáculos pequeños no evaluados para seguridad EVA.'
+        : 'SIMULATED: procedural terrain without a validated local DEM. Slopes and small obstacles are not assessed for EVA safety.'
+      : es
+        ? 'SIN DATOS: cobertura DEM local limitada o no validada para esta selección; peligros pequeños no evaluados.'
+        : 'INSUFFICIENT DATA: local DEM coverage limited or unverified for this selection; small hazards unassessed.'
 
   // 5. Estado del Habitat / Base Conceptual
   const habitat: HabitatOperationalStatus = {
-    colonyName: 'Base Ares Alpha (Gale Crater / Yellowknife Bay)',
+    colonyName: es ? 'Base Ares Alpha (simulación conceptual en Gale)' : 'Ares Alpha Base (conceptual Gale simulation)',
     totalModules: DEFAULT_COLONY_MODULES.length,
     powerGenerationKw: 145.0,
     oxygenReserveDays: 180,
@@ -228,7 +234,9 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
       },
       elevationMeters: elevationMeters !== null ? Math.round(elevationMeters) : null,
       elevationStatus,
-      selectedTargetName: input.selectedDiscoveryName,
+      selectedTargetName: input.selectedDiscoveryName
+        ? es ? input.selectedDiscoveryName : 'Illustrative science target (position unverified)'
+        : undefined,
     },
     activeLayers,
     route: {
@@ -240,7 +248,7 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
       walkbackAssessment: walkback
         ? {
             status: walkback.status,
-            label: walkback.label,
+            label: es ? `Supuesto ilustrativo: ${walkback.label}; NO es un límite NASA` : `Illustrative distance band (${walkback.status}); NOT a NASA EVA limit`,
             color: walkback.status === 'NOMINAL' ? '#63D4E5' : walkback.status === 'PRECAUCIÓN' ? '#E9B85C' : '#FF4444',
             nominalLimitKm: 5.0,
             emergencyLimitKm: 8.0,
@@ -255,11 +263,13 @@ export function buildCompactMissionContext(input: MissionContextInput): CompactM
       isTourPaused: Boolean(input.isDiscoveryPaused),
       activeTourStop:
         input.isDiscoveryTourActive && input.currentDiscoveryStopIndex !== undefined
-          ? GALE_DISCOVERIES[input.currentDiscoveryStopIndex]?.name
+          ? es ? GALE_DISCOVERIES[input.currentDiscoveryStopIndex]?.name : 'Illustrative Gale science stop — site match unverified'
           : undefined,
       isCleanView: Boolean(input.isCleanViewMode),
     },
     epistemicNote:
-      'Toda distancia utiliza radio marciano estricto Rm = 3,389.5 km. Los datos simulados están etiquetados como SIMULATED.',
+      es
+        ? 'Distancia horizontal con radio medio marciano aproximado 3 389,5 km; la escena Gale, hábitat, recursos y categorías de retorno son SIMULATED y NO son límites NASA. Sin DEM validado no se infiere seguridad.'
+        : 'Horizontal distance uses approximate Mars mean radius 3,389.5 km. Gale terrain, habitat, resources and walkback bands are SIMULATED, NOT NASA limits. No verified DEM means route safety cannot be inferred.',
   }
 }
