@@ -115,6 +115,25 @@
   padding: 24px;
 }
 
+.ares-comms-overlay.screen-terrain3d {
+  padding-bottom: 74px;
+  padding-right: 20px;
+}
+
+.ares-comms-overlay.screen-map {
+  padding-bottom: 48px;
+  padding-right: 20px;
+}
+
+.ares-comms-overlay.screen-globe {
+  padding-bottom: 60px;
+  padding-right: 20px;
+}
+
+body.has-right-drawer .ares-comms-overlay.screen-terrain3d {
+  padding-right: 395px;
+}
+
 .ares-comms-panel {
   position: relative;
   pointer-events: auto;
@@ -143,11 +162,35 @@
    FLOATING ORB MODE & HOLOGRAPHIC PRESENCE
    ========================================================= */
 .ares-floating-orb-wrapper {
+  position: fixed;
+  right: 20px;
+  bottom: 82px; /* Margen seguro por encima de la barra inferior de navegación (ares-hud-bottom termina en 60px) */
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
+  z-index: 10000;
+  transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.25s ease;
+}
+
+.ares-comms-overlay.screen-terrain3d .ares-floating-orb-wrapper {
+  bottom: 82px;
+  right: 20px;
+}
+
+body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wrapper {
+  right: 395px;
+}
+
+.ares-comms-overlay.screen-map .ares-floating-orb-wrapper {
+  bottom: 118px; /* Flota sobre el contador manual de Jezero */
+  right: 20px;
+}
+
+.ares-comms-overlay.screen-globe .ares-floating-orb-wrapper {
+  bottom: 112px; /* Flota sobre los controles orbitales */
+  right: 20px;
 }
 
 /* Cuadro de texto / Callout badge de activación hands-free */
@@ -217,24 +260,29 @@
 .ares-floating-orb {
   position: relative;
   pointer-events: auto;
-  width: 78px;
-  height: 78px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
   background: radial-gradient(circle, rgba(9, 14, 20, 0.95) 0%, rgba(17, 27, 37, 0.88) 75%);
   border: 2px solid var(--color-telemetry-cyan);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 24px rgba(99, 212, 229, 0.35);
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 212, 229, 0.35);
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, border-color 0.15s ease;
   user-select: none;
+  touch-action: none;
+}
+
+.ares-floating-orb:active {
+  cursor: grabbing;
 }
 
 .ares-floating-orb:hover {
-  transform: scale(1.06);
+  transform: scale(1.05);
   border-color: #a5f3fc;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 212, 229, 0.55);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 212, 229, 0.55);
 }
 
 .ares-floating-orb.orb-standby {
@@ -298,15 +346,15 @@
 }
 
 .ares-orb-ring.ring-outer {
-  width: 104px;
-  height: 104px;
+  width: 88px;
+  height: 88px;
   border: 1px dashed rgba(99, 212, 229, 0.35);
   animation: comms-orbit-cw 12s linear infinite;
 }
 
 .ares-orb-ring.ring-middle {
-  width: 90px;
-  height: 90px;
+  width: 76px;
+  height: 76px;
   border: 1px solid rgba(99, 212, 229, 0.2);
   animation: comms-orbit-ccw 8s linear infinite;
 }

@@ -916,6 +916,93 @@ export function AresMissionCommsModal({
     }
   }
 
+  // Posicionamiento interactivo y libre arrastre del orbe holográfico
+  const [orbPosition, setOrbPosition] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('ares_orb_pos')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+          return parsed
+        }
+      }
+    } catch {
+      // Ignorar fallback en entornos restringidos
+    }
+    return null
+  })
+
+  const dragTrackingRef = useRef<{ startX: number; startY: number; initX: number; initY: number; moved: boolean } | null>(null)
+
+  const handleOrbPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    const target = e.currentTarget
+    const rect = target.getBoundingClientRect()
+    dragTrackingRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: rect.left,
+      initY: rect.top,
+      moved: false,
+    }
+    try {
+      target.setPointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleOrbPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragTrackingRef.current) return
+    const dx = e.clientX - dragTrackingRef.current.startX
+    const dy = e.clientY - dragTrackingRef.current.startY
+    if (!dragTrackingRef.current.moved && Math.hypot(dx, dy) > 5) {
+      dragTrackingRef.current.moved = true
+    }
+    if (dragTrackingRef.current.moved) {
+      const orbSize = 66
+      const minX = 12
+      const maxX = Math.max(12, window.innerWidth - orbSize - 12)
+      const minY = 56
+      const maxY = Math.max(56, window.innerHeight - orbSize - 60)
+      const nextX = Math.min(Math.max(dragTrackingRef.current.initX + dx, minX), maxX)
+      const nextY = Math.min(Math.max(dragTrackingRef.current.initY + dy, minY), maxY)
+      setOrbPosition({ x: nextX, y: nextY })
+    }
+  }
+
+  const handleOrbPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragTrackingRef.current) return
+    const wasMoved = dragTrackingRef.current.moved
+    dragTrackingRef.current = null
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+    if (wasMoved) {
+      if (orbPosition) {
+        try {
+          localStorage.setItem('ares_orb_pos', JSON.stringify(orbPosition))
+        } catch {
+          // ignore
+        }
+      }
+    } else {
+      handleOrbClick()
+    }
+  }
+
+  const handleOrbDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setOrbPosition(null)
+    try {
+      localStorage.removeItem('ares_orb_pos')
+    } catch {
+      // ignore
+    }
+  }
+
   const handleResolveConfirmation = async (proceed: boolean) => {
     if (!pendingConfirm || !toolEngineRef.current) return
     const confId = pendingConfirm.id
@@ -937,7 +1024,11 @@ export function AresMissionCommsModal({
   }
 
   return (
-    <div className="ares-comms-overlay" role="region" aria-label="Ares Copilot Voice Assistant">
+    <div
+      className={`ares-comms-overlay screen-${contextInput.screen || 'terrain3d'} presentation-${presentationMode}`}
+      role="region"
+      aria-label="Ares Copilot Voice Assistant"
+    >
       {/* ========================================================
           MODO A: PANEL COMPACTO FLOTANTE (COMPACT PANEL MODE)
           ======================================================== */}
@@ -1328,7 +1419,20 @@ export function AresMissionCommsModal({
           MODOS B & C: FLOATING ORB MODE & MINIMIZED EXECUTION
           ======================================================== */}
       {presentationMode !== 'compact' && (
-        <div className="ares-floating-orb-wrapper">
+        <div
+          className="ares-floating-orb-wrapper"
+          style={
+            orbPosition
+              ? {
+                  position: 'fixed',
+                  left: `${orbPosition.x}px`,
+                  top: `${orbPosition.y}px`,
+                  right: 'auto',
+                  bottom: 'auto',
+                }
+              : undefined
+          }
+        >
           {/* Subtítulo Holográfico / Caption flotante */}
           {floatingSubtitle && (
             <div className="ares-orb-subtitle-pill" role="status">
@@ -1412,11 +1516,14 @@ export function AresMissionCommsModal({
             return (
               <div
                 className={`ares-floating-orb orb-${conversationState}`}
-                onClick={handleOrbClick}
+                onPointerDown={handleOrbPointerDown}
+                onPointerMove={handleOrbPointerMove}
+                onPointerUp={handleOrbPointerUp}
+                onDoubleClick={handleOrbDoubleClick}
                 role="button"
                 tabIndex={0}
-                aria-label={`Ares Copilot Orb (${conversationState}). Haz clic para abrir el panel de misión.`}
-                title="Ares Copilot // Haz clic para abrir el panel o habla diciendo 'Hola, ARES' / 'Hey, ARES'"
+                aria-label={`Ares Copilot Orb (${conversationState}). Arrastra para reposicionar o haz clic para abrir.`}
+                title="Ares Copilot // Clic para abrir · Arrastra para mover libremente · Doble clic para restablecer posición"
                 style={{
                   transform: `scale(${orbScale})`,
                   boxShadow: `0 0 ${orbGlow}px ${glowColor}, inset 0 0 ${Math.round(orbGlow / 2)}px ${glowColor}`,
@@ -1444,7 +1551,7 @@ export function AresMissionCommsModal({
 
                 {/* Núcleo central animado */}
                 <div className="ares-orb-core-wrap">
-                  <JarvisAiCore size={38} withOuterOrbits={false} />
+                  <JarvisAiCore size={32} withOuterOrbits={false} />
                 </div>
               </div>
             )
