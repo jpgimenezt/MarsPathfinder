@@ -273,11 +273,33 @@ def execute_tool(name: str, args: dict) -> dict:
 
 def run_agentic_conversation(user_message: str, history: list = None) -> dict:
     """Ejecuta el bucle ReAct del Agente usando Amazon Bedrock Converse"""
-    messages = []
+    valid_history = []
     if history:
+        started = False
+        last_role = None
         for h in history:
-            messages.append({"role": h.get("role", "user"), "content": [{"text": h.get("content", "")}]})
-    messages.append({"role": "user", "content": [{"text": user_message}]})
+            role = h.get("role", "user")
+            content_str = h.get("content", "")
+            if not isinstance(content_str, str) or not content_str.strip():
+                continue
+            # Bedrock Converse exige que el historial comience estrictamente con rol 'user'
+            if not started:
+                if role == "user":
+                    started = True
+                    valid_history.append({"role": "user", "content": [{"text": content_str}]})
+                    last_role = "user"
+            else:
+                # Asegurar alternancia estricta entre user y assistant
+                if role != last_role and role in ("user", "assistant"):
+                    valid_history.append({"role": role, "content": [{"text": content_str}]})
+                    last_role = role
+
+    if valid_history and valid_history[-1]["role"] == "user":
+        valid_history[-1]["content"] = [{"text": valid_history[-1]["content"][0]["text"] + "\n" + user_message}]
+    else:
+        valid_history.append({"role": "user", "content": [{"text": user_message}]})
+
+    messages = valid_history
 
     tool_config = {"tools": BEDROCK_TOOLS}
     system_config = [{"text": SYSTEM_PROMPT}]

@@ -60,11 +60,13 @@ export function AresAgentChat({
     if (!textToSend) setInput('')
     setLoading(true)
 
-    // Formatear historial para el agente
-    const historyPayload = messages.map(m => ({
-      role: m.role,
-      content: m.content,
-    }))
+    // Formatear historial para el agente (excluyendo mensaje inicial del sistema y errores)
+    const historyPayload = messages
+      .filter(m => m.id !== 'init-msg' && !m.content.startsWith('⚠️'))
+      .map(m => ({
+        role: m.role,
+        content: m.content,
+      }))
 
     const agentRes = await queryMarsAgent(query, historyPayload)
 
