@@ -13,7 +13,7 @@ const initialPosition = surfacePoint(...JEZERO_CRATER, 3.15)
 type GlobeTexture = 'mola' | 'viking'
 const textureFiles: Record<GlobeTexture, string> = {
   mola: 'data/mars-mola-global-1024.jpg',
-  viking: 'data/mars-viking-global-1024.webp',
+  viking: 'data/mars-viking-global-2048.webp',
 }
 const sourceUrls: Record<GlobeTexture, string> = {
   mola: 'https://astrogeology.usgs.gov/search/map/mars_mgs_mola_global_color_shaded_relief_463m',
@@ -339,6 +339,6 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
     </div>
     <div className="globe-credit"><a href={sourceUrls[activeTexture]} target="_blank" rel="noreferrer">
       {activeTexture === 'mola' ? 'NASA / USGS · MGS MOLA · relieve sombreado' :
-        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global 1024×512 px</div>
+        'NASA Ames / USGS · Viking MDIM 2.1 · mosaico colorizado'} ↗</a> · Imagen global {activeTexture === 'viking' ? '2048×1024 px' : '1024×512 px'}</div>
   </section>
 }

@@ -34,7 +34,7 @@ describe('Mission Discovery Tour Data (Gale Crater)', () => {
     MISSION_DISCOVERY_STOPS.forEach((stop: TourStop) => {
       expect(stop.imageCredit).toContain('NASA')
       if (stop.imageUrl) {
-        expect(stop.imageUrl.startsWith('https://')).toBe(true)
+        expect(stop.imageUrl.startsWith('https://') || stop.imageUrl.startsWith('data/')).toBe(true)
       }
     })
   })

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { TourStop } from '../features/tour/missionDiscoveryTourData'
+import { resolveAssetUrl } from '../utils/assetUrl'
 
 interface MissionDiscoveryTourOverlayProps {
   currentStopIndex: number
@@ -94,10 +95,13 @@ export function MissionDiscoveryTourOverlay({
         {currentStop.imageUrl && (
           <div className="card-nasa-visual">
             <img
-              src={currentStop.imageUrl}
+              src={resolveAssetUrl(currentStop.imageUrl)}
               alt={currentStop.title}
               className="card-nasa-img"
               loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
+              }}
             />
             <span className="card-nasa-credit">{currentStop.imageCredit}</span>
           </div>

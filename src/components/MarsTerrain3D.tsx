@@ -60,6 +60,7 @@ import {
   DEFAULT_COLONY_MODULES,
   type HabitatModuleConfig,
 } from '../features/colony/colonyCatalog'
+import { resolveAssetUrl } from '../utils/assetUrl'
 import { marsDistance, type MarsPoint } from '../features/route/marsDistance'
 import type { StopId } from '../features/route/routePlan'
 import {
@@ -1893,11 +1894,11 @@ export function MarsTerrain3D({
 
                 <div className="drawer-photo-wrap">
                   <img
-                    src={selectedDiscovery.imageUrl}
+                    src={resolveAssetUrl(selectedDiscovery.imageUrl)}
                     alt={selectedDiscovery.name}
                     className="drawer-photo"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/data/curiosity/bradbury-landing.jpg'
+                      (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
                     }}
                   />
                   <span className="drawer-photo-credit">{selectedDiscovery.imageCredit}</span>
@@ -1967,9 +1968,12 @@ export function MarsTerrain3D({
                 {PRIMARY_LANDING_SITE.imageUrl && (
                   <div className="drawer-photo-wrap">
                     <img
-                      src={PRIMARY_LANDING_SITE.imageUrl}
+                      src={resolveAssetUrl(PRIMARY_LANDING_SITE.imageUrl)}
                       alt={PRIMARY_LANDING_SITE.name}
                       className="drawer-photo"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
+                      }}
                     />
                     <span className="drawer-photo-credit">{PRIMARY_LANDING_SITE.imageCredit}</span>
                   </div>

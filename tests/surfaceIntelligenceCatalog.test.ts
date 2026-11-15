@@ -35,7 +35,7 @@ describe('Mars Surface Intelligence — Galería de Imágenes Reales', () => {
 
   it('todas las imágenes poseen URLs a imágenes de alta resolución oficiales de la NASA', () => {
     for (const img of SURFACE_INTELLIGENCE_GALLERY) {
-      expect(img.imageUrl).toMatch(/^https?:\/\//)
+      expect(img.imageUrl.startsWith('data/') || img.imageUrl.startsWith('http')).toBe(true)
       expect(img.highResUrl).toMatch(/^https?:\/\/photojournal\.jpl\.nasa\.gov\/jpeg\//)
       expect(img.nasaCredit).toContain('NASA')
       expect(img.sol).toBeGreaterThanOrEqual(0)

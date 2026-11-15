@@ -3,6 +3,7 @@ import {
   SURFACE_INTELLIGENCE_GALLERY,
   type SurfaceObservationImage,
 } from '../features/science/surfaceIntelligenceCatalog'
+import { resolveAssetUrl } from '../utils/assetUrl'
 
 interface Props {
   isOpen: boolean
@@ -127,7 +128,14 @@ export function MarsSurfaceIntelligenceModal({ isOpen, onClose, onFocusCoordinat
                 onClick={() => setInspectedImage(img)}
               >
                 <div className="surface-card-img-wrap">
-                  <img src={img.imageUrl} alt={img.title} loading="lazy" />
+                  <img
+                    src={resolveAssetUrl(img.imageUrl)}
+                    alt={img.title}
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
+                    }}
+                  />
                   <span className={`mission-tag ${img.mission.toLowerCase()}`}>
                     {img.roverName}
                   </span>
@@ -144,7 +152,13 @@ export function MarsSurfaceIntelligenceModal({ isOpen, onClose, onFocusCoordinat
           {inspectedImage && (
             <aside className="surface-inspect-panel">
               <div className="inspect-photo-display">
-                <img src={inspectedImage.imageUrl} alt={inspectedImage.title} />
+                <img
+                  src={resolveAssetUrl(inspectedImage.imageUrl)}
+                  alt={inspectedImage.title}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
+                  }}
+                />
                 <span className="inspect-credit">{inspectedImage.nasaCredit}</span>
               </div>
 
