@@ -24,7 +24,8 @@ export interface TranscriptEvent {
 }
 
 export interface VoiceConfig {
-  voiceId: 'carlos' | 'lupe' | string
+  voiceId: 'carlos' | 'lupe' | 'matthew' | 'tiffany' | string
+  language?: 'en' | 'es' | 'auto'
   endpointUrl: string
   interactionMode: InteractionMode
   volume: number
@@ -36,6 +37,7 @@ export interface AudioVisualizerData {
   userLevel: number
   assistantLevel: number
   frequencyData?: Uint8Array
+  timeDomainData?: Uint8Array
   source: 'user' | 'assistant' | 'idle'
 }
 

@@ -134,6 +134,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
           this.sendWsMessage({
             type: 'init',
             voiceId: this.config.voiceId,
+            language: this.config.language || (this.config.voiceId === 'matthew' || this.config.voiceId === 'tiffany' ? 'en' : 'es'),
             initialContext: this.missionContext,
           })
 
@@ -254,11 +255,12 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
   public updateConfig(newConfig: Partial<VoiceConfig>): void {
     this.config = { ...this.config, ...newConfig }
-    if (newConfig.voiceId && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      // Reinicializar sesión con la nueva voz
+    if ((newConfig.voiceId || newConfig.language) && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      // Reinicializar sesión con la nueva voz o idioma
       this.sendWsMessage({
         type: 'init',
         voiceId: this.config.voiceId,
+        language: this.config.language || (this.config.voiceId === 'matthew' || this.config.voiceId === 'tiffany' ? 'en' : 'es'),
         initialContext: this.missionContext,
       })
     }

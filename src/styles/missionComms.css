@@ -701,3 +701,85 @@
   font-size: 0.68rem;
   color: var(--color-titanium-grey);
 }
+
+/* =========================================================
+   BILINGUAL & INTERNATIONAL DEMO MODE STYLING
+   ========================================================= */
+.ares-demo-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99, 212, 229, 0.1);
+  border: 1px solid rgba(99, 212, 229, 0.35);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--color-telemetry-cyan);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ares-demo-badge-btn:hover {
+  background: rgba(99, 212, 229, 0.22);
+  border-color: var(--color-telemetry-cyan);
+  box-shadow: 0 0 10px rgba(99, 212, 229, 0.3);
+}
+
+.ares-demo-badge-btn.demo-active {
+  background: linear-gradient(135deg, rgba(99, 212, 229, 0.2), rgba(215, 123, 80, 0.15));
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-ice-white);
+  box-shadow: 0 0 12px rgba(99, 212, 229, 0.35);
+}
+
+.ares-comms-action-btn.wake-active {
+  background: rgba(233, 184, 92, 0.18);
+  border-color: var(--color-warning-amber);
+  color: var(--color-warning-amber);
+  box-shadow: 0 0 12px rgba(233, 184, 92, 0.4);
+}
+
+.ares-comms-suggestions-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(9, 14, 20, 0.85);
+  border-top: 1px solid rgba(99, 212, 229, 0.1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ares-comms-suggestions-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.ares-suggestions-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-titanium-grey);
+  white-space: nowrap;
+}
+
+.ares-suggestion-chip {
+  background: rgba(17, 27, 37, 0.7);
+  border: 1px solid rgba(99, 212, 229, 0.25);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--color-ice-white);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ares-suggestion-chip:hover {
+  background: rgba(99, 212, 229, 0.18);
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-telemetry-cyan);
+  box-shadow: 0 0 8px rgba(99, 212, 229, 0.25);
+  transform: translateY(-1px);
+}

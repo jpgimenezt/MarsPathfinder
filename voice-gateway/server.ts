@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
       JSON.stringify({
         service: 'ARES Voice Gateway',
         version: '1.0.0',
-        supportedVoices: ['carlos', 'lupe'],
+        supportedVoices: ['carlos', 'lupe', 'matthew', 'tiffany'],
         inputSampleRate: GATEWAY_CONFIG.sampleRateInput,
         outputSampleRate: GATEWAY_CONFIG.sampleRateOutput,
         bedrockRegion: GATEWAY_CONFIG.bedrockRegion,
@@ -121,7 +121,8 @@ wss.on('connection', (ws: WebSocket, req) => {
         case 'init': {
           cleanup()
           const voiceId = message.voiceId || GATEWAY_CONFIG.defaultVoice
-          console.log(`[ARES VOICE GATEWAY] Inicializando sesión de Nova Sonic con voz: ${voiceId}`)
+          const language = message.language || (voiceId === 'matthew' || voiceId === 'tiffany' ? 'en' : 'es')
+          console.log(`[ARES VOICE GATEWAY] Inicializando sesión de Nova Sonic | Voz: ${voiceId} | Idioma: ${language}`)
           send({ type: 'state_change', state: 'CONNECTING' })
 
           session = new BedrockNovaSonicSession(voiceId, {
@@ -178,15 +179,17 @@ wss.on('connection', (ws: WebSocket, req) => {
           })
 
           try {
-            await session.startSession(message.initialContext)
+            await session.startSession(message.initialContext, language)
             send({ type: 'state_change', state: 'LISTENING' })
             resetSessionTimer()
 
-            // Saludo táctico inicial de ARES Copilot con síntesis de voz inmediata
+            // Saludo táctico inicial bilingüe de ARES Copilot con síntesis de voz inmediata
             if (message.greet !== false) {
-              session.sendTextMessage(
-                'Astronauta enlazado a la frecuencia táctica ARES. Confirma enlace establecido de forma breve e indícale al comandante que estás a la escucha para órdenes de navegación y análisis.'
-              )
+              const greetingText =
+                language === 'en'
+                  ? 'Astronaut connected to ARES tactical channel. Acknowledge link established briefly in English and state you are standing by for mission navigation and surface science orders.'
+                  : 'Astronauta enlazado a la frecuencia táctica ARES. Confirma enlace establecido de forma breve en español e indícale al comandante que estás a la escucha para órdenes de navegación y análisis.'
+              session.sendTextMessage(greetingText)
             }
           } catch (initErr: unknown) {
             const err = initErr instanceof Error ? initErr : new Error(String(initErr))
