@@ -12,12 +12,79 @@
  */
 
 import type { SupportedLanguage } from '../i18n/commsTranslations'
+import { resolveBilingualTool } from './bilingualCommandRegistry'
 
 export interface WakeWordEvent {
   phrase: string
   detectedLanguage: SupportedLanguage
   timestamp: number
   trailingCommand?: string
+}
+
+export interface WakeWordMatchResult {
+  isWake: boolean
+  wakePhrase: string
+  detectedLanguage: SupportedLanguage
+  trailingCommand?: string
+}
+
+/**
+ * Motor fonético de última generación para detección de "Hey ARES" y "Hola ARES",
+ * con tolerancia a truncamientos acústicos iniciales (clipping de fonemas como "res", "eiares", "ey ares")
+ * y reconocimiento inmediato de comandos adjuntos.
+ */
+export function matchWakeWordPhonetic(rawText: string, currentLang: SupportedLanguage = 'es'): WakeWordMatchResult | null {
+  if (!rawText || !rawText.trim()) return null
+  const text = rawText.trim()
+  const lower = text.toLowerCase()
+
+  // 1. Patrones estándar en inglés
+  const englishRegex = /\b(?:hey|hay|hi|hello|ok|okay)\s*[,.:;]?\s*(?:ares|áres|alex|alice|iris|aris|eric|alres|copilot|copiloto|eiares|res)\b/i
+  // 2. Patrones estándar en español
+  const spanishRegex = /\b(?:hola|ola|oye|ey|ei|ay|buenos\s+dias)\s*[,.:;]?\s*(?:ares|áres|alex|alice|iris|aris|eric|alres|copiloto|copilot|eiares|res)\b/i
+  // 3. Variantes fonéticas recortadas / clipped (cuando el navegador o micrófono corta el inicio "H" o "Hey")
+  // Ejemplos reportados por astronautas: "res", "eiares", "eyares", "ey ares", "eares", "ares"
+  const clippedRegex = /\b(?:eiares|eyares|eares|iares|yares|ei\s+ares|ey\s+ares|e\s+ares|ay\s+ares|ai\s+ares|hay\s+ares|ah\s+ares|res|rez|eres|e\s+res|ei\s+res|ey\s+res)\b/i
+  // 4. Menciones directas de ARES o COPILOTO
+  const directRegex = /\b(?:ares|áres|alex|iris|aris|copiloto|copilot)\b/i
+
+  const engMatch = lower.match(englishRegex)
+  const espMatch = lower.match(spanishRegex)
+  const clipMatch = lower.match(clippedRegex)
+  const dirMatch = lower.match(directRegex)
+
+  const candidates: { match: RegExpMatchArray; lang: SupportedLanguage }[] = []
+  if (engMatch) candidates.push({ match: engMatch, lang: 'en' })
+  if (espMatch) candidates.push({ match: espMatch, lang: 'es' })
+  if (clipMatch) candidates.push({ match: clipMatch, lang: currentLang })
+  if (dirMatch) candidates.push({ match: dirMatch, lang: currentLang })
+
+  if (candidates.length === 0) return null
+
+  // Seleccionar la coincidencia que aparece primero en el audio
+  candidates.sort((a, b) => (a.match.index ?? 0) - (b.match.index ?? 0))
+  const best = candidates[0]
+  const matchedPrefix = best.match[0]
+  const startIndex = best.match.index ?? 0
+  let detectedLang = best.lang
+
+  const trailing = text.slice(startIndex + matchedPrefix.length).replace(/^[,.:;\s]+/, '').trim()
+
+  // Heurística de idioma sobre el comando adjunto
+  if (trailing) {
+    if (/(?:enfoc[aá]|activ[aá]|mostr[aá]|calcul[aá]|capas|relieve|inercia|geolog|ruta|donde|hola|cambiar)/i.test(trailing)) {
+      detectedLang = 'es'
+    } else if (/(?:focus|toggle|show|layer|thermal|elevation|route|where|hello|switch)/i.test(trailing)) {
+      detectedLang = 'en'
+    }
+  }
+
+  return {
+    isWake: true,
+    wakePhrase: matchedPrefix,
+    detectedLanguage: detectedLang,
+    trailingCommand: trailing || undefined,
+  }
 }
 
 export type WakeWordListener = (event: WakeWordEvent) => void
@@ -36,6 +103,10 @@ export class LocalWakeWordDetector {
   private interruptListeners: InterruptListener[] = []
   private restartTimeout: any = null
   private isExplicitlyStopped = false
+
+  private lastTriggeredWakeTime = 0
+  private lastEmittedCommand = ''
+  private lastEmittedCommandTime = 0
 
   constructor() {
     this.setupRecognition()
@@ -96,52 +167,64 @@ export class LocalWakeWordDetector {
   }
 
   private evaluateTranscript(text: string, isFinal: boolean): void {
+    const trimmed = text.trim()
+    if (!trimmed) return
+
     // 0. Detección inmediata de comando vocal de interrupción (Barge-In)
-    const interruptMatch = text.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
+    const interruptMatch = trimmed.match(/\b(detener|detente|para|parar|silencio|stop|cancela|cancelar|basta|callate|cállate|quiet|pause)\b/i)
     if (interruptMatch) {
-      console.log(`[VOICE INTERRUPT DETECTED] Interrupción por comando vocal: "${text}"`)
+      console.log(`[VOICE INTERRUPT DETECTED] Interrupción por comando vocal: "${trimmed}"`)
       this.emitInterrupt()
       return
     }
 
-    // 1. Frases de activación con tolerancia fonética de SpeechRecognition
-    // Se contemplan transcripciones fonéticas habituales del navegador (ARES suele transcribirse como alex, iris, ariel, eric)
-    const englishMatch = text.match(/\b(hey\s+(?:ares|áres|alex|alice|iris|aris|eric|alres|copilot|copiloto)|hello\s+(?:ares|copilot)|ok\s+ares|ay\s+ares)\b/i)
-    const spanishMatch = text.match(/\b(hola\s+(?:ares|áres|alex|alice|iris|aris|alres|copiloto|copilot)|oye\s+(?:ares|áres|copiloto)|buenos\s+dias\s+ares|ares\s+copiloto|copiloto\s+ares)\b/i)
-    const standaloneMatch = text.match(/^(?:ares|áres|copiloto)\b/i)
+    // 1. Detección de Wake Word mediante motor fonético tolerante de última generación
+    const wakeResult = matchWakeWordPhonetic(trimmed, this.currentLanguage)
+    if (wakeResult) {
+      const now = Date.now()
+      this.currentLanguage = wakeResult.detectedLanguage
 
-    if (englishMatch) {
-      const wakePhrase = englishMatch[0]
-      const trailing = text.slice((englishMatch.index || 0) + wakePhrase.length).replace(/^[,.\s]+/, '').trim()
-      this.currentLanguage = 'en'
-      this.triggerWake('Hey, ARES', 'en', trailing || undefined)
-      if (trailing && isFinal) {
-        this.emitCommand(trailing, 'en')
+      // Evitar spam si el navegador envía eventos interinos continuos de la misma frase en < 1500ms
+      const isNewWake = now - this.lastTriggeredWakeTime > 1500
+      if (isNewWake) {
+        this.lastTriggeredWakeTime = now
+        this.triggerWake(wakeResult.wakePhrase, wakeResult.detectedLanguage, wakeResult.trailingCommand)
       }
-      return
-    }
 
-    if (spanishMatch || standaloneMatch) {
-      const matched = spanishMatch ? spanishMatch[0] : standaloneMatch![0]
-      const trailing = text.slice((spanishMatch ? spanishMatch.index || 0 : 0) + matched.length).replace(/^[,.\s]+/, '').trim()
-      this.currentLanguage = 'es'
-      this.triggerWake('Hola, ARES', 'es', trailing || undefined)
-      if (trailing && isFinal) {
-        this.emitCommand(trailing, 'es')
+      // Si viene con comando adjunto (ej: "Hey ARES enfoca Mount Sharp" o "eiares activa themis")
+      if (wakeResult.trailingCommand && wakeResult.trailingCommand.length > 2) {
+        const cmd = wakeResult.trailingCommand
+        const isResolved = resolveBilingualTool(cmd) !== null
+        // Emitir si es final O si ya resolvimos semánticamente una herramienta táctica válida
+        if (isFinal || isResolved) {
+          if (cmd !== this.lastEmittedCommand || now - this.lastEmittedCommandTime > 2500) {
+            this.lastEmittedCommand = cmd
+            this.lastEmittedCommandTime = now
+            this.emitCommand(cmd, wakeResult.detectedLanguage)
+          }
+        }
       }
       return
     }
 
     // 2. Verificar comando explícito de desconexión / cierre de comunicaciones
-    const disconnectMatch = text.match(/\b(cerrar\s+comunicaciones|desconectar|cortar\s+enlace|terminar\s+sesion|disconnect|close\s+comms|end\s+session)\b/i)
+    const disconnectMatch = trimmed.match(/\b(cerrar\s+comunicaciones|desconectar|cortar\s+enlace|terminar\s+sesion|disconnect|close\s+comms|end\s+session)\b/i)
     if (disconnectMatch) {
       this.emitDisconnect()
       return
     }
 
     // 3. Si estamos en modo de escucha de comando activo tras el despertar (conversación continua)
-    if (this.isCommandListening && isFinal && text.length > 2) {
-      this.emitCommand(text, this.currentLanguage)
+    if (this.isCommandListening && trimmed.length > 2) {
+      const now = Date.now()
+      const isResolved = resolveBilingualTool(trimmed) !== null
+      if (isFinal || isResolved) {
+        if (trimmed !== this.lastEmittedCommand || now - this.lastEmittedCommandTime > 2500) {
+          this.lastEmittedCommand = trimmed
+          this.lastEmittedCommandTime = now
+          this.emitCommand(trimmed, this.currentLanguage)
+        }
+      }
     }
   }
 

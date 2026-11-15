@@ -6,7 +6,7 @@ import {
 import { ToolExecutionEngine, type AppActionHandlers } from '../src/features/agent/toolExecutionEngine'
 import { buildCompactMissionContext } from '../src/features/agent/missionContext'
 import { AmazonNovaSonicProvider } from '../src/features/voice/amazonNovaSonicProvider'
-import { LocalWakeWordDetector } from '../src/features/voice/wakeWordDetector'
+import { LocalWakeWordDetector, matchWakeWordPhonetic } from '../src/features/voice/wakeWordDetector'
 
 describe('ARES MISSION COMMS — Conversational Engine & Continuity (Scenarios A - G)', () => {
   let mockHandlers: AppActionHandlers
@@ -259,6 +259,69 @@ describe('ARES MISSION COMMS — Conversational Engine & Continuity (Scenarios A
       // Probar que frases operativas normales NO disparan desconexión
       expect(disconnectRegex.test('enfocá mount sharp')).toBe(false)
       expect(disconnectRegex.test('mostrar capas')).toBe(false)
+    })
+  })
+
+  // =========================================================================
+  // SCENARIO H: Reconocimiento fonético tolerante de última generación
+  // "res", "eiares", "ey ares", "eares", "hey alex", clippings y comandos directos
+  // =========================================================================
+  describe('Escenario H: Reconocimiento fonético tolerante y comandos adjuntos', () => {
+    it('detecta correctamente frases de activación con truncamientos fonéticos reportados por astronautas', () => {
+      const clippedWakeCases = [
+        'res',
+        'eiares',
+        'eyares',
+        'ey ares',
+        'ei ares',
+        'eares',
+        'ares',
+        'áres',
+        'hey alex',
+        'hey ares',
+        'hola ares',
+      ]
+
+      for (const phrase of clippedWakeCases) {
+        const res = matchWakeWordPhonetic(phrase)
+        expect(res, `Fallo en detección fonética de: "${phrase}"`).not.toBeNull()
+        expect(res?.isWake).toBe(true)
+      }
+    })
+
+    it('extrae y ejecuta inmediatamente comandos tácticos adjuntos a la frase de activación', async () => {
+      const combinedPhrases = [
+        { text: 'eiares enfoca mount sharp', expectedTool: 'focusGeographicTarget', expectedLang: 'es' },
+        { text: 'res activa themis', expectedTool: 'toggleScientificLayer', expectedLang: 'es' },
+        { text: 'hey ares switch to english', expectedLang: 'en' },
+        { text: 'hola ares calcula la ruta', expectedTool: 'previewEVARoute', expectedLang: 'es' },
+      ]
+
+      for (const testCase of combinedPhrases) {
+        const wakeResult = matchWakeWordPhonetic(testCase.text)
+        expect(wakeResult, `No se detectó wake en: "${testCase.text}"`).not.toBeNull()
+        expect(wakeResult?.isWake).toBe(true)
+        expect(wakeResult?.trailingCommand).toBeDefined()
+
+        if (testCase.expectedTool) {
+          const resolved = resolveBilingualTool(wakeResult!.trailingCommand!)
+          expect(resolved?.tool).toBe(testCase.expectedTool)
+        }
+      }
+    })
+
+    it('no activa falsos positivos con oraciones operativas sin mención a ARES', () => {
+      const nonWakeCases = [
+        'el rover avanza hacia el cráter',
+        'distancia estimada 5.2 kilómetros',
+        'la pendiente en la cresta es empinada',
+        'temperatura superficial registrada por el radiómetro',
+      ]
+
+      for (const phrase of nonWakeCases) {
+        const res = matchWakeWordPhonetic(phrase)
+        expect(res, `Falso positivo detectado en: "${phrase}"`).toBeNull()
+      }
     })
   })
 })

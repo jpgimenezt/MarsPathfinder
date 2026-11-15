@@ -150,6 +150,70 @@
   gap: 10px;
 }
 
+/* Cuadro de texto / Callout badge de activación hands-free */
+.ares-orb-callout-badge {
+  pointer-events: auto;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(6, 14, 24, 0.92);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 20px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(0, 240, 255, 0.22);
+  backdrop-filter: blur(12px);
+  color: #cde9f6;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  user-select: none;
+  animation: callout-float 3s ease-in-out infinite alternate;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ares-orb-callout-badge:hover {
+  transform: translateY(-2px) scale(1.03);
+  border-color: #00f0ff;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.4);
+  color: #ffffff;
+}
+
+.ares-orb-callout-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff;
+  animation: callout-pulse-dot 1.6s infinite;
+}
+
+.ares-orb-callout-keyword {
+  color: #00f0ff;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+@keyframes callout-float {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes callout-pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
 .ares-floating-orb {
   position: relative;
   pointer-events: auto;

@@ -228,16 +228,6 @@ export function App() {
             <span className="nav-btn-code">03</span>
             <span className="nav-btn-text">JEZERO 2D</span>
           </button>
-          <button
-            type="button"
-            className={`nav-mode-btn nav-mode-copilot ${isCommsOpen ? 'active' : ''}`}
-            onClick={() => setIsCommsOpen(prev => !prev)}
-            title="Ares Copilot // Asistente inteligente de voz y navegación con Amazon Nova 2.5 Sonic"
-          >
-            <span className="nav-mode-pulse" aria-hidden="true" />
-            <span className="nav-btn-code">AI</span>
-            <span className="nav-btn-text">ARES COPILOT</span>
-          </button>
         </nav>
 
         <div className="header-right">

@@ -1081,6 +1081,22 @@ export function AresMissionCommsModal({
             </div>
           )}
 
+          {/* Cuadro de texto / Callout badge para activación por voz */}
+          {!floatingSubtitle && !currentExecutionInfo && (
+            <div
+              className="ares-orb-callout-badge"
+              onClick={handleOrbClick}
+              role="button"
+              tabIndex={0}
+              title="Actívame con 'Hey ARES' o haz clic aquí para abrir la consola"
+            >
+              <span className="ares-orb-callout-pulse" aria-hidden="true" />
+              <span className="ares-orb-callout-text">
+                Actívame con <strong className="ares-orb-callout-keyword">"Hey ARES"</strong>
+              </span>
+            </div>
+          )}
+
           {/* Orbe Holográfico Interactivo */}
           <div
             className={`ares-floating-orb orb-${conversationState}`}
