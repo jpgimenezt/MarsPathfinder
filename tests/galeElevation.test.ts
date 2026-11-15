@@ -5,7 +5,7 @@ import {
   getGaleElevation,
   getGaleSlopeDegrees,
 } from '../src/features/terrain/galeElevation'
-import { GALE_CENTER, GALE_DISCOVERIES, MOUNT_SHARP_PEAK } from '../src/features/science/galeCuriosityData'
+import { GALE_CENTER, GALE_DISCOVERIES, MOUNT_SHARP_PEAK, PRIMARY_LANDING_SITE } from '../src/features/science/galeCuriosityData'
 
 describe('galeCuriosityData & galeElevation', () => {
   it('contiene los cuatro descubrimientos obligatorios de Gale y Curiosity con coordenadas válidas', () => {
@@ -72,5 +72,17 @@ describe('galeCuriosityData & galeElevation', () => {
     expect(Number.isFinite(slopeFloor)).toBe(true)
     expect(slopeFloor).toBeGreaterThanOrEqual(0)
     expect(slopeFloor).toBeLessThan(45)
+  })
+
+  it('verifica las propiedades geodésicas y científicas del sitio candidato principal de aterrizaje (LZ-1 Bradbury Base)', () => {
+    expect(PRIMARY_LANDING_SITE).toBeDefined()
+    expect(PRIMARY_LANDING_SITE.id).toBe('bradbury-landing-primary')
+    expect(PRIMARY_LANDING_SITE.coordinates.lat).toBeCloseTo(-4.5895, 3)
+    expect(PRIMARY_LANDING_SITE.coordinates.lon).toBeCloseTo(137.4417, 3)
+    expect(PRIMARY_LANDING_SITE.elevationMeters).toBeLessThan(-4400) // Profundo en el cráter, máxima columna atmosférica
+    expect(PRIMARY_LANDING_SITE.safetyEvaluation.slopeDegrees).toBeLessThan(3.0) // Terreno plano para aterrizaje seguro
+    expect(PRIMARY_LANDING_SITE.safetyEvaluation.trafficability).toBe('ÓPTIMA')
+    expect(PRIMARY_LANDING_SITE.ellipseMajorKm).toBeGreaterThan(5.0)
+    expect(PRIMARY_LANDING_SITE.ellipseMinorKm).toBeGreaterThan(3.0)
   })
 })

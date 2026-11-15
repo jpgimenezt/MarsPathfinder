@@ -46,6 +46,58 @@ export const MOUNT_SHARP_PEAK: { lat: number; lon: number; elevationMeters: numb
   elevationMeters: 1050, // ~5.5 km sobre el lecho del cráter
 }
 
+export interface CandidateLandingSite {
+  id: string
+  name: string
+  designation: string
+  coordinates: {
+    lat: number
+    lon: number
+  }
+  elevationMeters: number
+  ellipseMajorKm: number
+  ellipseMinorKm: number
+  ellipseAzimuthDeg: number
+  terrainType: string
+  rationale: string
+  imageUrl?: string
+  imageCredit?: string
+  safetyEvaluation: {
+    slopeDegrees: number
+    rockAbundancePercent: number
+    trafficability: 'ÓPTIMA' | 'MODERADA' | 'DIFÍCIL'
+  }
+}
+
+/**
+ * Sitio Candidato Principal para Aterrizaje Tripulado en Gale Crater (LZ-1 Bradbury Base)
+ * Coordenadas verificadas del punto de toque de MSL Curiosity, seleccionado por NASA
+ * por su máxima densidad atmosférica (frenado parachute), pendientes mínimas (<2.5°) y planicie de acceso.
+ */
+export const PRIMARY_LANDING_SITE: CandidateLandingSite = {
+  id: 'bradbury-landing-primary',
+  name: 'Bradbury Landing / Llanura Aluvial de Yellowknife',
+  designation: 'SITIO CANDIDATO PRINCIPAL LZ-1 (BASE ALFA)',
+  coordinates: {
+    lat: -4.5895,
+    lon: 137.4417,
+  },
+  elevationMeters: -4520,
+  ellipseMajorKm: 7.0, // Longitud de la elipse de aterrizaje segura
+  ellipseMinorKm: 4.5, // Ancho de la elipse
+  ellipseAzimuthDeg: 78,
+  terrainType: 'Llanura aluvial compacta de baja rugosidad y regolito firme',
+  rationale:
+    'Máxima columna atmosférica de Gale Crater (~8.5 hPa), lo que optimiza el frenado aerodinámico. Pendientes mínimas (<2.5°), ausencia de escarpes y acceso plano directo hacia Mount Sharp.',
+  imageUrl: '/data/curiosity/bradbury-landing.jpg',
+  imageCredit: 'NASA/JPL-Caltech/MSSS (MSL Sol 2)',
+  safetyEvaluation: {
+    slopeDegrees: 2.1,
+    rockAbundancePercent: 4.2,
+    trafficability: 'ÓPTIMA',
+  },
+}
+
 export const GALE_DISCOVERIES: ScientificDiscovery[] = [
   {
     id: 'pontours-mud-cracks',
@@ -61,8 +113,8 @@ export const GALE_DISCOVERIES: ScientificDiscovery[] = [
     mission: 'Mars Science Laboratory (MSL) Curiosity',
     instruments: ['Mastcam', 'ChemCam LIBS', 'APXS', 'MAHLI'],
     discoveryDate: 'Junio 2021 (Sol 3148)',
-    imageUrl: 'https://mars.nasa.gov/system/resources/detail_files/26078_PIA24659-web.jpg',
-    imageCredit: 'NASA/JPL-Caltech/MSSS',
+    imageUrl: '/data/curiosity/pontours-mud-cracks.jpg',
+    imageCredit: 'NASA/JPL-Caltech/MSSS (Mastcam Sol 3168 · PIA25915)',
     significance:
       'Primera evidencia concluyente de ciclos estacionales húmedos y secos en el Marte primitivo. Las uniones en forma de T y patrones hexagonales revelan que el agua se evaporó y rellenó repetidamente, un requisito clave para la polimerización prebiótica.',
     safetyNotes:
@@ -87,8 +139,8 @@ export const GALE_DISCOVERIES: ScientificDiscovery[] = [
     mission: 'Curiosity Rover / MRO HiRISE',
     instruments: ['HiRISE (reconocimiento orbital)', 'ChemCam', 'Mastcam-Z'],
     discoveryDate: '2023 (Exploración de aproximación Sol 3800+)',
-    imageUrl: 'https://mars.nasa.gov/system/resources/detail_files/27471_PIA25925-web.jpg',
-    imageCredit: 'NASA/JPL-Caltech/Univ. of Arizona',
+    imageUrl: '/data/curiosity/mount-sharp-boxwork.jpg',
+    imageCredit: 'NASA/JPL-Caltech/MSSS (Mastcam Sol 3800+ · PIA26680)',
     significance:
       'Estructuras formadas cuando aguas subterráneas ricas en minerales cementaron fracturas en la roca. Al erosionarse la roca madre más blanda por el viento marciano, quedaron murallas minerales elevadas de hasta varios metros, preservando acuíferos fósiles.',
     safetyNotes:
@@ -113,8 +165,8 @@ export const GALE_DISCOVERIES: ScientificDiscovery[] = [
     mission: 'Curiosity Rover',
     instruments: ['ChemCam', 'APXS', 'DAN', 'Mastcam'],
     discoveryDate: 'Septiembre 2017 (Sol 1809–2290)',
-    imageUrl: 'https://mars.nasa.gov/system/resources/detail_files/21571_PIA22221_full.jpg',
-    imageCredit: 'NASA/JPL-Caltech/MSSS',
+    imageUrl: '/data/curiosity/vera-rubin-ridge.jpg',
+    imageCredit: 'NASA/JPL-Caltech/MSSS (Mastcam Sol 1809 · PIA21850)',
     significance:
       'Identificada originalmente desde órbita por CRISM, la cresta demostró interacciones complejas entre aguas subterráneas oxidantes y sedimentos lacustres reductores, creando un frente redox propicio para el metabolismo microbiano antiguo.',
     safetyNotes:
@@ -139,8 +191,8 @@ export const GALE_DISCOVERIES: ScientificDiscovery[] = [
     mission: 'Curiosity Rover (Primer sitio de perforación profunda)',
     instruments: ['CheMin (Difracción de Rayos X)', 'SAM', 'APXS', 'ChemCam'],
     discoveryDate: 'Febrero 2013 (Sols 126–300)',
-    imageUrl: 'https://mars.nasa.gov/system/resources/detail_files/5980_PIA16834_sol193_raw.jpg',
-    imageCredit: 'NASA/JPL-Caltech/MSSS',
+    imageUrl: '/data/curiosity/yellowknife-bay.jpg',
+    imageCredit: 'NASA/JPL-Caltech/MSSS (Mastcam Sol 193 · PIA16569)',
     significance:
       'Sitio del descubrimiento histórico de habitabilidad en Marte: rocas sedimentarias formadas en agua dulce de pH casi neutro y baja salinidad, conteniendo los bioelementos fundamentales: Carbono, Hidrógeno, Nitrógeno, Oxígeno, Fósforo y Azufre (CHNOPS).',
     safetyNotes:

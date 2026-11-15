@@ -30,22 +30,24 @@ export interface LayerMetadata {
   limitations: string
 }
 
+export const REAL_GALE_TEXTURE_URL = '/data/gale/gale_real_satellite_1024.jpg'
+
 export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
   optical: {
     id: 'optical',
-    name: 'Mosaico Óptico Hiperrealista (CTX / HiRISE)',
-    mission: 'Mars Reconnaissance Orbiter (MRO)',
-    instrument: 'CTX (Context Camera) + HiRISE Albedo',
-    resolution: '6.0 m/px (CTX) a 0.25 m/px (HiRISE local)',
-    acquisition: 'Mapeo orbital continuo (2006-2024)',
-    units: 'Reflectancia relativa I/F (Albedo visible)',
+    name: 'Fotografía Orbital Satelital Real (NASA MRO / HRSC)',
+    mission: 'NASA Mars Reconnaissance Orbiter (MRO) + ESA Mars Express',
+    instrument: 'CTX (Context Camera) + HRSC True Color',
+    resolution: 'Mosaico orbital de alta resolución (2560x1600 px)',
+    acquisition: 'Misión orbital Gale Crater (NASA/JPL-Caltech/ESA)',
+    units: 'Fotografía óptica en espectro visible (Luz solar natural)',
     legend: [
-      { color: '#2c1e18', label: 'Dunas basálticas oscuras (Bagnold Dunes)' },
-      { color: '#8c4826', label: 'Regolito y gravas de impacto' },
-      { color: '#c47d4e', label: 'Lodolitas y areniscas sedimentarias' },
-      { color: '#e8c29b', label: 'Estratos claros de sulfatos y yeso (Mount Sharp)' },
+      { color: '#c47d4e', label: 'Regolito basáltico y manto eólico de Gale Crater' },
+      { color: '#8c4826', label: 'Estratigrafía sedimentaria real de Aeolis Mons' },
+      { color: '#2c1e18', label: 'Arenas oscuras ricas en piroxeno y olivino' },
+      { color: '#e8c29b', label: 'Afloramientos brillantes de sulfatos y arcillas' },
     ],
-    limitations: 'Imagen fotométrica; no mide directamente altura, pendiente ni estabilidad de suelo.',
+    limitations: 'Fotografía satelital óptica real de NASA/ESA. Sin estilización artificial ni estrías sintéticas.',
   },
   dem: {
     id: 'dem',
@@ -162,38 +164,17 @@ export function generateTerrainTexture(
 
       switch (layerType) {
         case 'optical': {
-          // 1. Capa geológica estratificada de Mount Sharp (estratos rítmicos sedimentarios)
-          const strataFrequency = 0.08
-          const strataBand = Math.sin((elevation + 4500) * strataFrequency) * 0.5 + 0.5
-
-          // 2. Micro-relieve y grano de regolito
-          const noise1 = Math.sin(u * 120 + v * 90) * 12
-          const noise2 = Math.cos(u * 45 - v * 65) * 8
-          const fineGrain = (Math.sin(u * 380) * Math.cos(v * 380)) * 6
-          const combinedNoise = noise1 + noise2 + fineGrain
-
-          // 3. Campo de dunas oscuras basálticas (Bagnold Dunes) en zonas deprimidas entre -4400 m y -4100 m
-          const isDuneField = elevation < -4150 && elevation > -4420 && Math.sin(u * 35 + v * 20) > 0.45
-
-          if (isDuneField) {
-            // Arena basáltica rica en hierro / piroxeno oscuro (#2c1e18)
-            const duneShade = Math.sin(u * 140) * 14
-            r = Math.min(255, Math.max(20, 52 + combinedNoise * 0.4 + duneShade))
-            g = Math.min(255, Math.max(15, 38 + combinedNoise * 0.3 + duneShade * 0.7))
-            b = Math.min(255, Math.max(10, 30 + combinedNoise * 0.2 + duneShade * 0.5))
-          } else if (elevation > -3800) {
-            // Flancos superiores de Mount Sharp: estratos alternados de sulfatos claros y areniscas ocres
-            const strataBright = strataBand * 32
-            r = Math.min(255, Math.max(0, 195 + strataBright + combinedNoise))
-            g = Math.min(255, Math.max(0, 138 + strataBright * 0.85 + combinedNoise * 0.8))
-            b = Math.min(255, Math.max(0, 96 + strataBright * 0.7 + combinedNoise * 0.6))
-          } else {
-            // Llanuras y lecho de Gale: regolito ocre marciano clásico (#a85c39 / #c47d4e)
-            const slopeDark = Math.max(0.6, 1 - (slope / 45) * 0.35)
-            r = Math.min(255, Math.max(0, (178 + combinedNoise) * slopeDark))
-            g = Math.min(255, Math.max(0, (108 + combinedNoise * 0.8) * slopeDark))
-            b = Math.min(255, Math.max(0, (68 + combinedNoise * 0.6) * slopeDark))
-          }
+          // Coloración uniforme natural basada en el albedo real de Gale Crater
+          // Sin estrías artificiales ni bandas sintéticas
+          const baseR = 195
+          const baseG = 125
+          const baseB = 85
+          // Sutil modulación orográfica y sombreado de pendiente
+          const heightFactor = Math.min(1.15, Math.max(0.85, (elevation + 4500) / 4500))
+          const slopeShade = Math.max(0.72, 1 - (slope / 45) * 0.28)
+          r = Math.min(255, Math.round(baseR * heightFactor * slopeShade))
+          g = Math.min(255, Math.round(baseG * heightFactor * slopeShade))
+          b = Math.min(255, Math.round(baseB * heightFactor * slopeShade))
           break
         }
 

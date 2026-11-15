@@ -269,7 +269,7 @@ export function App() {
                 setScreen('terrain3d')
               }}
             >
-              🏔 Terreno 3D Gale
+              [01] TERRENO 3D GALE
             </button>
             <button
               type="button"
@@ -324,7 +324,7 @@ export function App() {
                     aria-label="Cerrar panel"
                     onClick={() => setPanel(null)}
                   >
-                    ×
+                    [CERRAR]
                   </button>
                 </div>
 
@@ -353,7 +353,7 @@ export function App() {
                         className={mode.type === 'explore' ? 'mode-active' : ''}
                         onClick={() => setMode({ type: 'explore' })}
                       >
-                        ✥ &nbsp; Explorar mapa
+                        [MODO EXPLORAR]
                       </button>
                     </div>
                     <ol className="stop-list">
@@ -552,24 +552,24 @@ export function App() {
         </main>
       )}
 
-      <footer className="footer">
-        <div className="footer-status-left">
-          <span className="footer-status-badge">● DSN ONLINE</span>
-          <span className="footer-datum">DATUM: AREOIDE 6.1 MBAR · ESFERA RM = 3,389,500 M</span>
-        </div>
-        <div className="footer-status-center">
-          <span>
-            {screen === 'terrain3d'
-              ? 'TERRENO 3D: MGS MOLA + HRSC DTM // HITOS MSL CURIOSITY (NASA/JPL-Caltech)'
-              : screen === 'globe'
-              ? 'GLOBO ESFÉRICO: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)'
-              : 'ORBITAL GIS: MRO CTX + MGS MOLA + MARS ODYSSEY THEMIS (NASA/JPL/ASU/USGS)'}
-          </span>
-        </div>
-        <div className="footer-status-right">
-          <strong>PROTOTIPO INDEPENDIENTE // NO CERTIFICADO PARA VUELO</strong>
-        </div>
-      </footer>
+      {screen !== 'terrain3d' && (
+        <footer className="footer">
+          <div className="footer-status-left">
+            <span className="footer-status-badge">● DSN ONLINE</span>
+            <span className="footer-datum">DATUM: AREOIDE 6.1 MBAR · ESFERA RM = 3,389,500 M</span>
+          </div>
+          <div className="footer-status-center">
+            <span>
+              {screen === 'globe'
+                ? 'GLOBO ESFÉRICO: MGS MOLA NASA/USGS + VIKING MDIM 2.1 (NASA Ames/USGS)'
+                : 'ORBITAL GIS: MRO CTX + MGS MOLA + MARS ODYSSEY THEMIS (NASA/JPL/ASU/USGS)'}
+            </span>
+          </div>
+          <div className="footer-status-right">
+            <strong>PROTOTIPO INDEPENDIENTE // NO CERTIFICADO PARA VUELO</strong>
+          </div>
+        </footer>
+      )}
 
       <AresAgentChat
         isOpen={isAgentOpen}

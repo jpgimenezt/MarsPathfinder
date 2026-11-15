@@ -290,11 +290,11 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {onGaleTerrain && (
           <button type="button" className="globe-primary" onClick={onGaleTerrain} style={{ background: 'linear-gradient(135deg, #00f0ff, #0284c7)', color: '#04090e', fontWeight: 800 }}>
-            🏔 Gale Crater 3D <span aria-hidden="true">↗</span>
+            [01] GALE CRATER 3D <span aria-hidden="true">↗</span>
           </button>
         )}
         <button type="button" className="globe-primary" onClick={onJezero}>
-          🗺 Jezero 2D <span aria-hidden="true">↗</span>
+          [03] JEZERO 2D <span aria-hidden="true">↗</span>
         </button>
       </div>
       <p className="globe-warning">{activeTexture === 'mola' ? 'Relieve sombreado visual NASA/USGS' :
