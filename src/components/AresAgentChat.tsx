@@ -13,15 +13,17 @@ interface AresAgentChatProps {
 
 /**
  * Icono de Núcleo de IA cinético estilo J.A.R.V.I.S. (Marvel ARC Reactor / HUD FUI)
- * Construido con SVG vectorial puro y anillos concéntricos contra-rotatorios acelerados por GPU.
+ * Construido con SVG vectorial puro centrado en (0, 0) para rotaciones matemáticas perfectas en GPU.
  */
 export function JarvisAiCore({
   size = 28,
   active = true,
+  withOuterOrbits = false,
   className = '',
 }: {
   size?: number
   active?: boolean
+  withOuterOrbits?: boolean
   className?: string
 }) {
   const gradientId = useId()
@@ -55,129 +57,136 @@ export function JarvisAiCore({
           </filter>
         </defs>
 
-        {/* Aura de energía de fondo */}
-        <circle cx="50" cy="50" r="32" fill={`url(#${gradientId})`} className="jarvis-pulse-glow" />
+        {/* Coordenadas locales centradas en (0, 0) mediante translate(50, 50) */}
+        <g transform="translate(50, 50)">
+          {/* Aura de energía de fondo */}
+          <circle cx="0" cy="0" r="32" fill={`url(#${gradientId})`} className="jarvis-pulse-glow" />
 
-        {/* Órbitas 3D elípticas que se proyectan y giran fuera del objeto */}
-        <g className="jarvis-outer-orbit orbit-alpha">
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="74"
-            ry="24"
+          {/* Órbitas 3D externas que salen del objeto (SOLO en el botón flotante / standalone) */}
+          {withOuterOrbits && (
+            <g className="jarvis-outer-orbits-group">
+              <g className="jarvis-spin-orbit-alpha">
+                <ellipse
+                  cx="0"
+                  cy="0"
+                  rx="64"
+                  ry="20"
+                  fill="none"
+                  stroke="#00f0ff"
+                  strokeWidth="1.3"
+                  strokeDasharray="14 6 4 6"
+                  opacity="0.85"
+                />
+                <circle cx="64" cy="0" r="2.8" fill="#ffffff" filter={`url(#${filterId})`} className="orbit-particle-alpha" />
+                <circle cx="-64" cy="0" r="2" fill="#00f0ff" />
+              </g>
+
+              <g className="jarvis-spin-orbit-beta">
+                <ellipse
+                  cx="0"
+                  cy="0"
+                  rx="70"
+                  ry="18"
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeWidth="1.1"
+                  strokeDasharray="20 8"
+                  opacity="0.75"
+                />
+                <circle cx="0" cy="18" r="2.5" fill="#38bdf8" filter={`url(#${filterId})`} className="orbit-particle-beta" />
+                <circle cx="0" cy="-18" r="1.8" fill="#ffffff" />
+              </g>
+
+              <g className="jarvis-spin-orbit-gamma">
+                <ellipse
+                  cx="0"
+                  cy="0"
+                  rx="58"
+                  ry="24"
+                  fill="none"
+                  stroke="#7dd3fc"
+                  strokeWidth="1.1"
+                  strokeDasharray="8 6"
+                  opacity="0.65"
+                />
+                <circle cx="58" cy="0" r="2.2" fill="#ffffff" className="orbit-particle-gamma" />
+              </g>
+            </g>
+          )}
+
+          {/* Anillo exterior con marcas de cuadrante (FUI / Jarvis ring) */}
+          <circle
+            cx="0"
+            cy="0"
+            r="44"
             fill="none"
             stroke="#00f0ff"
-            strokeWidth="1.4"
-            strokeDasharray="16 8 4 8"
-            opacity="0.8"
+            strokeWidth="1.2"
+            strokeDasharray="3 5"
+            opacity="0.6"
+            className="jarvis-ring-outer-ticks"
           />
-          <circle cx="124" cy="50" r="3.2" fill="#ffffff" filter={`url(#${filterId})`} className="orbit-particle-alpha" />
-          <circle cx="50" cy="26" r="1.6" fill="#00f0ff" />
-        </g>
 
-        <g className="jarvis-outer-orbit orbit-beta">
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="80"
-            ry="22"
+          {/* 4 Nodos orbitales en cruz */}
+          <g className="jarvis-orbital-nodes">
+            <circle cx="0" cy="-44" r="2.2" fill="#00f0ff" />
+            <circle cx="44" cy="0" r="2.2" fill="#00f0ff" />
+            <circle cx="0" cy="44" r="2.2" fill="#00f0ff" />
+            <circle cx="-44" cy="0" r="2.2" fill="#00f0ff" />
+          </g>
+
+          {/* Anillo de datos segmentado (rotación horaria) */}
+          <circle
+            cx="0"
+            cy="0"
+            r="36"
             fill="none"
             stroke="#38bdf8"
-            strokeWidth="1.2"
-            strokeDasharray="22 10"
-            opacity="0.75"
+            strokeWidth="2.2"
+            strokeDasharray="18 8 5 8"
+            strokeLinecap="round"
+            className="jarvis-ring-segmented"
           />
-          <circle cx="50" cy="72" r="2.8" fill="#38bdf8" filter={`url(#${filterId})`} className="orbit-particle-beta" />
-          <circle cx="130" cy="50" r="1.8" fill="#ffffff" />
-        </g>
 
-        <g className="jarvis-outer-orbit orbit-gamma">
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="68"
-            ry="28"
+          {/* Anillo contra-rotatorio con cortes angulares (rotación antihoraria) */}
+          <circle
+            cx="0"
+            cy="0"
+            r="28"
+            fill="none"
+            stroke="#00f0ff"
+            strokeWidth="2.6"
+            strokeDasharray="24 14"
+            strokeLinecap="round"
+            filter={`url(#${filterId})`}
+            className="jarvis-ring-counter"
+          />
+
+          {/* Anillo interior del reactor ARC */}
+          <circle
+            cx="0"
+            cy="0"
+            r="18"
             fill="none"
             stroke="#7dd3fc"
-            strokeWidth="1.1"
-            strokeDasharray="10 8"
-            opacity="0.65"
+            strokeWidth="1.6"
+            strokeDasharray="8 6"
+            className="jarvis-ring-inner-arc"
           />
-          <circle cx="118" cy="50" r="2.4" fill="#ffffff" className="orbit-particle-gamma" />
+
+          {/* Rayos radiales de energía del iris */}
+          <g className="jarvis-iris-rays" stroke="#00f0ff" strokeWidth="1.2" opacity="0.8">
+            <line x1="0" y1="-16" x2="0" y2="-10" />
+            <line x1="0" y1="10" x2="0" y2="16" />
+            <line x1="-16" y1="0" x2="-10" y2="0" />
+            <line x1="10" y1="0" x2="16" y2="0" />
+          </g>
+
+          {/* Núcleo central del reactor (ARC Reactor Core) */}
+          <circle cx="0" cy="0" r="7.5" fill="#00f0ff" opacity="0.55" className="jarvis-core-pulse" />
+          <circle cx="0" cy="0" r="4.2" fill="#ffffff" filter={`url(#${filterId})`} className="jarvis-center-dot" />
+          <circle cx="0" cy="0" r="2" fill="#00f0ff" />
         </g>
-
-        {/* Anillo exterior con marcas de cuadrante (FUI / Jarvis ring) */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
-          fill="none"
-          stroke="#00f0ff"
-          strokeWidth="1.2"
-          strokeDasharray="3 5"
-          opacity="0.6"
-          className="jarvis-ring-outer-ticks"
-        />
-
-        {/* 4 Nodos orbitales en cruz */}
-        <g className="jarvis-orbital-nodes">
-          <circle cx="50" cy="5" r="2.2" fill="#00f0ff" />
-          <circle cx="95" cy="50" r="2.2" fill="#00f0ff" />
-          <circle cx="50" cy="95" r="2.2" fill="#00f0ff" />
-          <circle cx="5" cy="50" r="2.2" fill="#00f0ff" />
-        </g>
-
-        {/* Anillo de datos segmentado (rotación horaria) */}
-        <circle
-          cx="50"
-          cy="50"
-          r="37"
-          fill="none"
-          stroke="#38bdf8"
-          strokeWidth="2.2"
-          strokeDasharray="18 8 5 8"
-          strokeLinecap="round"
-          className="jarvis-ring-segmented"
-        />
-
-        {/* Anillo contra-rotatorio con cortes angulares (rotación antihoraria) */}
-        <circle
-          cx="50"
-          cy="50"
-          r="28"
-          fill="none"
-          stroke="#00f0ff"
-          strokeWidth="2.8"
-          strokeDasharray="26 14"
-          strokeLinecap="round"
-          filter={`url(#${filterId})`}
-          className="jarvis-ring-counter"
-        />
-
-        {/* Anillo interior del reactor ARC */}
-        <circle
-          cx="50"
-          cy="50"
-          r="18"
-          fill="none"
-          stroke="#7dd3fc"
-          strokeWidth="1.6"
-          strokeDasharray="8 6"
-          className="jarvis-ring-inner-arc"
-        />
-
-        {/* Rayos radiales de energía del iris */}
-        <g className="jarvis-iris-rays" stroke="#00f0ff" strokeWidth="1.2" opacity="0.8">
-          <line x1="50" y1="34" x2="50" y2="40" />
-          <line x1="50" y1="60" x2="50" y2="66" />
-          <line x1="34" y1="50" x2="40" y2="50" />
-          <line x1="60" y1="50" x2="66" y2="50" />
-        </g>
-
-        {/* Núcleo central del reactor (ARC Reactor Core) */}
-        <circle cx="50" cy="50" r="7.5" fill="#00f0ff" opacity="0.55" className="jarvis-core-pulse" />
-        <circle cx="50" cy="50" r="4.2" fill="#ffffff" filter={`url(#${filterId})`} className="jarvis-center-dot" />
-        <circle cx="50" cy="50" r="2" fill="#00f0ff" />
       </svg>
     </div>
   )
@@ -261,10 +270,19 @@ export function AresAgentChat({
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' })
   }
 
+  // Prevenir saltos de layout durante la animación holográfica de apertura
+  useEffect(() => {
+    if (isModalOpen) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true })
+      }, 550)
+      return () => clearTimeout(timer)
+    }
+  }, [isModalOpen])
+
   useEffect(() => {
     if (isModalOpen) {
       scrollToBottom()
-      inputRef.current?.focus()
     }
   }, [messages, isModalOpen])
 
@@ -348,7 +366,7 @@ export function AresAgentChat({
         >
           <div className="ares-fab-core-container">
             <span className="ares-fab-sonar-ping" aria-hidden="true" />
-            <JarvisAiCore size={36} className="ares-fab-jarvis" />
+            <JarvisAiCore size={36} withOuterOrbits={true} className="ares-fab-jarvis" />
           </div>
           <div className="ares-fab-labels">
             <span className="ares-fab-badge">[IA TÁCTICA]</span>
@@ -387,9 +405,9 @@ export function AresAgentChat({
             {/* Header de Cabina Táctica */}
             <header className="hud-header">
               <div className="hud-title-group">
-                <JarvisAiCore size={38} className="hud-header-jarvis" />
-                <div>
-                  <div className="hud-sub">CONSOLA TÁCTICA DE NAVEGACIÓN // NASA SPACE APPS</div>
+                <JarvisAiCore size={32} withOuterOrbits={false} className="hud-header-jarvis" />
+                <div className="hud-title-text-block">
+                  <div className="hud-sub">CONSOLA TÁCTICA // NASA SPACE APPS</div>
                   <h2 id="agent-title" className="hud-title">
                     ARES-NAV <span>SISTEMA DE ASISTENCIA</span>
                   </h2>
@@ -512,7 +530,7 @@ export function AresAgentChat({
                   {messages.map(msg => (
                     <div key={msg.id} className={`hud-message-row ${msg.role}`}>
                       <div className="hud-avatar" aria-hidden="true">
-                        {msg.role === 'user' ? <AstronautIcon /> : <JarvisAiCore size={22} className="hud-msg-jarvis" />}
+                        {msg.role === 'user' ? <AstronautIcon /> : <JarvisAiCore size={20} withOuterOrbits={false} className="hud-msg-jarvis" />}
                       </div>
                       <div className="hud-message-bubble">
                         <div className="hud-msg-meta">
@@ -549,7 +567,7 @@ export function AresAgentChat({
                   {loading && (
                     <div className="hud-message-row assistant loading">
                       <div className="hud-avatar" aria-hidden="true">
-                        <JarvisAiCore size={22} active className="hud-loading-jarvis" />
+                        <JarvisAiCore size={20} active withOuterOrbits={false} className="hud-loading-jarvis" />
                       </div>
                       <div className="hud-message-bubble loading-bubble">
                         <div className="hud-typing-indicator">

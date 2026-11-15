@@ -37,37 +37,43 @@
 .jarvis-iris-rays,
 .jarvis-pulse-glow,
 .jarvis-core-pulse,
-.jarvis-outer-orbit {
-  transform-origin: 50px 50px;
-  transform-box: fill-box;
+.jarvis-spin-orbit-alpha,
+.jarvis-spin-orbit-beta,
+.jarvis-spin-orbit-gamma {
+  transform-origin: 0 0;
+  transform-box: view-box;
 }
 
-/* Órbitas 3D externas que se proyectan y giran fuera del objeto */
-.orbit-alpha {
-  animation: orbitSpinAlpha 6.5s linear infinite;
+/* Órbitas 3D externas que se proyectan y giran fuera del objeto (centradas en 0, 0) */
+.jarvis-outer-orbits-group {
+  pointer-events: none;
 }
 
-.orbit-beta {
-  animation: orbitSpinBeta 8.5s linear infinite;
+@keyframes spinOrbitAlpha {
+  0% { transform: rotate(-30deg); }
+  100% { transform: rotate(330deg); }
 }
 
-.orbit-gamma {
-  animation: orbitSpinGamma 5s linear infinite;
+@keyframes spinOrbitBeta {
+  0% { transform: rotate(45deg); }
+  100% { transform: rotate(-315deg); }
 }
 
-@keyframes orbitSpinAlpha {
-  0% { transform: rotate(-28deg); }
-  100% { transform: rotate(332deg); }
+@keyframes spinOrbitGamma {
+  0% { transform: rotate(-70deg); }
+  100% { transform: rotate(290deg); }
 }
 
-@keyframes orbitSpinBeta {
-  0% { transform: rotate(38deg); }
-  100% { transform: rotate(-322deg); }
+.jarvis-spin-orbit-alpha {
+  animation: spinOrbitAlpha 7s linear infinite;
 }
 
-@keyframes orbitSpinGamma {
-  0% { transform: rotate(-68deg); }
-  100% { transform: rotate(292deg); }
+.jarvis-spin-orbit-beta {
+  animation: spinOrbitBeta 9s linear infinite;
+}
+
+.jarvis-spin-orbit-gamma {
+  animation: spinOrbitGamma 5.5s linear infinite;
 }
 
 /* Partículas cuánticas orbitales con pulso y resplandor */
@@ -165,18 +171,18 @@
 }
 
 /* Aceleración en hover y en estado activo / procesamiento */
-.jarvis-core-container:hover .orbit-alpha,
-.jarvis-core-container.is-active .orbit-alpha {
+.jarvis-core-container:hover .jarvis-spin-orbit-alpha,
+.jarvis-core-container.is-active .jarvis-spin-orbit-alpha {
   animation-duration: 2.6s;
 }
 
-.jarvis-core-container:hover .orbit-beta,
-.jarvis-core-container.is-active .orbit-beta {
+.jarvis-core-container:hover .jarvis-spin-orbit-beta,
+.jarvis-core-container.is-active .jarvis-spin-orbit-beta {
   animation-duration: 3.4s;
 }
 
-.jarvis-core-container:hover .orbit-gamma,
-.jarvis-core-container.is-active .orbit-gamma {
+.jarvis-core-container:hover .jarvis-spin-orbit-gamma,
+.jarvis-core-container.is-active .jarvis-spin-orbit-gamma {
   animation-duration: 2s;
 }
 
@@ -331,46 +337,33 @@
   overflow: hidden;
   color: #f1f5f9;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
-  transform-origin: 92% 92%;
-  animation: aladdinGenieDeploy 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity, filter, clip-path;
+  transform-origin: calc(100% - 60px) calc(100% - 60px);
+  animation: aladdinGenieDeploy 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
-/* Efecto Aladino: brota y se expande desde el icono en la esquina inferior */
+/* Efecto Aladino fluido y continuo (sin sacudidas, rebotes ni saltos) */
 @keyframes aladdinGenieDeploy {
   0% {
     opacity: 0;
-    transform: scale(0.03) translate(340px, 240px) skew(-16deg, -8deg);
-    filter: blur(16px) brightness(3.5);
-    border-radius: 50%;
-    clip-path: polygon(45% 0%, 55% 0%, 95% 100%, 85% 100%);
-    box-shadow: 0 0 90px rgba(0, 240, 255, 1);
+    transform: scale(0.12) translate(140px, 90px);
+    filter: blur(10px) brightness(2.2);
+    box-shadow: 0 0 80px rgba(0, 240, 255, 0.9);
   }
-  28% {
-    opacity: 0.85;
-    transform: scale(0.35) translate(140px, 90px) skew(-8deg, -4deg);
-    filter: blur(6px) brightness(2.2);
-    border-radius: 36px;
-    clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 70% 100%);
+  42% {
+    opacity: 0.9;
+    transform: scale(0.72) translate(28px, 16px);
+    filter: blur(2px) brightness(1.2);
   }
-  65% {
+  78% {
     opacity: 0.98;
-    transform: scale(1.025) translate(-6px, -4px) skew(1.2deg, 0.6deg);
-    filter: blur(1px) brightness(1.2);
-    border-radius: 16px;
-    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-  }
-  85% {
-    transform: scale(0.995) translate(2px, 1px) skew(-0.3deg, -0.1deg);
-    filter: blur(0px) brightness(1.05);
-    border-radius: 13px;
+    transform: scale(0.97) translate(5px, 2px);
+    filter: blur(0px) brightness(1.03);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translate(0, 0) skew(0deg, 0deg);
-    filter: blur(0) brightness(1);
-    border-radius: 12px;
-    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    transform: scale(1) translate(0, 0);
+    filter: blur(0px) brightness(1);
     box-shadow: 
       0 0 45px rgba(0, 240, 255, 0.22),
       0 25px 70px rgba(0, 0, 0, 0.88),
@@ -510,12 +503,27 @@
   gap: 16px;
   background: rgba(14, 28, 36, 0.9);
   border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  position: relative;
+  z-index: 10;
 }
 
 .hud-title-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.hud-header-jarvis {
+  flex-shrink: 0;
+}
+
+.hud-title-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .hud-pulse-radar {
@@ -548,18 +556,20 @@
 }
 
 .hud-sub {
-  font-size: 0.60rem;
-  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
   color: #ff9d42;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .hud-title {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: #ffffff;
+  white-space: nowrap;
 }
 
 .hud-title span {
@@ -1057,9 +1067,9 @@
   .hud-scanline,
   .hud-laser-boot-beam,
   .hud-genie-steam,
-  .orbit-alpha,
-  .orbit-beta,
-  .orbit-gamma,
+  .jarvis-spin-orbit-alpha,
+  .jarvis-spin-orbit-beta,
+  .jarvis-spin-orbit-gamma,
   .orbit-particle-alpha,
   .orbit-particle-beta,
   .orbit-particle-gamma,
