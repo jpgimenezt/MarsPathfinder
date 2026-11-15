@@ -70,26 +70,26 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   const texBerm = createRegolithBermTexture()
   const texCrops = createCropsTexture()
 
-  // Materiales PBR optimizados para luz rasante marciana
+  // Materiales PBR optimizados para luz rasante marciana (con reflectancia ambiental equilibrada)
   const matWhiteHull = new MeshStandardMaterial({
     color: 0xf8fafc,
     map: texHull || null,
-    metalness: 0.65,
-    roughness: 0.32,
+    metalness: 0.15,
+    roughness: 0.45,
   })
 
   const matGoldMli = new MeshStandardMaterial({
     color: 0xd97706,
     map: texKapton || null,
-    metalness: 0.95,
-    roughness: 0.22,
+    metalness: 0.45,
+    roughness: 0.35,
   })
 
   const matSolarCell = new MeshStandardMaterial({
-    color: 0x172554,
+    color: 0x1e3a8a,
     map: texSolar || null,
-    metalness: 0.88,
-    roughness: 0.15,
+    metalness: 0.35,
+    roughness: 0.35,
   })
 
   const matGlassGreenhouse = new MeshStandardMaterial({
@@ -97,7 +97,7 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
     transparent: true,
     opacity: 0.48,
     roughness: 0.08,
-    metalness: 0.2,
+    metalness: 0.15,
     side: DoubleSide,
   })
 
@@ -110,16 +110,16 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   })
 
   const matMetalFrame = new MeshStandardMaterial({
-    color: 0x334155,
+    color: 0x64748b,
     map: texCarbon || null,
-    metalness: 0.85,
-    roughness: 0.35,
+    metalness: 0.25,
+    roughness: 0.55,
   })
 
   const matEngineNozzle = new MeshStandardMaterial({
-    color: 0x1e293b,
-    metalness: 0.95,
-    roughness: 0.2,
+    color: 0x475569,
+    metalness: 0.35,
+    roughness: 0.45,
   })
 
   const matRegolithBerm = new MeshStandardMaterial({
@@ -130,23 +130,23 @@ export function buildColony3DGroup(options: ColonyBuilderOptions): Group {
   })
 
   const matRoverTire = new MeshStandardMaterial({
-    color: 0x1e293b,
+    color: 0x334155,
     map: texTire || null,
-    metalness: 0.8,
-    roughness: 0.4,
+    metalness: 0.25,
+    roughness: 0.6,
   })
 
   const matVisorGold = new MeshStandardMaterial({
     color: 0xf59e0b,
     map: texKapton || null,
-    metalness: 0.98,
-    roughness: 0.1,
+    metalness: 0.45,
+    roughness: 0.25,
   })
 
   const matBlackTilesTPS = new MeshStandardMaterial({
-    color: 0x0f172a,
-    roughness: 0.7,
-    metalness: 0.3,
+    color: 0x334155,
+    roughness: 0.65,
+    metalness: 0.15,
   })
 
   const matLightCyan = new MeshBasicMaterial({

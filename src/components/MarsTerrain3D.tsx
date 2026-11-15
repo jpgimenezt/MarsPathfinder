@@ -12,6 +12,7 @@ import {
   FogExp2,
   Float32BufferAttribute,
   Group,
+  HemisphereLight,
   LineBasicMaterial,
   LineLoop,
   Mesh,
@@ -342,8 +343,12 @@ export function MarsTerrain3D({
     scene.add(skyDome)
 
     // 6. Iluminación Solar y Difusa con sombras rasantes de Marte
-    const ambientLight = new AmbientLight(0xffeedd, 0.65)
+    const ambientLight = new AmbientLight(0xffeedd, 0.55)
     scene.add(ambientLight)
+
+    // Luz hemisférica marciana: cielo cálido anaranjado arriba, rebote de polvo marciano rojizo abajo
+    const hemiLight = new HemisphereLight(0xffedd5, 0x9a3412, 0.85)
+    scene.add(hemiLight)
 
     const sunLight = new DirectionalLight(0xfff5ea, 2.5)
     sunLight.position.set(140, 220, 100)
@@ -595,8 +600,21 @@ export function MarsTerrain3D({
     // 12. Raycasting para Inspección Interactiva
     const raycaster = new Raycaster()
     const mouse = new Vector2()
+    let pointerDownPos = { x: 0, y: 0 }
+    let isDragging = false
+
+    const onPointerDown = (e: MouseEvent) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY }
+      isDragging = false
+    }
 
     const onPointerMove = (e: MouseEvent) => {
+      const dx = e.clientX - pointerDownPos.x
+      const dy = e.clientY - pointerDownPos.y
+      if (dx * dx + dy * dy > 36) {
+        isDragging = true
+      }
+
       const rect = renderer.domElement.getBoundingClientRect()
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
@@ -616,6 +634,11 @@ export function MarsTerrain3D({
     }
 
     const onPointerClick = (e: MouseEvent) => {
+      if (isDragging) {
+        isDragging = false
+        return
+      }
+
       const rect = renderer.domElement.getBoundingClientRect()
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
@@ -710,6 +733,7 @@ export function MarsTerrain3D({
       }
     }
 
+    renderer.domElement.addEventListener('mousedown', onPointerDown)
     renderer.domElement.addEventListener('mousemove', onPointerMove)
     renderer.domElement.addEventListener('click', onPointerClick)
 
@@ -793,6 +817,7 @@ export function MarsTerrain3D({
     return () => {
       cancelAnimationFrame(animFrameId.current)
       resizeObserver.disconnect()
+      renderer.domElement.removeEventListener('mousedown', onPointerDown)
       renderer.domElement.removeEventListener('mousemove', onPointerMove)
       renderer.domElement.removeEventListener('click', onPointerClick)
       controls.dispose()
@@ -2222,7 +2247,7 @@ export function MarsTerrain3D({
       )}
 
       {/* ZONA 4: HUD INFERIOR TELEMETRÍA & WAYPOINTS */}
-      <footer className="ares-hud-bottom" aria-label="Monitoreo de Caminata EVA">
+      <footer className={`ares-hud-bottom ${isInspectorOpen ? 'has-inspector-open' : ''}`} aria-label="Monitoreo de Caminata EVA">
         <div className="hud-bottom-eva">
           <div className="eva-distance-block">
             <span className="eva-distance-label">DISTANCIA DE RUTA EVA (3D)</span>

@@ -317,15 +317,46 @@ export function generateTerrainTexture(
         }
 
         case 'spectral': {
-          if (elevation < -4200) {
-            r = 6; g = 182; b = 212 // Cyan arcillas
-          } else if (elevation >= -4200 && elevation < -4050) {
-            r = 168; g = 85; b = 247 // Magenta hematita
-          } else if (elevation >= -4050 && elevation < -3400) {
-            r = 245; g = 158; b = 11 // Ámbar sulfatos
+          // Base de terreno fotográfico con sombreado orográfico de pendientes
+          const baseR = 190
+          const baseG = 125
+          const baseB = 85
+          const slopeShade = Math.max(0.62, 1 - (slope / 45) * 0.38)
+          const heightFactor = Math.min(1.18, Math.max(0.82, (elevation + 4500) / 4500))
+
+          const natR = baseR * heightFactor * slopeShade
+          const natG = baseG * heightFactor * slopeShade
+          const natB = baseB * heightFactor * slopeShade
+
+          // Firmas mineralógicas de CRISM / ChemCam con transiciones sigmoidales suaves:
+          let specR = natR, specG = natG, specB = natB
+          let blendWeight = 0.42 // Tinte mineral equilibrado que preserva el relieve 3D
+
+          if (elevation < -4220) {
+            // Filosilicatos / Esmectitas (Arcillas lacustres en Aeolis Palus) - Tinte cian/verde azulado mineral
+            specR = 35; specG = 155; specB = 180
+          } else if (elevation >= -4220 && elevation < -4060) {
+            // Zona de transición y Hematita cristalina (Cresta Vera Rubin) - Granate / púrpura mineral
+            const t = (elevation - -4220) / 160
+            specR = Math.round(35 + t * (160 - 35))
+            specG = Math.round(155 + t * (65 - 155))
+            specB = Math.round(180 + t * (170 - 180))
+          } else if (elevation >= -4060 && elevation < -3350) {
+            // Unidad estratificada de Sulfatos hidratados (Mount Sharp) - Ocre / dorado mineral
+            const t = Math.min(1, (elevation - -4060) / 180)
+            specR = Math.round(160 + t * (218 - 160))
+            specG = Math.round(65 + t * (150 - 65))
+            specB = Math.round(170 + t * (45 - 170))
           } else {
-            r = 140; g = 110; b = 95
+            // Regolito basáltico eólico superior
+            specR = 150; specG = 115; specB = 92
+            blendWeight = 0.15
           }
+
+          // Fusión orográfica: preserva crestas, escarpes y textura 3D del relieve
+          r = Math.min(255, Math.round(natR * (1 - blendWeight) + specR * blendWeight * slopeShade))
+          g = Math.min(255, Math.round(natG * (1 - blendWeight) + specG * blendWeight * slopeShade))
+          b = Math.min(255, Math.round(natB * (1 - blendWeight) + specB * blendWeight * slopeShade))
           break
         }
 
