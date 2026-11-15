@@ -49,7 +49,7 @@ import {
   createMartianSkyDome,
   generateTerrainBumpMap,
   generateTerrainTexture,
-  REAL_GALE_TEXTURE_URL,
+  REAL_LAYER_TEXTURE_URLS,
   TERRAIN_LAYERS_CATALOG,
   type TerrainLayerType,
 } from '../features/terrain/terrainShaderUtils'
@@ -62,6 +62,16 @@ import {
 } from '../features/colony/colonyCatalog'
 import { marsDistance, type MarsPoint } from '../features/route/marsDistance'
 import type { StopId } from '../features/route/routePlan'
+import {
+  CURIOSITY_HISTORICAL_PATH,
+  type CuriosityTraversePoint,
+} from '../features/science/curiosityPathData'
+import {
+  queryScientificObservationProfile,
+} from '../features/science/scientificDataCenter'
+import { AresScientificDataCenterModal } from './AresScientificDataCenterModal'
+import { MarsSurfaceIntelligenceModal } from './MarsSurfaceIntelligenceModal'
+import { MissionPathComparisonModal } from './MissionPathComparisonModal'
 
 export type CameraViewMode = 'orbit' | 'pan' | 'firstPerson' | 'fly'
 
@@ -119,8 +129,16 @@ export function MarsTerrain3D({
   // Estados exclusivos del inspector derecho (solo uno activo a la vez para evitar superposiciones)
   const [selectedDiscovery, setSelectedDiscovery] = useState<ScientificDiscovery | null>(null)
   const [selectedColonyModule, setSelectedColonyModule] = useState<HabitatModuleConfig | null>(null)
+  const [selectedCuriosityWaypoint, setSelectedCuriosityWaypoint] = useState<CuriosityTraversePoint | null>(null)
+  const [selectedObservationProfile, setSelectedObservationProfile] = useState<ReturnType<typeof queryScientificObservationProfile> | null>(null)
   const [showLandingBriefing, setShowLandingBriefing] = useState(false)
   const [showTraceabilityModal, setShowTraceabilityModal] = useState(false)
+
+  // Estados de modales científicos multimisión y visualización
+  const [isDataCenterOpen, setIsDataCenterOpen] = useState(false)
+  const [isSurfaceIntelligenceOpen, setIsSurfaceIntelligenceOpen] = useState(false)
+  const [isMissionComparisonOpen, setIsMissionComparisonOpen] = useState(false)
+  const [showCuriosityRoute, setShowCuriosityRoute] = useState(true)
 
   const [hoveredInfo, setHoveredInfo] = useState<{ lon: number; lat: number; elev: number; slope: number } | null>(null)
   const [isCinematicPlaying, setIsCinematicPlaying] = useState(false)
@@ -140,11 +158,15 @@ export function MarsTerrain3D({
   const controlsRef = useRef<OrbitControls | null>(null)
   const terrainMeshRef = useRef<Mesh | null>(null)
   const routeGroupRef = useRef<Group | null>(null)
+  const curiosityGroupRef = useRef<Group | null>(null)
   const beaconsGroupRef = useRef<Group | null>(null)
   const landingGroupRef = useRef<Group | null>(null)
   const landingRingsRef = useRef<Group | null>(null)
   const colonyGroupRef = useRef<Group | null>(null)
   const realOrbitalTexRef = useRef<Texture | null>(null)
+  const loadedTexturesRef = useRef<Record<string, Texture>>({})
+  const activeLayerRef = useRef<TerrainLayerType>(activeLayer)
+  activeLayerRef.current = activeLayer
   const animFrameId = useRef<number>(0)
   const cameraModeRef = useRef<CameraViewMode>(cameraMode)
   cameraModeRef.current = cameraMode
@@ -244,26 +266,7 @@ export function MarsTerrain3D({
     }
   }, [currentStops, routePointsList, totalRouteMeters])
 
-  // Carga asíncrona de la fotografía satelital real de NASA MRO/HRSC
-  useEffect(() => {
-    const loader = new TextureLoader()
-    loader.load(
-      REAL_GALE_TEXTURE_URL,
-      (tex) => {
-        tex.colorSpace = SRGBColorSpace
-        realOrbitalTexRef.current = tex
-        if (activeLayer === 'optical' && terrainMeshRef.current) {
-          const mat = terrainMeshRef.current.material as MeshStandardMaterial
-          mat.map = tex
-          mat.needsUpdate = true
-        }
-      },
-      undefined,
-      (err) => {
-        console.warn('Textura satelital real cargando con fallback:', err)
-      }
-    )
-  }, [activeLayer])
+
 
   // Sincronizar visibilidad de la colonia marciana 3D
   useEffect(() => {
@@ -597,6 +600,60 @@ export function MarsTerrain3D({
     routeGroupRef.current = routeGroup
     scene.add(routeGroup)
 
+    // 11b. Grupo para la Travesía Histórica de Curiosity (MSL Heritage)
+    const curiosityGroup = new Group()
+    curiosityGroup.name = 'curiosity-heritage-group'
+    curiosityGroupRef.current = curiosityGroup
+    scene.add(curiosityGroup)
+
+    const curiosity3DPoints = CURIOSITY_HISTORICAL_PATH.map((wp) => {
+      const { x, z } = geoToTerrainPosition(wp.lon, wp.lat)
+      const elev = getGaleElevation(wp.lon, wp.lat)
+      return new Vector3(x, (elev + 4500) * ELEVATION_SCALE + 0.35, z)
+    })
+
+    if (curiosity3DPoints.length >= 2) {
+      const curve = new CatmullRomCurve3(curiosity3DPoints)
+      const tubeGeo = new TubeGeometry(curve, curiosity3DPoints.length * 3, 0.28, 8, false)
+      const tubeMat = new MeshBasicMaterial({
+        color: 0xf59e0b,
+        transparent: true,
+        opacity: 0.85,
+      })
+      curiosityGroup.add(new Mesh(tubeGeo, tubeMat))
+    }
+
+    CURIOSITY_HISTORICAL_PATH.forEach((wp) => {
+      const { x, z } = geoToTerrainPosition(wp.lon, wp.lat)
+      const elev = getGaleElevation(wp.lon, wp.lat)
+      const y = (elev + 4500) * ELEVATION_SCALE
+
+      const wpGroup = new Group()
+      wpGroup.name = `curiosity-wp-${wp.id}`
+      wpGroup.userData = { curiosityPoint: wp }
+      wpGroup.position.set(x, y, z)
+
+      const ringGeo = new RingGeometry(0.7, 1.2, 16)
+      ringGeo.rotateX(-Math.PI / 2)
+      const ringMesh = new Mesh(ringGeo, new MeshBasicMaterial({ color: 0xf59e0b, side: DoubleSide }))
+      ringMesh.position.y = 0.08
+      wpGroup.add(ringMesh)
+
+      const pinGeo = new CylinderGeometry(0.08, 0.08, 3.5, 6)
+      const pinMat = new MeshBasicMaterial({ color: 0xf59e0b })
+      const pinMesh = new Mesh(pinGeo, pinMat)
+      pinMesh.position.y = 1.75
+      wpGroup.add(pinMesh)
+
+      const topGeo = new OctahedronGeometry(0.45)
+      const topMat = new MeshBasicMaterial({ color: 0xffedd5 })
+      const topMesh = new Mesh(topGeo, topMat)
+      topMesh.position.y = 3.6
+      wpGroup.add(topMesh)
+
+      curiosityGroup.add(wpGroup)
+    })
+
     // 12. Raycasting para Inspección Interactiva
     const raycaster = new Raycaster()
     const mouse = new Vector2()
@@ -639,6 +696,8 @@ export function MarsTerrain3D({
             setSelectedColonyModule(currentObj.userData.moduleData as HabitatModuleConfig)
             setSelectedDiscovery(null)
             setShowLandingBriefing(false)
+            setSelectedCuriosityWaypoint(null)
+            setSelectedObservationProfile(null)
             return
           }
         }
@@ -651,11 +710,13 @@ export function MarsTerrain3D({
           setShowLandingBriefing(true)
           setSelectedDiscovery(null)
           setSelectedColonyModule(null)
+          setSelectedCuriosityWaypoint(null)
+          setSelectedObservationProfile(null)
           return
         }
       }
 
-      // Clic en balizas científicas de Curiosity
+      // Clic en balizas científicas de descubrimientos
       const pinHits = raycaster.intersectObjects(beaconsGroup.children, true)
       if (pinHits.length > 0) {
         let currentObj = pinHits[0].object
@@ -668,7 +729,46 @@ export function MarsTerrain3D({
           setSelectedDiscovery(found)
           setShowLandingBriefing(false)
           setSelectedColonyModule(null)
+          setSelectedCuriosityWaypoint(null)
+          setSelectedObservationProfile(null)
+          return
         }
+      }
+
+      // Clic en balizas históricas de la travesía de Curiosity
+      if (curiosityGroupRef.current && curiosityGroupRef.current.visible) {
+        const curHits = raycaster.intersectObjects(curiosityGroupRef.current.children, true)
+        if (curHits.length > 0) {
+          let currentObj = curHits[0].object
+          while (currentObj.parent && !currentObj.name.startsWith('curiosity-wp-')) {
+            currentObj = currentObj.parent as Mesh
+          }
+          if (currentObj.userData?.curiosityPoint) {
+            setSelectedCuriosityWaypoint(currentObj.userData.curiosityPoint as CuriosityTraversePoint)
+            setSelectedDiscovery(null)
+            setSelectedColonyModule(null)
+            setShowLandingBriefing(false)
+            setSelectedObservationProfile(null)
+            return
+          }
+        }
+      }
+
+      // Clic en la superficie para perfil científico multimisión
+      const terrainHits = raycaster.intersectObject(terrainMesh)
+      if (terrainHits.length > 0) {
+        const hit = terrainHits[0].point
+        const u = (hit.x / TERRAIN_WIDTH) + 0.5
+        const v = (hit.z / TERRAIN_HEIGHT) + 0.5
+        const lon = REGION_BOUNDS.minLon + u * (REGION_BOUNDS.maxLon - REGION_BOUNDS.minLon)
+        const lat = REGION_BOUNDS.maxLat - v * (REGION_BOUNDS.maxLat - REGION_BOUNDS.minLat)
+        const elev = getGaleElevation(lon, lat)
+        const profile = queryScientificObservationProfile(lon, lat, elev)
+        setSelectedObservationProfile(profile)
+        setSelectedDiscovery(null)
+        setSelectedColonyModule(null)
+        setShowLandingBriefing(false)
+        setSelectedCuriosityWaypoint(null)
       }
     }
 
@@ -755,21 +855,48 @@ export function MarsTerrain3D({
     const mesh = terrainMeshRef.current
     const mat = mesh.material as MeshStandardMaterial
 
-    if (activeLayer === 'optical') {
-      if (realOrbitalTexRef.current) {
-        mat.map = realOrbitalTexRef.current
+    const realUrl = REAL_LAYER_TEXTURE_URLS[activeLayer]
+    if (realUrl) {
+      if (loadedTexturesRef.current[activeLayer]) {
+        mat.map = loadedTexturesRef.current[activeLayer]
         mat.needsUpdate = true
-      } else {
-        const fallback = generateTerrainTexture('optical', REGION_BOUNDS, 512)
-        mat.map = fallback
-        mat.needsUpdate = true
+        return
       }
-    } else {
-      const dataTex = generateTerrainTexture(activeLayer, REGION_BOUNDS, 1024)
-      mat.map = dataTex
-      mat.needsUpdate = true
+      const loader = new TextureLoader()
+      loader.load(
+        realUrl,
+        (tex) => {
+          tex.colorSpace = SRGBColorSpace
+          loadedTexturesRef.current[activeLayer] = tex
+          if (activeLayerRef.current === activeLayer && terrainMeshRef.current) {
+            mat.map = tex
+            mat.needsUpdate = true
+          }
+        },
+        undefined,
+        (err) => {
+          console.warn(`Fallback procedural para capa ${activeLayer}:`, err)
+          const fallbackTex = generateTerrainTexture(activeLayer, REGION_BOUNDS, 1024)
+          fallbackTex.colorSpace = SRGBColorSpace
+          mat.map = fallbackTex
+          mat.needsUpdate = true
+        }
+      )
+      return
     }
+
+    const dataTex = generateTerrainTexture(activeLayer, REGION_BOUNDS, 1024)
+    dataTex.colorSpace = SRGBColorSpace
+    mat.map = dataTex
+    mat.needsUpdate = true
   }, [activeLayer])
+
+  // Sincronizar visibilidad de la ruta histórica de Curiosity
+  useEffect(() => {
+    if (curiosityGroupRef.current) {
+      curiosityGroupRef.current.visible = showCuriosityRoute
+    }
+  }, [showCuriosityRoute])
 
   // Actualización de ruta 3D
   useEffect(() => {
@@ -1219,9 +1346,17 @@ export function MarsTerrain3D({
     setSelectedDiscovery(null)
     setSelectedColonyModule(null)
     setShowLandingBriefing(false)
+    setSelectedCuriosityWaypoint(null)
+    setSelectedObservationProfile(null)
   }
 
-  const isInspectorOpen = Boolean(selectedDiscovery || selectedColonyModule || showLandingBriefing)
+  const isInspectorOpen = Boolean(
+    selectedDiscovery ||
+    selectedColonyModule ||
+    showLandingBriefing ||
+    selectedCuriosityWaypoint ||
+    selectedObservationProfile
+  )
 
   return (
     <div className="ares-terrain-container" aria-label="Explorador 3D de Gale Crater y Mount Sharp">
@@ -1325,6 +1460,22 @@ export function MarsTerrain3D({
           </button>
           <button
             type="button"
+            className="hud-btn highlight"
+            onClick={() => setIsDataCenterOpen(true)}
+            title="Abrir el catálogo centralizado ARES Scientific Data Center (NASA/USGS/PDS)"
+          >
+            [DATOS NASA]
+          </button>
+          <button
+            type="button"
+            className="hud-btn primary"
+            onClick={() => setIsSurfaceIntelligenceOpen(true)}
+            title="Abrir galería de observaciones de superficie Curiosity y Perseverance"
+          >
+            [FOTOS RAW]
+          </button>
+          <button
+            type="button"
             className="hud-btn"
             onClick={onSwitchToGlobal}
             title="Cambiar al Globo 3D planetario de Marte"
@@ -1392,7 +1543,42 @@ export function MarsTerrain3D({
         <div className="dock-content">
           {leftTab === 'layers' && (
             <div className="layer-selection-list">
-              {(Object.keys(TERRAIN_LAYERS_CATALOG) as TerrainLayerType[]).map((key) => {
+              <div className="layer-category-header">CARTOGRAFÍA PLANETARIA</div>
+              {(['optical', 'ctx_mosaic', 'thermal'] as TerrainLayerType[]).map((key) => {
+                const meta = TERRAIN_LAYERS_CATALOG[key]
+                const active = activeLayer === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`layer-select-btn ${active ? 'active' : ''}`}
+                    onClick={() => setActiveLayer(key)}
+                  >
+                    <span className="layer-btn-title">{meta.name.split(' (')[0]}</span>
+                    <span className="layer-btn-sub">{meta.instrument.split(' ')[0]} · {meta.mission.split(' ')[0]}</span>
+                  </button>
+                )
+              })}
+
+              <div className="layer-category-header">GEOLOGÍA Y COMPOSICIÓN</div>
+              {(['geology', 'spectral'] as TerrainLayerType[]).map((key) => {
+                const meta = TERRAIN_LAYERS_CATALOG[key]
+                const active = activeLayer === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`layer-select-btn ${active ? 'active' : ''}`}
+                    onClick={() => setActiveLayer(key)}
+                  >
+                    <span className="layer-btn-title">{meta.name.split(' (')[0]}</span>
+                    <span className="layer-btn-sub">{meta.instrument.split(' ')[0]} · {meta.mission.split(' ')[0]}</span>
+                  </button>
+                )
+              })}
+
+              <div className="layer-category-header">ANÁLISIS TOPOGRÁFICO Y RIESGO</div>
+              {(['dem', 'slope', 'radiation'] as TerrainLayerType[]).map((key) => {
                 const meta = TERRAIN_LAYERS_CATALOG[key]
                 const active = activeLayer === key
                 return (
@@ -1416,6 +1602,37 @@ export function MarsTerrain3D({
                     <span>{item.label}</span>
                   </div>
                 ))}
+              </div>
+
+              <div className="dock-action-buttons">
+                <button
+                  type="button"
+                  className="hud-btn highlight"
+                  onClick={() => setIsDataCenterOpen(true)}
+                >
+                  [CENTRO CIENTÍFICO ARES]
+                </button>
+                <button
+                  type="button"
+                  className="hud-btn primary"
+                  onClick={() => setIsSurfaceIntelligenceOpen(true)}
+                >
+                  [INTELIGENCIA DE SUPERFICIE]
+                </button>
+                <button
+                  type="button"
+                  className="hud-btn secondary"
+                  onClick={() => setIsMissionComparisonOpen(true)}
+                >
+                  [COMPARAR MISIONES]
+                </button>
+                <button
+                  type="button"
+                  className={`hud-btn ${showCuriosityRoute ? 'highlight' : ''}`}
+                  onClick={() => setShowCuriosityRoute(prev => !prev)}
+                >
+                  {showCuriosityRoute ? '[RUTA CURIOSITY: ON]' : '[RUTA CURIOSITY: OFF]'}
+                </button>
               </div>
             </div>
           )}
@@ -1503,6 +1720,10 @@ export function MarsTerrain3D({
                 ? '[PROPUESTA CONCEPTUAL // SIMULACIÓN]'
                 : showLandingBriefing
                 ? '[SITIO CANDIDATO PRINCIPAL LZ-1]'
+                : selectedCuriosityWaypoint
+                ? '[HERENCIA CURIOSITY // HISTÓRICO NASA]'
+                : selectedObservationProfile
+                ? '[PERFIL CIENTÍFICO MULTIMISIÓN]'
                 : '[HITO CIENTÍFICO VERIFICADO]'}
             </span>
             <button
@@ -1727,6 +1948,145 @@ export function MarsTerrain3D({
                 </div>
               </>
             )}
+
+            {/* 4. Vista de Hito de la Travesía de Curiosity (MSL Heritage) */}
+            {selectedCuriosityWaypoint && (
+              <>
+                <h3 className="drawer-title">{selectedCuriosityWaypoint.name}</h3>
+                <p className="drawer-sub">
+                  Sol {selectedCuriosityWaypoint.sol} · {selectedCuriosityWaypoint.earthDate} · Odometría: {selectedCuriosityWaypoint.cumulativeDistKm} km
+                </p>
+
+                <div className="drawer-meta-grid">
+                  <div className="drawer-meta-item">
+                    <label>MISIÓN OFICIAL</label>
+                    <span>MSL Curiosity (NASA/JPL)</span>
+                  </div>
+                  <div className="drawer-meta-item">
+                    <label>TIPO DE OBJETIVO</label>
+                    <span>{selectedCuriosityWaypoint.targetType}</span>
+                  </div>
+                  <div className="drawer-meta-item">
+                    <label>COTA AREOIDE MOLA</label>
+                    <span>{selectedCuriosityWaypoint.elevationMeters} m</span>
+                  </div>
+                  <div className="drawer-meta-item">
+                    <label>INSTRUMENTOS CLAVE</label>
+                    <span>{selectedCuriosityWaypoint.instruments.join(', ')}</span>
+                  </div>
+                </div>
+
+                <div className="drawer-text-block">
+                  <strong style={{ color: '#f59e0b' }}>Resumen de Campaña Científica:</strong>
+                  <p>{selectedCuriosityWaypoint.scienceSummary}</p>
+                </div>
+
+                <div className="drawer-actions">
+                  <button
+                    type="button"
+                    className="hud-btn primary"
+                    onClick={() => {
+                      const { x, z } = geoToTerrainPosition(selectedCuriosityWaypoint.lon, selectedCuriosityWaypoint.lat)
+                      const elev = (getGaleElevation(selectedCuriosityWaypoint.lon, selectedCuriosityWaypoint.lat) + 4500) * ELEVATION_SCALE
+                      if (controlsRef.current && cameraRef.current) {
+                        controlsRef.current.target.set(x, elev + 2, z)
+                        cameraRef.current.position.set(x + 12, elev + 14, z + 16)
+                      }
+                    }}
+                  >
+                    [CENTRAR CÁMARA]
+                  </button>
+                  {onSelectScienceStop && (
+                    <button
+                      type="button"
+                      className="hud-btn highlight"
+                      onClick={() => {
+                        onSelectScienceStop(
+                          [selectedCuriosityWaypoint.lon, selectedCuriosityWaypoint.lat],
+                          `Curiosity Sol ${selectedCuriosityWaypoint.sol}: ${selectedCuriosityWaypoint.name.split(' (')[0]}`,
+                        )
+                      }}
+                    >
+                      [FIJAR DESTINO EVA B]
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 5. Vista de Perfil Científico Multimisión */}
+            {selectedObservationProfile && (
+              <>
+                <h3 className="drawer-title">PERFIL CIENTÍFICO MULTIMISIÓN</h3>
+                <p className="drawer-sub">
+                  {Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(4)}°S · {selectedObservationProfile.targetCoordinates.lon.toFixed(4)}°E · Cota {Math.round(selectedObservationProfile.targetCoordinates.elevationMeters)} m
+                </p>
+
+                <div className="drawer-text-block">
+                  <strong style={{ color: '#00f0ff' }}>Contexto Geológico Identificado:</strong>
+                  <p>{selectedObservationProfile.geologySummary}</p>
+                </div>
+
+                <div className="drawer-text-block">
+                  <strong style={{ color: '#f59e0b' }}>Análisis Topográfico y de Seguridad:</strong>
+                  <p>{selectedObservationProfile.terrainSummary}</p>
+                </div>
+
+                <div className="drawer-text-block">
+                  <strong>Herencia de Exploración Cercana:</strong>
+                  <ul className="subsystems-list">
+                    {selectedObservationProfile.missionHeritageNearby.map((h, idx) => (
+                      <li key={idx}>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="drawer-text-block">
+                  <strong>Datasets Oficiales con Cobertura en este Punto:</strong>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                    {selectedObservationProfile.availableDatasets.map((ds) => (
+                      <div
+                        key={ds.datasetId}
+                        style={{
+                          background: 'rgba(15, 23, 42, 0.6)',
+                          padding: '6px 8px',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          fontSize: '0.66rem',
+                        }}
+                      >
+                        <span style={{ color: '#00f0ff', fontWeight: 800 }}>{ds.instrument}</span>
+                        <div style={{ color: '#cbd5e1' }}>{ds.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="drawer-actions">
+                  <button
+                    type="button"
+                    className="hud-btn highlight"
+                    onClick={() => setIsDataCenterOpen(true)}
+                  >
+                    [ABRIR CENTRO CIENTÍFICO]
+                  </button>
+                  {onSelectScienceStop && (
+                    <button
+                      type="button"
+                      className="hud-btn primary"
+                      onClick={() => {
+                        onSelectScienceStop(
+                          [selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat],
+                          `Sector ${Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(2)}S/${selectedObservationProfile.targetCoordinates.lon.toFixed(2)}E`,
+                        )
+                      }}
+                    >
+                      [FIJAR DESTINO EVA B]
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </article>
       )}
@@ -1865,6 +2225,15 @@ export function MarsTerrain3D({
           >
             [BASE LZ-1 BRADBURY]
           </button>
+          <button
+            type="button"
+            className="waypoint-chip"
+            style={{ borderColor: 'rgba(245, 158, 11, 0.5)', color: '#f59e0b' }}
+            onClick={() => setIsMissionComparisonOpen(true)}
+            title="Comparar travesía de 32 km de Curiosity con ruta EVA planificada"
+          >
+            [COMPARAR CON CURIOSITY]
+          </button>
           {GALE_DISCOVERIES.map((disc) => (
             <button
               key={disc.id}
@@ -1877,6 +2246,32 @@ export function MarsTerrain3D({
           ))}
         </div>
       </footer>
+
+      {/* Modales Científicos y de Inteligencia Multimisión */}
+      <AresScientificDataCenterModal
+        isOpen={isDataCenterOpen}
+        onClose={() => setIsDataCenterOpen(false)}
+      />
+
+      <MarsSurfaceIntelligenceModal
+        isOpen={isSurfaceIntelligenceOpen}
+        onClose={() => setIsSurfaceIntelligenceOpen(false)}
+        onFocusCoordinates={(coords) => {
+          const { x, z } = geoToTerrainPosition(coords.lon, coords.lat)
+          const elev = (getGaleElevation(coords.lon, coords.lat) + 4500) * ELEVATION_SCALE
+          if (controlsRef.current && cameraRef.current) {
+            controlsRef.current.target.set(x, elev + 2, z)
+            cameraRef.current.position.set(x + 15, elev + 16, z + 20)
+          }
+        }}
+      />
+
+      <MissionPathComparisonModal
+        isOpen={isMissionComparisonOpen}
+        onClose={() => setIsMissionComparisonOpen(false)}
+        evaDistanceKm={totalRouteMeters / 1000}
+        evaHours={routeTelemetry ? routeTelemetry.segments.reduce((acc, s) => acc + s.estWalkHours, 0) : 0}
+      />
     </div>
   )
 }

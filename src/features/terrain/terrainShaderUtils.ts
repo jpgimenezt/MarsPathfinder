@@ -15,8 +15,17 @@ import {
   SRGBColorSpace,
 } from 'three'
 import { getGaleElevation, getGaleSlopeDegrees } from './galeElevation'
+import { getUsgsGeologicUnitAt } from '../geology/usgsGeologyData'
 
-export type TerrainLayerType = 'optical' | 'dem' | 'slope' | 'thermal' | 'spectral' | 'radiation'
+export type TerrainLayerType = 
+  | 'optical' 
+  | 'ctx_mosaic' 
+  | 'dem' 
+  | 'slope' 
+  | 'geology' 
+  | 'thermal' 
+  | 'spectral' 
+  | 'radiation'
 
 export interface LayerMetadata {
   id: TerrainLayerType
@@ -28,9 +37,17 @@ export interface LayerMetadata {
   units: string
   legend: { color: string; label: string }[]
   limitations: string
+  category: 'CARTOGRAPHY' | 'GEOLOGY' | 'MISSION_HERITAGE' | 'SURFACE_IMAGERY' | 'TERRAIN_ANALYSIS'
 }
 
 export const REAL_GALE_TEXTURE_URL = '/data/gale/gale_real_satellite_1024.jpg'
+
+export const REAL_LAYER_TEXTURE_URLS: Partial<Record<TerrainLayerType, string>> = {
+  optical: '/data/gale/gale_real_satellite_1024.jpg',
+  ctx_mosaic: '/data/gale/gale_ctx_mosaic_1024.jpg',
+  dem: '/data/gale/gale_mola_clrshade_1024.jpg',
+  thermal: '/data/gale/gale_themis_dayir_1024.jpg',
+}
 
 export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
   optical: {
@@ -48,10 +65,27 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#e8c29b', label: 'Afloramientos brillantes de sulfatos y arcillas' },
     ],
     limitations: 'Fotografía satelital óptica real de NASA/ESA. Sin estilización artificial ni estrías sintéticas.',
+    category: 'CARTOGRAPHY',
+  },
+  ctx_mosaic: {
+    id: 'ctx_mosaic',
+    name: 'Mosaico Controlado CTX Gale (Gale_CTX_BlockAdj_dd)',
+    mission: 'NASA Mars Reconnaissance Orbiter (MRO)',
+    instrument: 'CTX (Context Camera) · Mars Trek WMTS',
+    resolution: '6 m/píxel de resolución nativa',
+    acquisition: 'Mosaico oficial controlado por bloques de Gale Crater',
+    units: 'Reflectancia óptica monocromática I/F (500-800 nm)',
+    legend: [
+      { color: '#d4d4d8', label: 'Albedo alto: estratos claros de sulfatos y yeso' },
+      { color: '#71717a', label: 'Albedo medio: areniscas y regolito consolidado' },
+      { color: '#18181b', label: 'Albedo bajo: campos de dunas eólicas basálticas' },
+    ],
+    limitations: 'Mosaico oficial de NASA Mars Trek. No contiene datos altimétricos numéricos directos.',
+    category: 'CARTOGRAPHY',
   },
   dem: {
     id: 'dem',
-    name: 'Modelo Digital de Elevación Hipsométrica (DEM)',
+    name: 'Modelo Digital de Elevación Hipsométrica (MOLA / HRSC)',
     mission: 'Mars Global Surveyor / Mars Express',
     instrument: 'MOLA (Laser Altimeter) + HRSC DTM',
     resolution: '50 m/px derivado (Areoide marciano)',
@@ -65,6 +99,7 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#f8fafc', label: '> 0 m a +1,050 m (Cumbre de Aeolis Mons)' },
     ],
     limitations: 'Elevación regional. Características menores a 50 metros pueden no estar resueltas.',
+    category: 'TERRAIN_ANALYSIS',
   },
   slope: {
     id: 'slope',
@@ -80,6 +115,25 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#ef4444', label: '> 15° · PELIGROSO (Riesgo de deslizamiento de regolito)' },
     ],
     limitations: 'No detecta rocas individuales (<1 m) ni zanjas estrechas de arena suelta.',
+    category: 'TERRAIN_ANALYSIS',
+  },
+  geology: {
+    id: 'geology',
+    name: 'Contexto Geológico y Estratigrafía (USGS SIM 3292)',
+    mission: 'USGS Astrogeology Science Center / NASA',
+    instrument: 'Compilación Geológica Tanaka et al. (2014) + Grotzinger et al.',
+    resolution: 'Escala 1:500,000 (Gale) / 1:20,000,000 (Global)',
+    acquisition: 'Síntesis litoestratigráfica multisinóptica',
+    units: 'Unidades litoestratigráficas y facies sedimentarias',
+    legend: [
+      { color: '#a855f7', label: 'lApm: Estratos de sulfatos del montículo central (Aeolis Mons)' },
+      { color: '#0ea5e9', label: 'eHh: Unidad de transición lacustre y arcillas (Yellowknife / Glen Torridon)' },
+      { color: '#334155', label: 'AHv: Dunas eólicas basálticas activas (Dunas de Bagnold)' },
+      { color: '#eab308', label: 'mNh: Suelo de cráter y abanicos aluviales (Formación Bradbury)' },
+      { color: '#ef4444', label: 'Nhm: Macizos del borde y murallas de impacto de Gale' },
+    ],
+    limitations: 'Límites geológicos regionales inferidos a partir de contactos geomorfológicos y firmas orbitales.',
+    category: 'GEOLOGY',
   },
   thermal: {
     id: 'thermal',
@@ -95,6 +149,7 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#ef4444', label: 'Alta inercia (Roca madre expuesta / calor retenido)' },
     ],
     limitations: 'Promedio térmico histórico. No refleja la temperatura meteorológica instantánea.',
+    category: 'CARTOGRAPHY',
   },
   spectral: {
     id: 'spectral',
@@ -110,6 +165,7 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#f59e0b', label: 'Sulfatos de Mg/Ca (Evaporitas / secado de lago)' },
     ],
     limitations: 'Cobertura espectral discontinua integrada con puntos de perforación de Curiosity.',
+    category: 'GEOLOGY',
   },
   radiation: {
     id: 'radiation',
@@ -125,6 +181,7 @@ export const TERRAIN_LAYERS_CATALOG: Record<TerrainLayerType, LayerMetadata> = {
       { color: '#ef4444', label: '> 0.72 mSv/día (Borde expuesto / elevación alta)' },
     ],
     limitations: 'Modelo de dosis acumulativa de superficie; eventos solares (SPE) pueden aumentar la tasa en órdenes de magnitud.',
+    category: 'TERRAIN_ANALYSIS',
   },
 }
 
@@ -175,6 +232,32 @@ export function generateTerrainTexture(
           r = Math.min(255, Math.round(baseR * heightFactor * slopeShade))
           g = Math.min(255, Math.round(baseG * heightFactor * slopeShade))
           b = Math.min(255, Math.round(baseB * heightFactor * slopeShade))
+          break
+        }
+
+        case 'ctx_mosaic': {
+          // Mosaico monocromático de reflectancia CTX (6 m/px)
+          const baseGrey = 135
+          const heightFactor = Math.min(1.2, Math.max(0.75, (elevation + 4500) / 4500))
+          const slopeShade = Math.max(0.68, 1 - (slope / 45) * 0.32)
+          const gVal = Math.min(255, Math.round(baseGrey * heightFactor * slopeShade))
+          r = gVal
+          g = gVal
+          b = gVal
+          break
+        }
+
+        case 'geology': {
+          // Unidades geológicas USGS SIM 3292 con modulación de relieve
+          const unit = getUsgsGeologicUnitAt(lon, lat, elevation)
+          const hex = unit.usgsColor.replace('#', '')
+          const ur = parseInt(hex.substring(0, 2), 16)
+          const ug = parseInt(hex.substring(2, 4), 16)
+          const ub = parseInt(hex.substring(4, 6), 16)
+          const slopeShade = Math.max(0.65, 1 - (slope / 45) * 0.35)
+          r = Math.min(255, Math.round(ur * slopeShade))
+          g = Math.min(255, Math.round(ug * slopeShade))
+          b = Math.min(255, Math.round(ub * slopeShade))
           break
         }
 

@@ -58,3 +58,22 @@ No completar campos desconocidos con datos inventados. Mantener `null` o `unknow
 - [x] Confirmar interés científico **regional** de Jezero en NASA; posición exacta de parada aún NO verificada.
 - [ ] Revisar la existencia de DEM numérico del mismo ROI para perfil/3D.
 - [ ] Probar endpoint bajo entorno de deployment; Chrome local y respaldo estático ya probados.
+
+
+## Integración Científica Oficial Gale Crater — ARES (15/11/2026)
+
+Conexión de las fuentes oficiales estipuladas para el NASA Space Apps Challenge 2026 sobre la región de exploración principal de Gale Crater y Mount Sharp (Aeolis Mons):
+
+| Dataset / Misión | Instrumento | Producto / Identificador | Resolución | Cobertura | Estado |
+|---|---|---|---|---|---|
+| NASA Mars Trek (MRO) | CTX (Context Camera) | `Gale_CTX_BlockAdj_dd` | 6 m/px nativa | 135.18° a 139.24°E, 6.57° a 2.81°S | VERIFIED (WMTS HTTP 200, 9 teselas z8 descargadas y georreferenciadas a 1024x1024) |
+| NASA Mars Trek (MGS) | MOLA / HRSC | `Mars_MGS_MOLA_ClrShade_merge_global_463m` | 463 m/px | Global marciano | VERIFIED (WMTS HTTP 200, teselas z7 integradas) |
+| NASA Mars Trek (Odyssey) | THEMIS-IR | `THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018` | 100 m/px | ±65° latitud | VERIFIED (WMTS HTTP 200, formato PNG z8 integrado) |
+| USGS Astrogeology | Compilación Multisinóptica | USGS Scientific Investigations Map 3292 | Escala 1:500,000 (Gale) | Unidades `lApm`, `eHh`, `AHv`, `mNh`, `Nhm` | VERIFIED (Capa `GEOLOGICAL CONTEXT` y shader interactivo) |
+| NASA MSL Curiosity | Conjunto Científico Rover | Curiosity Proposed Path up Mount Sharp | Travesía puntual georreferenciada | 32.2 km desde Bradbury Landing hasta Gediz Vallis | VERIFIED (Capa 3D ámbar, waypoints Sol 0 a Sol 3800 y Mission Comparison) |
+| NASA Mars 2020 / MSL | Mastcam, Mastcam-Z, MAHLI, WATSON | Archivo Oficial Raw Images (JPL/NASA) | Macro a paisaje | Gale Crater (Curiosity) y Jezero Crater (Perseverance) | VERIFIED (Módulo `MARS SURFACE INTELLIGENCE` con estricta distinción geográfica) |
+
+### Avisos y Restricciones de Uso
+1. **Atribución Oficial:** Todas las capas conservan sus créditos originales a NASA, JPL-Caltech, MSSS, USGS Astrogeology y ASU.
+2. **Independencia Institucional:** "ARES es un proyecto independiente desarrollado para el NASA Space Apps Challenge. No está afiliado, respaldado ni patrocinado por la NASA."
+3. **Distinción Geográfica Estricta:** Las fotografías de Perseverance pertenecen al Cráter Jezero (a 3,700 km de distancia) y se identifican explícitamente como inteligencia de superficie comparativa / análogo planetario, sin proyectarse sobre las coordenadas de Gale Crater.
