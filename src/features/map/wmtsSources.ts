@@ -3,7 +3,7 @@ import WMTS, { optionsFromCapabilities } from 'ol/source/WMTS.js'
 import { marsProjection } from './marsProjection'
 import type { SourceRecord } from '../../data/sourceManifest'
 
-export async function loadWmts(source: SourceRecord, signal: AbortSignal): Promise<WMTS> {
+export async function loadWmts(source: Pick<SourceRecord, 'sourceUrl' | 'productId' | 'attribution'>, signal: AbortSignal): Promise<WMTS> {
   const response = await fetch(source.sourceUrl, { signal })
   if (!response.ok) throw new Error(`GetCapabilities: HTTP ${response.status}`)
   const xml = await response.text()
