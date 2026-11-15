@@ -369,7 +369,7 @@ body.is-clean-view .ares-fab-trigger {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: radial-gradient(circle at 92% 92%, rgba(0, 240, 255, 0.12) 0%, rgba(4, 9, 14, 0.88) 55%), rgba(4, 9, 14, 0.84);
+  background: radial-gradient(circle at 50% 92%, rgba(0, 240, 255, 0.20) 0%, rgba(4, 9, 14, 0.88) 55%), rgba(4, 9, 14, 0.84);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   animation: hudOverlayBoot 0.4s ease-out forwards;
@@ -401,27 +401,47 @@ body.is-clean-view .ares-fab-trigger {
   overflow: hidden;
   color: #f1f5f9;
   font-family: 'JetBrains Mono', 'Segoe UI Mono', Consolas, monospace;
-  transform-origin: calc(100% - 60px) calc(100% - 60px);
-  animation: aladdinGenieDeploy 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
+  transform-origin: 50% 100%;
+  animation: aladdinGenieDeploy 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-/* Despliegue puro acelerado por GPU (cero microsaltos) */
+/* Despliegue efecto Aladín puro acelerado por GPU desde el centro inferior hacia arriba */
 @keyframes aladdinGenieDeploy {
-  from {
+  0% {
     opacity: 0;
-    transform: translate3d(120px, 80px, 0) scale(0.18);
+    transform: translate3d(0, 95px, 0) scale(0.08, 0.03);
+    filter: blur(8px) brightness(2);
   }
 
-  to {
+  35% {
+    opacity: 0.85;
+    transform: translate3d(0, 35px, 0) scale(0.38, 0.55);
+    filter: blur(2px) brightness(1.5);
+  }
+
+  70% {
+    opacity: 0.98;
+    transform: translate3d(0, -6px, 0) scale(1.02, 1.01);
+    filter: blur(0px) brightness(1.1);
+  }
+
+  88% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 2px, 0) scale(0.995, 0.998);
+    filter: blur(0px) brightness(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1, 1);
+    filter: blur(0px) brightness(1);
   }
 }
 
-/* Haz de barrido láser de arranque acelerado por GPU */
+/* Haz de barrido láser de arranque acelerado por GPU ascendiendo desde el centro inferior */
 .hud-laser-boot-beam {
   position: absolute;
   top: 0;
@@ -438,12 +458,12 @@ body.is-clean-view .ares-fab-trigger {
 @keyframes laserBootScan {
   from {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 780px, 0);
   }
 
   to {
     opacity: 0;
-    transform: translate3d(0, 780px, 0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
