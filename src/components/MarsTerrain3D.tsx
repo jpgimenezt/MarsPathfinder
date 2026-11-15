@@ -36,11 +36,11 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import {
   GALE_DISCOVERIES,
+  localizedGaleDiscovery,
   PRIMARY_LANDING_SITE,
   type ScientificDiscovery,
 } from '../features/science/galeCuriosityData'
 import {
-  evaluateSlope,
   evaluateWalkbackLimit,
   getGaleElevation,
   getGaleSlopeDegrees,
@@ -50,7 +50,7 @@ import {
   generateTerrainBumpMap,
   generateTerrainTexture,
   REAL_LAYER_TEXTURE_URLS,
-  TERRAIN_LAYERS_CATALOG,
+  localizedTerrainLayer,
   type TerrainLayerType,
 } from '../features/terrain/terrainShaderUtils'
 import {
@@ -58,6 +58,7 @@ import {
 } from '../features/colony/colony3DBuilder'
 import {
   DEFAULT_COLONY_MODULES,
+  localizedColonyModule,
   type HabitatModuleConfig,
 } from '../features/colony/colonyCatalog'
 import { resolveAssetUrl } from '../utils/assetUrl'
@@ -70,6 +71,7 @@ import {
 import type { StopId } from '../features/route/routePlan'
 import {
   CURIOSITY_HISTORICAL_PATH,
+  curiosityWaypointTitle,
   type CuriosityTraversePoint,
 } from '../features/science/curiosityPathData'
 import {
@@ -80,6 +82,7 @@ import { MarsSurfaceIntelligenceModal } from './MarsSurfaceIntelligenceModal'
 import { MissionPathComparisonModal } from './MissionPathComparisonModal'
 import { AresGuidedTour } from './AresGuidedTour'
 import { MissionDiscoveryTourOverlay } from './MissionDiscoveryTourOverlay'
+import { useLanguage } from '../features/i18n/appI18n'
 import {
   MISSION_DISCOVERY_STOPS,
 } from '../features/tour/missionDiscoveryTourData'
@@ -156,6 +159,8 @@ export function MarsTerrain3D({
   onTourStateChange,
   tacticalCommand,
 }: MarsTerrain3DProps) {
+  const { language, t } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   const containerRef = useRef<HTMLDivElement>(null)
   const isCameraAnimatingRef = useRef(false)
   const [activeLayer, setActiveLayer] = useState<TerrainLayerType>('optical')
@@ -268,11 +273,11 @@ export function MarsTerrain3D({
   const routePointsList = useMemo(() => {
     if (!currentStops) return []
     const list: { id: StopId; point: MarsPoint; name: string }[] = []
-    if (currentStops.A) list.push({ id: 'A', point: currentStops.A, name: 'Base / Inicio A' })
-    if (currentStops.P) list.push({ id: 'P', point: currentStops.P, name: 'Parada Científica P' })
-    if (currentStops.B) list.push({ id: 'B', point: currentStops.B, name: 'Objetivo B' })
+    if (currentStops.A) list.push({ id: 'A', point: currentStops.A, name: ui('Base / Starting Point A', 'Base / Inicio A') })
+    if (currentStops.P) list.push({ id: 'P', point: currentStops.P, name: ui('Science Stop P', 'Parada Científica P') })
+    if (currentStops.B) list.push({ id: 'B', point: currentStops.B, name: ui('Destination B', 'Objetivo B') })
     return list
-  }, [currentStops])
+  }, [currentStops, language])
 
   const totalRouteMeters = useMemo(() => {
     if (routePointsList.length < 2) return 0
@@ -1622,7 +1627,7 @@ export function MarsTerrain3D({
   }, [isCleanViewMode, isDiscoveryTourActive, isInspectorOpen])
 
   return (
-    <div className="ares-terrain-container" aria-label="Explorador 3D de Gale Crater y Mount Sharp">
+    <div className="ares-terrain-container" aria-label={language === 'en' ? 'Gale Crater and Mount Sharp 3D explorer' : 'Explorador 3D de Gale Crater y Mount Sharp'}>
       {/* Contenedor del Canvas de Three.js */}
       <div className="ares-canvas-host" ref={containerRef} />
 
@@ -1632,28 +1637,28 @@ export function MarsTerrain3D({
           <div className="edl-reticle-bracket" aria-hidden="true" />
 
           <div className="edl-left-tape">
-            <span className="tape-label">VELOCIDAD</span>
+            <span className="tape-label">{ui('SPEED', 'VELOCIDAD')}</span>
             <strong className="tape-value">{flightTelemetry.velocityStr}</strong>
             <span className="tape-sub">{flightTelemetry.machStr}</span>
           </div>
 
           <div className="edl-center-hud">
-            <div className="edl-phase-tag">[MANIOBRA GOOGLE EARTH // EDL ENTRY]</div>
-            <h2 className="edl-target-title">DESCENSO A BRADBURY BASE (GALE CRATER)</h2>
-            <p className="edl-target-coords">4.590°S · 137.442°E // ELEV. EST.: -4,520 M // ELIPSE: 7.0 × 4.5 KM</p>
+            <div className="edl-phase-tag">{ui('[EDUCATIONAL CAMERA ANIMATION // NOT FLIGHT TELEMETRY]', '[ANIMACIÓN EDUCATIVA DE CÁMARA // NO TELEMETRÍA REAL]')}</div>
+            <h2 className="edl-target-title">{ui('DESCENT TO BRADBURY BASE (GALE CRATER)', 'DESCENSO A BRADBURY BASE (GALE CRATER)')}</h2>
+            <p className="edl-target-coords">4.590°S · 137.442°E // {ui('SIMULATED TERRAIN', 'TERRENO SIMULADO')}</p>
             <div className="edl-phase-bar">
-              <span className="phase-text">{flightTelemetry.phaseName}</span>
+               <span className="phase-text">{ui('EDUCATIONAL CAMERA DESCENT — NOT LIVE TELEMETRY', 'DESCENSO EDUCATIVO DE CÁMARA — NO TELEMETRÍA REAL')}</span>
               <div className="phase-track">
                 <div className="phase-fill" style={{ width: `${flightTelemetry.percent}%` }} />
               </div>
             </div>
             <button type="button" className="edl-skip-btn" onClick={skipCinematic}>
-              [SALTEAR ANIMACIÓN]
+              {ui('[SKIP ANIMATION]', '[SALTEAR ANIMACIÓN]')}
             </button>
           </div>
 
           <div className="edl-right-tape">
-            <span className="tape-label">ALTITUD</span>
+            <span className="tape-label">{ui('ALTITUDE (SIMULATED)', 'ALTITUD (SIMULADA)')}</span>
             <strong className="tape-value">{flightTelemetry.altitudeStr}</strong>
             <span className="tape-sub">PITCH: {flightTelemetry.pitchDeg}°</span>
           </div>
@@ -1661,33 +1666,31 @@ export function MarsTerrain3D({
       )}
 
       {/* ZONA 1: HUD SUPERIOR UNIFICADO (Sin superposiciones) */}
-      <header className="ares-hud-top" aria-label="Telemetría de Navegación 3D">
+      <header className="ares-hud-top" aria-label={ui('3D visualization controls', 'Controles de visualización 3D')}>
         <div className="hud-top-telemetry">
           <div className="top-telemetry-block">
-            <span className="top-telemetry-tag">REGIÓN CANÓNICA</span>
+            <span className="top-telemetry-tag">{ui('REGION', 'REGIÓN')}</span>
             <strong className="top-telemetry-val">GALE CRATER · MOUNT SHARP</strong>
-            <span className="top-telemetry-sub">Aeolis Mons (+5.5 km sobre el lecho)</span>
+            <span className="top-telemetry-sub">{ui('Aeolis Mons (approximate 3D model)', 'Aeolis Mons (modelo 3D aproximado)')}</span>
           </div>
 
           <div className="top-telemetry-block">
-            <span className="top-telemetry-tag">SUPERFICIE 3D</span>
-            <strong className="top-telemetry-val" style={{ color: '#f59e0b', fontSize: '0.74rem' }}>
-              RECONSTRUCCIÓN APROXIMADA
-            </strong>
-            <span className="top-telemetry-sub">Modelo educativo procedural</span>
+            <span className="top-telemetry-tag">{ui('SIMULATED SURFACE MODEL', 'MODELO DE SUPERFICIE SIMULADO')}</span>
+            <strong className="top-telemetry-val" style={{ color: '#f59e0b', fontSize: '0.74rem' }}>{ui('APPROXIMATE RECONSTRUCTION', 'RECONSTRUCCIÓN APROXIMADA')}</strong>
+            <span className="top-telemetry-sub">{ui('Educational procedural model; no validated vertical datum', 'Modelo procedural educativo; sin datum vertical validado')}</span>
           </div>
 
           <div className="top-telemetry-block cursor-block">
-            <span className="top-telemetry-tag">COORDENADAS BAJO CURSOR</span>
+            <span className="top-telemetry-tag">{ui('CURSOR COORDINATES', 'COORDENADAS BAJO CURSOR')}</span>
             <strong className="top-telemetry-val">
               {hoveredInfo
                 ? `${hoveredInfo.lat >= 0 ? `${hoveredInfo.lat.toFixed(3)}°N` : `${Math.abs(hoveredInfo.lat).toFixed(3)}°S`} · ${hoveredInfo.lon.toFixed(3)}°E`
-                : 'EXPLORACIÓN EN SUPERFICIE'}
+                : ui('SURFACE EXPLORATION', 'EXPLORACIÓN EN SUPERFICIE')}
             </strong>
             <span className="top-telemetry-sub">
               {hoveredInfo
-                ? `Elev. estimada: ${hoveredInfo.elev} m · Pendiente est.: ${hoveredInfo.slope}° (${evaluateSlope(hoveredInfo.slope).riskLevel})`
-                : 'Mover cursor para inspección'}
+                ? `${ui('Modeled height', 'Altura modelada')}: ${hoveredInfo.elev} m · ${ui('modeled slope', 'pendiente modelada')}: ${hoveredInfo.slope}° (${ui('simulation', 'simulación')})`
+                : ui('Move cursor to inspect', 'Mover cursor para inspección')}
             </span>
           </div>
         </div>
@@ -1697,9 +1700,9 @@ export function MarsTerrain3D({
             type="button"
             className="hud-btn highlight"
             onClick={() => setIsGuidedTourOpen(true)}
-            title="Iniciar recorrido guiado interactivo por todas las funciones de ARES"
+            title={ui('Start guided tour of ARES features', 'Iniciar recorrido guiado por las funciones de ARES')}
           >
-            [GUÍA]
+            {ui('[GUIDE]', '[GUÍA]')}
           </button>
           <button
             type="button"
@@ -1715,31 +1718,31 @@ export function MarsTerrain3D({
               setCurrentDiscoveryStopIndex(0)
               setIsDiscoveryPaused(false)
             }}
-            title="Iniciar sobrevuelo cinematográfico 3D por los 7 hitos científicos de Gale Crater"
+            title={ui('Start educational 3D flyover of seven Gale science landmarks', 'Iniciar sobrevuelo educativo 3D por siete hitos científicos de Gale')}
           >
-            [SOBREVUELO]
+            {ui('[FLYOVER]', '[SOBREVUELO]')}
           </button>
           <button
             type="button"
             className="hud-btn primary"
             onClick={playGoogleEarthDive}
-            title="Iniciar descenso orbital continuo estilo Google Earth hacia LZ-1 Bradbury Base"
+            title={ui('Start simulated camera descent toward Bradbury Base', 'Iniciar descenso de cámara simulado hacia Bradbury Base')}
           >
-            [DESCENSO EDL]
+            {ui('[EDL DESCENT]', '[DESCENSO EDL]')}
           </button>
           <button
             type="button"
             className="hud-btn"
             onClick={playGoogleEarthAscent}
-            title="Ascender a órbita espacial alta de Marte"
+            title={ui('Move camera to high Mars orbit', 'Ascender cámara a órbita alta de Marte')}
           >
-            [ÓRBITA]
+            {ui('[ORBIT]', '[ÓRBITA]')}
           </button>
           <button
             type="button"
             className="hud-btn"
             onClick={focusOnLandingSite}
-            title="Enfocar cámara en el Sitio Candidato Principal LZ-1"
+            title={ui('Focus on conceptual LZ-1 site', 'Enfocar sitio conceptual LZ-1')}
           >
             [LZ-1 BASE]
           </button>
@@ -1747,7 +1750,7 @@ export function MarsTerrain3D({
             type="button"
             className="hud-btn"
             onClick={tourColony}
-            title="Recorrido panorámico de la Colonia Marciana Base Alfa"
+            title={ui('Panoramic tour of conceptual Base Alpha', 'Recorrido panorámico de Base Alfa conceptual')}
           >
             [PANORAMA]
           </button>
@@ -1755,31 +1758,31 @@ export function MarsTerrain3D({
             type="button"
             className="hud-btn highlight"
             onClick={() => setIsDataCenterOpen(true)}
-            title="Abrir el catálogo centralizado ARES Scientific Data Center (NASA/USGS/PDS)"
+            title={ui('Open ARES Scientific Data Center (NASA/USGS/PDS)', 'Abrir catálogo ARES Scientific Data Center (NASA/USGS/PDS)')}
           >
-            [DATOS NASA]
+            {ui('[NASA DATA]', '[DATOS NASA]')}
           </button>
           <button
             type="button"
             className="hud-btn primary"
             onClick={() => setIsSurfaceIntelligenceOpen(true)}
-            title="Abrir galería de observaciones de superficie Curiosity y Perseverance"
+            title={ui('Open Curiosity and Perseverance surface observations', 'Abrir observaciones de superficie Curiosity y Perseverance')}
           >
-            [FOTOS RAW]
+            {ui('[RAW IMAGES]', '[FOTOS RAW]')}
           </button>
           <button
             type="button"
             className="hud-btn"
             onClick={onSwitchToGlobal}
-            title="Cambiar al Globo 3D planetario de Marte"
+            title={ui('Open 3D Mars globe', 'Cambiar al globo 3D de Marte')}
           >
-            [GLOBO 3D]
+            {ui('[3D GLOBE]', '[GLOBO 3D]')}
           </button>
           <button
             type="button"
             className="hud-btn"
             onClick={onSwitchToJezero2D}
-            title="Abrir mapa científico 2D de Jezero Crater"
+            title={ui('Open Jezero Crater scientific 2D map', 'Abrir mapa científico 2D de Jezero Crater')}
           >
             [JEZERO 2D]
           </button>
@@ -1787,30 +1790,28 @@ export function MarsTerrain3D({
             type="button"
             className="hud-btn"
             onClick={() => setIsCleanViewMode(true)}
-            title="Modo pantalla completa limpia sin paneles distractores (Esc para restaurar)"
+            title={ui('Hide panels (Esc to restore)', 'Ocultar paneles (Esc para restaurar)')}
           >
-            [LIMPIAR]
+            {ui('[CLEAR VIEW]', '[LIMPIAR]')}
           </button>
         </div>
       </header>
 
       {/* Banner de Transparencia Científica Gale 3D */}
-      <div className="ares-science-disclaimer-bar" role="note" aria-label="Aviso científico">
-        <span className="disclaimer-badge">RECONSTRUCCIÓN TOPOGRÁFICA APROXIMADA · MODELO EDUCATIVO</span>
-        <span className="disclaimer-text">
-          El relieve de Gale es una reconstrucción procedural con fines educativos. Las alturas, pendientes y rutas simuladas no constituyen mediciones topográficas verificadas ni evaluaciones de seguridad operacional.
-        </span>
+      <div className="ares-science-disclaimer-bar" role="note" aria-label={ui('Scientific limitation', 'Límite científico')}>
+        <span className="disclaimer-badge">{ui('APPROXIMATE PROCEDURAL TERRAIN · EDUCATIONAL MODEL', 'RECONSTRUCCIÓN PROCEDURAL APROXIMADA · MODELO EDUCATIVO')}</span>
+        <span className="disclaimer-text">{t('galeWarning')}</span>
       </div>
 
       {/* ZONA 2: PANEL DE CONTROL TÁCTICO IZQUIERDO (Acoplado y Colapsable) */}
-      <aside className={`ares-tactical-dock ${isLeftDockCollapsed ? 'collapsed' : ''}`} aria-label="Panel Táctico">
+      <aside className={`ares-tactical-dock ${isLeftDockCollapsed ? 'collapsed' : ''}`} aria-label={ui('Exploration controls', 'Controles de exploración')}>
         <div className="dock-header">
-          <span className="dock-title">CONSOLA DE CONTROL TÁCTICO</span>
+          <span className="dock-title">{ui('EXPLORATION CONTROL PANEL', 'PANEL DE CONTROL DE EXPLORACIÓN')}</span>
           <button
             type="button"
             className="dock-collapse-toggle"
             onClick={() => setIsLeftDockCollapsed(prev => !prev)}
-            title={isLeftDockCollapsed ? 'Expandir panel táctico' : 'Colapsar panel táctico'}
+            title={isLeftDockCollapsed ? ui('Expand panel', 'Expandir panel') : ui('Collapse panel', 'Colapsar panel')}
           >
             {isLeftDockCollapsed ? '[▶]' : '[◀]'}
           </button>
@@ -1825,7 +1826,7 @@ export function MarsTerrain3D({
               setIsLeftDockCollapsed(false)
             }}
           >
-            CAPAS CIENTÍFICAS
+            {ui('SCIENCE LAYERS', 'CAPAS CIENTÍFICAS')}
           </button>
           <button
             type="button"
@@ -1835,7 +1836,7 @@ export function MarsTerrain3D({
               setIsLeftDockCollapsed(false)
             }}
           >
-            CÁMARA
+            {ui('CAMERA', 'CÁMARA')}
           </button>
           <button
             type="button"
@@ -1852,9 +1853,9 @@ export function MarsTerrain3D({
         <div className="dock-content">
           {leftTab === 'layers' && (
             <div className="layer-selection-list">
-              <div className="layer-category-header">CARTOGRAFÍA PLANETARIA</div>
+              <div className="layer-category-header">{ui('PLANETARY MAPPING', 'CARTOGRAFÍA PLANETARIA')}</div>
               {(['optical', 'ctx_mosaic', 'thermal'] as TerrainLayerType[]).map((key) => {
-                const meta = TERRAIN_LAYERS_CATALOG[key]
+                const meta = localizedTerrainLayer(key, language)
                 const active = activeLayer === key
                 return (
                   <button
@@ -1873,9 +1874,9 @@ export function MarsTerrain3D({
                 )
               })}
 
-              <div className="layer-category-header">GEOLOGÍA Y COMPOSICIÓN</div>
+              <div className="layer-category-header">{ui('GEOLOGY AND COMPOSITION', 'GEOLOGÍA Y COMPOSICIÓN')}</div>
               {(['geology', 'spectral'] as TerrainLayerType[]).map((key) => {
-                const meta = TERRAIN_LAYERS_CATALOG[key]
+                const meta = localizedTerrainLayer(key, language)
                 const active = activeLayer === key
                 return (
                   <button
@@ -1894,9 +1895,9 @@ export function MarsTerrain3D({
                 )
               })}
 
-              <div className="layer-category-header">ANÁLISIS TOPOGRÁFICO Y RIESGO</div>
+              <div className="layer-category-header">{ui('TERRAIN AND UNCERTAINTY', 'TERRENO E INCERTIDUMBRE')}</div>
               {(['dem', 'slope', 'radiation'] as TerrainLayerType[]).map((key) => {
-                const meta = TERRAIN_LAYERS_CATALOG[key]
+                const meta = localizedTerrainLayer(key, language)
                 const active = activeLayer === key
                 return (
                   <button
@@ -1916,8 +1917,8 @@ export function MarsTerrain3D({
               })}
 
               <div className="dock-integrated-legend">
-                <div className="legend-title">{TERRAIN_LAYERS_CATALOG[activeLayer].name}</div>
-                {TERRAIN_LAYERS_CATALOG[activeLayer].legend.map((item, idx) => (
+                <div className="legend-title">{localizedTerrainLayer(activeLayer, language).name}</div>
+                {localizedTerrainLayer(activeLayer, language).legend.map((item, idx) => (
                   <div key={idx} className="legend-row">
                     <span className="legend-swatch" style={{ backgroundColor: item.color }} />
                     <span>{item.label}</span>
@@ -1931,21 +1932,21 @@ export function MarsTerrain3D({
                   className="hud-btn highlight"
                   onClick={() => setIsDataCenterOpen(true)}
                 >
-                  [CENTRO CIENTÍFICO ARES]
+                  {ui('[ARES SCIENCE CENTER]', '[CENTRO CIENTÍFICO ARES]')}
                 </button>
                 <button
                   type="button"
                   className="hud-btn primary"
                   onClick={() => setIsSurfaceIntelligenceOpen(true)}
                 >
-                  [INTELIGENCIA DE SUPERFICIE]
+                  {ui('[SURFACE OBSERVATIONS]', '[OBSERVACIONES DE SUPERFICIE]')}
                 </button>
                 <button
                   type="button"
                   className="hud-btn secondary"
                   onClick={() => setIsMissionComparisonOpen(true)}
                 >
-                  [COMPARAR MISIONES]
+                  {ui('[COMPARE MISSIONS]', '[COMPARAR MISIONES]')}
                 </button>
                 <button
                   type="button"
@@ -1957,9 +1958,9 @@ export function MarsTerrain3D({
                   onClick={() => {
                     setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')
                   }}
-                  title="Alternar entre la Ruta EVA planificada de astronautas y la Travesía histórica de Curiosity"
+                  title={ui('Toggle proposed EVA route and historical Curiosity traverse', 'Alternar ruta EVA propuesta y travesía histórica Curiosity')}
                 >
-                  {routeViewMode === 'both' ? '[VISTA: AMBAS RUTAS]' : routeViewMode === 'eva' ? '[VISTA: SOLO RUTA EVA]' : '[VISTA: SOLO CURIOSITY]'}
+                  {routeViewMode === 'both' ? ui('[VIEW: BOTH ROUTES]', '[VISTA: AMBAS RUTAS]') : routeViewMode === 'eva' ? ui('[VIEW: EVA ONLY]', '[VISTA: SOLO RUTA EVA]') : ui('[VIEW: CURIOSITY ONLY]', '[VISTA: SOLO CURIOSITY]')}
                 </button>
               </div>
             </div>
@@ -1972,32 +1973,32 @@ export function MarsTerrain3D({
                 className={`cam-mode-btn ${cameraMode === 'orbit' ? 'active' : ''}`}
                 onClick={() => setMode('orbit')}
               >
-                <span>VISTA ÓRBITA</span>
-                <small>Rotación 360° libre</small>
+                <span>{ui('ORBIT VIEW', 'VISTA ÓRBITA')}</span>
+                <small>{ui('Free 360° rotation', 'Rotación 360° libre')}</small>
               </button>
               <button
                 type="button"
                 className={`cam-mode-btn ${cameraMode === 'pan' ? 'active' : ''}`}
                 onClick={() => setMode('pan')}
               >
-                <span>VISTA PAN</span>
-                <small>Desplazamiento horizontal</small>
+                <span>{ui('PAN VIEW', 'VISTA PAN')}</span>
+                <small>{ui('Horizontal movement', 'Desplazamiento horizontal')}</small>
               </button>
               <button
                 type="button"
                 className={`cam-mode-btn ${cameraMode === 'firstPerson' ? 'active' : ''}`}
                 onClick={() => setMode('firstPerson')}
               >
-                <span>1ª PERSONA (EVA)</span>
-                <small>Perspectiva astronauta a 1.8 m</small>
+                <span>{ui('FIRST PERSON (EVA)', '1ª PERSONA (EVA)')}</span>
+                <small>{ui('Simulated eye-level perspective at 1.8 m', 'Perspectiva simulada a 1,8 m')}</small>
               </button>
               <button
                 type="button"
                 className={`cam-mode-btn ${cameraMode === 'fly' ? 'active' : ''}`}
                 onClick={() => setMode('fly')}
               >
-                <span>VUELO PANORÁMICO</span>
-                <small>Recorrido aéreo continuo</small>
+                <span>{ui('PANORAMIC FLIGHT', 'VUELO PANORÁMICO')}</span>
+                <small>{ui('Continuous camera flight', 'Recorrido aéreo continuo')}</small>
               </button>
             </div>
           )}
@@ -2005,7 +2006,7 @@ export function MarsTerrain3D({
           {leftTab === 'colony' && (
             <div className="colony-dock-section">
               <label className="colony-visibility-toggle">
-                <span>Visualizar Base Alfa 3D</span>
+                <span>{ui('Show conceptual Base Alpha 3D', 'Mostrar Base Alfa conceptual 3D')}</span>
                 <input
                   type="checkbox"
                   checked={colonyVisible}
@@ -2018,7 +2019,7 @@ export function MarsTerrain3D({
                 className="hud-btn highlight"
                 onClick={tourColony}
               >
-                [INICIAR RECORRIDO BASE]
+                {ui('[TOUR BASE]', '[RECORRER BASE]')}
               </button>
 
               <div className="colony-modules-list">
@@ -2029,8 +2030,8 @@ export function MarsTerrain3D({
                     className={`colony-module-pill ${selectedColonyModule?.id === mod.id ? 'active' : ''}`}
                     onClick={() => focusOnColonyModule(mod)}
                   >
-                    <span className="mod-pill-name">{mod.name.split(' (')[0]}</span>
-                    <span className="mod-pill-cat">{mod.category}</span>
+                     <span className="mod-pill-name">{localizedColonyModule(mod, language).name}</span>
+                     <span className="mod-pill-cat">{ui('SIMULATED', 'SIMULADO')}</span>
                   </button>
                 ))}
               </div>
@@ -2041,26 +2042,26 @@ export function MarsTerrain3D({
 
       {/* ZONA 3: DRAWER DERECHO INSPECTOR (Sin superposiciones con otros paneles) */}
       {!isCinematicPlaying && !isDiscoveryTourActive && isInspectorOpen && (
-        <article className="ares-inspector-drawer" aria-label="Inspector de Objeto Seleccionado">
+        <article className="ares-inspector-drawer" aria-label={ui('Selected object inspector', 'Inspector de objeto seleccionado')}>
           <div className="drawer-header">
             <span className={`drawer-badge ${selectedColonyModule ? 'conceptual' : ''}`}>
               {selectedColonyModule
-                ? '[PROPUESTA CONCEPTUAL // SIMULACIÓN]'
+                ? ui('[CONCEPTUAL PROPOSAL // SIMULATION]', '[PROPUESTA CONCEPTUAL // SIMULACIÓN]')
                 : showLandingBriefing
-                ? '[SITIO CANDIDATO PRINCIPAL LZ-1]'
+                ? ui('[CONCEPTUAL LZ-1 SITE // UNVALIDATED]', '[SITIO CONCEPTUAL LZ-1 // SIN VALIDAR]')
                 : selectedCuriosityWaypoint
-                ? '[HERENCIA CURIOSITY // HISTÓRICO NASA]'
+                ? ui('[CURIOSITY HERITAGE // HISTORICAL NASA CONTEXT]', '[HERENCIA CURIOSITY // CONTEXTO HISTÓRICO NASA]')
                 : selectedObservationProfile
-                ? '[PERFIL CIENTÍFICO MULTIMISIÓN]'
-                : '[HITO CIENTÍFICO VERIFICADO]'}
+                ? ui('[MULTI-MISSION SCIENCE CONTEXT]', '[CONTEXTO CIENTÍFICO MULTIMISIÓN]')
+                : ui('[SCIENCE LANDMARK // SPATIAL MATCH UNVERIFIED]', '[HITO CIENTÍFICO // REGISTRO ESPACIAL SIN VALIDAR]')}
             </span>
             <button
               type="button"
               className="drawer-close-btn"
               onClick={closeInspector}
-              aria-label="Cerrar inspector"
+              aria-label={ui('Close inspector', 'Cerrar inspector')}
             >
-              [CERRAR]
+              {ui('[CLOSE]', '[CERRAR]')}
             </button>
           </div>
 
@@ -2068,50 +2069,50 @@ export function MarsTerrain3D({
             {/* 1. Vista de Módulo de Colonia */}
             {selectedColonyModule && (
               <>
-                <h3 className="drawer-title">{selectedColonyModule.name}</h3>
-                <p className="drawer-sub">{selectedColonyModule.designation}</p>
+                 <h3 className="drawer-title">{localizedColonyModule(selectedColonyModule, language).name}</h3>
+                 <p className="drawer-sub">{localizedColonyModule(selectedColonyModule, language).designation}</p>
 
                 <div className="drawer-meta-grid">
                   <div className="drawer-meta-item">
-                    <label>CATEGORÍA</label>
-                    <span>{selectedColonyModule.category}</span>
+                    <label>{ui('CATEGORY', 'CATEGORÍA')}</label>
+                     <span>{ui('SIMULATION', 'SIMULACIÓN')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>CAPACIDAD TRIPULACIÓN</label>
-                    <span>{selectedColonyModule.crewCapacity > 0 ? `${selectedColonyModule.crewCapacity} astronautas` : 'Autónomo / Remoto'}</span>
+                    <label>{ui('CONCEPTUAL CREW CAPACITY', 'CAPACIDAD DE TRIPULACIÓN CONCEPTUAL')}</label>
+                    <span>{selectedColonyModule.crewCapacity > 0 ? `${selectedColonyModule.crewCapacity} ${ui('astronauts', 'astronautas')}` : ui('Autonomous / remote', 'Autónomo / remoto')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>DEMANDA ENERGÉTICA</label>
-                    <span>{selectedColonyModule.powerRequirementKw > 0 ? `${selectedColonyModule.powerRequirementKw} kW` : `Generación ${Math.abs(selectedColonyModule.powerRequirementKw)} kW`}</span>
+                    <label>{ui('SIMULATED POWER REQUIREMENT', 'REQUISITO ENERGÉTICO SIMULADO')}</label>
+                    <span>{selectedColonyModule.powerRequirementKw > 0 ? `${selectedColonyModule.powerRequirementKw} kW` : `${ui('Generation', 'Generación')} ${Math.abs(selectedColonyModule.powerRequirementKw)} kW`}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>DIMENSIONES (An x L x Al)</label>
+                    <label>{ui('DIMENSIONS (W × L × H)', 'DIMENSIONES (An × L × Al)')}</label>
                     <span>{selectedColonyModule.dimensions.widthMeters} × {selectedColonyModule.dimensions.lengthMeters} × {selectedColonyModule.dimensions.heightMeters} m</span>
                   </div>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Función Operacional:</strong>
-                  <p>{selectedColonyModule.functionSummary}</p>
+                  <strong>{ui('Conceptual function:', 'Función conceptual:')}</strong>
+                   <p>{localizedColonyModule(selectedColonyModule, language).functionSummary}</p>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Descripción de Ingeniería:</strong>
-                  <p>{selectedColonyModule.description}</p>
+                  <strong>{ui('Design description:', 'Descripción de diseño:')}</strong>
+                   <p>{localizedColonyModule(selectedColonyModule, language).description}</p>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Subsistemas Principales:</strong>
+                  <strong>{ui('Proposed subsystems:', 'Subsistemas propuestos:')}</strong>
                   <ul className="subsystems-list">
-                    {selectedColonyModule.subsystems.map((sub, idx) => (
+                     {localizedColonyModule(selectedColonyModule, language).subsystems.map((sub, idx) => (
                       <li key={idx}>{sub}</li>
                     ))}
                   </ul>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Referencia Técnica:</strong>
-                  <p style={{ color: '#94a3b8', fontSize: '0.64rem' }}>{selectedColonyModule.technicalReference}</p>
+                  <strong>{ui('Technical reference:', 'Referencia técnica:')}</strong>
+                   <p style={{ color: '#94a3b8', fontSize: '0.64rem' }}>{localizedColonyModule(selectedColonyModule, language).technicalReference}</p>
                 </div>
 
                 <div className="drawer-actions">
@@ -2120,7 +2121,7 @@ export function MarsTerrain3D({
                     className="hud-btn primary"
                     onClick={() => focusOnColonyModule(selectedColonyModule)}
                   >
-                    [CENTRAR CÁMARA]
+                    {ui('[FOCUS CAMERA]', '[CENTRAR CÁMARA]')}
                   </button>
                   {onSelectScienceStop && (
                     <button
@@ -2133,7 +2134,7 @@ export function MarsTerrain3D({
                         )
                       }}
                     >
-                      [FIJAR BASE A (RUTA EVA)]
+                      {ui('[SET START A (EVA PLAN)]', '[FIJAR BASE A (PLAN EVA)]')}
                     </button>
                   )}
                 </div>
@@ -2143,13 +2144,13 @@ export function MarsTerrain3D({
             {/* 2. Vista de Descubrimiento Científico */}
             {selectedDiscovery && (
               <>
-                <h3 className="drawer-title">{selectedDiscovery.name}</h3>
-                <p className="drawer-sub">{selectedDiscovery.feature}</p>
+                 <h3 className="drawer-title">{localizedGaleDiscovery(selectedDiscovery, language).name}</h3>
+                 <p className="drawer-sub">{ui('Curiosity science context; scene location not independently verified', selectedDiscovery.feature)}</p>
 
                 <div className="drawer-photo-wrap">
                   <img
                     src={resolveAssetUrl(selectedDiscovery.imageUrl)}
-                    alt={selectedDiscovery.name}
+                     alt={localizedGaleDiscovery(selectedDiscovery, language).name}
                     className="drawer-photo"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = resolveAssetUrl('data/curiosity/bradbury-landing.jpg')
@@ -2160,31 +2161,31 @@ export function MarsTerrain3D({
 
                 <div className="drawer-meta-grid">
                   <div className="drawer-meta-item">
-                    <label>MISIÓN / SOL</label>
-                    <span>{selectedDiscovery.mission} · Sol {selectedDiscovery.sol}</span>
+                    <label>{ui('MISSION / SOL', 'MISIÓN / SOL')}</label>
+                     <span>{selectedDiscovery.mission} · {ui('tour Sol unverified', 'Sol del recorrido sin verificar')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>UNIDAD GEOLÓGICA</label>
-                    <span>{selectedDiscovery.geologicalUnit}</span>
+                    <label>{ui('GEOLOGIC UNIT', 'UNIDAD GEOLÓGICA')}</label>
+                     <span>{localizedGaleDiscovery(selectedDiscovery, language).geologicalUnit}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>INSTRUMENTOS</label>
+                    <label>{ui('INSTRUMENTS', 'INSTRUMENTOS')}</label>
                     <span>{selectedDiscovery.instruments.join(', ')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>VALOR CIENTÍFICO</label>
-                    <span>{selectedDiscovery.details.scientificValue}</span>
+                    <label>{ui('SCIENTIFIC VALUE', 'VALOR CIENTÍFICO')}</label>
+                     <span>{ui('Potential science interest; site unverified', 'Interés científico potencial; sitio sin verificar')}</span>
                   </div>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Relevancia Astrobiológica:</strong>
-                  <p>{selectedDiscovery.significance}</p>
+                  <strong>{ui('Astrobiological relevance:', 'Relevancia astrobiológica:')}</strong>
+                   <p>{localizedGaleDiscovery(selectedDiscovery, language).significance}</p>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong style={{ color: '#ff9d00' }}>Seguridad de Locomoción EVA:</strong>
-                  <p>{selectedDiscovery.safetyNotes}</p>
+                  <strong style={{ color: '#ff9d00' }}>{ui('Unassessed EVA hazards (model context):', 'Peligros EVA no evaluados (contexto del modelo):')}</strong>
+                   <p>{localizedGaleDiscovery(selectedDiscovery, language).safetyNotes}</p>
                 </div>
 
                 <div className="drawer-actions">
@@ -2193,7 +2194,7 @@ export function MarsTerrain3D({
                     className="hud-btn primary"
                     onClick={() => focusOnDiscovery(selectedDiscovery)}
                   >
-                    [CENTRAR CÁMARA]
+                    {ui('[FOCUS CAMERA]', '[CENTRAR CÁMARA]')}
                   </button>
                   {onSelectScienceStop && (
                     <button
@@ -2206,7 +2207,7 @@ export function MarsTerrain3D({
                         )
                       }}
                     >
-                      [FIJAR PARADA EVA P]
+                      {ui('[SET SCIENCE STOP P]', '[FIJAR PARADA CIENTÍFICA P]')}
                     </button>
                   )}
                 </div>
@@ -2235,26 +2236,26 @@ export function MarsTerrain3D({
 
                 <div className="drawer-meta-grid">
                   <div className="drawer-meta-item">
-                    <label>COORDENADAS GEODÉSICAS</label>
+                    <label>{ui('ILLUSTRATIVE COORDINATES', 'COORDENADAS ILUSTRATIVAS')}</label>
                     <span>4.5895°S · 137.4417°E</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>ELEVACIÓN ESTIMADA DEL MODELO</label>
-                    <span>-4,520 m (Presión ~8.5 hPa)</span>
+                    <label>{ui('ELEVATION / LOCAL PRESSURE', 'ELEVACIÓN / PRESIÓN LOCAL')}</label>
+                    <span>{ui('Unverified — simulated scene', 'Sin verificar — escena simulada')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>ELIPSE DE SEGURIDAD</label>
-                    <span>7.0 × 4.5 km · Azimut 78°</span>
+                    <label>{ui('LANDING ZONE', 'ZONA DE ATERRIZAJE')}</label>
+                    <span>{ui('Conceptual; no certified landing ellipse', 'Conceptual; sin elipse certificada')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>PENDIENTE MEDIA</label>
-                    <span>2.1° · ÓPTIMA (&lt;15° límite)</span>
+                    <label>{ui('MEAN SLOPE', 'PENDIENTE MEDIA')}</label>
+                    <span>{ui('Unverified procedural estimate; no NASA limit', 'Estimación procedural sin verificar; no es un límite NASA')}</span>
                   </div>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Racional de Selección:</strong>
-                  <p>{PRIMARY_LANDING_SITE.rationale}</p>
+                  <strong>{ui('Conceptual site rationale:', 'Motivo conceptual del sitio:')}</strong>
+                  <p>{ui('Educational landing-site scenario only. Local slope, pressure, obstacle clearance and operational suitability are unassessed.', 'Escenario educativo de aterrizaje. Pendiente, presión, obstáculos y aptitud operativa locales no evaluados.')}</p>
                 </div>
 
                 <div className="drawer-actions">
@@ -2263,7 +2264,7 @@ export function MarsTerrain3D({
                     className="hud-btn primary"
                     onClick={focusOnLandingSite}
                   >
-                    [CENTRAR CÁMARA]
+                    {ui('[FOCUS CAMERA]', '[CENTRAR CÁMARA]')}
                   </button>
                   {onSelectScienceStop && (
                     <button
@@ -2276,7 +2277,7 @@ export function MarsTerrain3D({
                         )
                       }}
                     >
-                      [FIJAR COMO BASE A (RUTA EVA)]
+                      {ui('[SET START A (EVA PLAN)]', '[FIJAR ORIGEN A (PLAN EVA)]')}
                     </button>
                   )}
                 </div>
@@ -2286,33 +2287,33 @@ export function MarsTerrain3D({
             {/* 4. Vista de Hito de la Travesía de Curiosity (MSL Heritage) */}
             {selectedCuriosityWaypoint && (
               <>
-                <h3 className="drawer-title">{selectedCuriosityWaypoint.name}</h3>
+                <h3 className="drawer-title">{curiosityWaypointTitle(selectedCuriosityWaypoint, language)}</h3>
                 <p className="drawer-sub">
-                  Sol {selectedCuriosityWaypoint.sol} · {selectedCuriosityWaypoint.earthDate} · Odometría: {selectedCuriosityWaypoint.cumulativeDistKm} km
+                  Sol {selectedCuriosityWaypoint.sol} · {ui('tour coordinates and dates unverified against the rover record', 'coordenadas y fechas del recorrido sin verificar contra el registro del rover')}
                 </p>
 
                 <div className="drawer-meta-grid">
                   <div className="drawer-meta-item">
-                    <label>MISIÓN OFICIAL</label>
+                     <label>{ui('MISSION CONTEXT', 'CONTEXTO DE MISIÓN')}</label>
                     <span>MSL Curiosity (NASA/JPL)</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>TIPO DE OBJETIVO</label>
-                    <span>{selectedCuriosityWaypoint.targetType}</span>
+                     <label>{ui('SCIENCE TARGET', 'OBJETIVO CIENTÍFICO')}</label>
+                     <span>{ui('Illustrative tour waypoint', 'Hito ilustrativo del recorrido')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>ELEVACIÓN ESTIMADA DEL MODELO</label>
-                    <span>{selectedCuriosityWaypoint.elevationMeters} m</span>
+                     <label>{ui('ELEVATION', 'ELEVACIÓN')}</label>
+                     <span>{ui('Not independently validated', 'Sin validación independiente')}</span>
                   </div>
                   <div className="drawer-meta-item">
-                    <label>INSTRUMENTOS CLAVE</label>
+                     <label>{ui('MISSION INSTRUMENTS', 'INSTRUMENTOS DE MISIÓN')}</label>
                     <span>{selectedCuriosityWaypoint.instruments.join(', ')}</span>
                   </div>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong style={{ color: '#f59e0b' }}>Resumen de Campaña Científica:</strong>
-                  <p>{selectedCuriosityWaypoint.scienceSummary}</p>
+                   <strong style={{ color: '#f59e0b' }}>{ui('Scientific context:', 'Contexto científico:')}</strong>
+                   <p>{ui('Curiosity investigated the geological history of Gale Crater. This animated waypoint and its photo association require independent verification.', 'Curiosity investigó la historia geológica de Gale. El hito animado y su asociación fotográfica requieren verificación independiente.')}</p>
                 </div>
 
                 <div className="drawer-actions">
@@ -2328,7 +2329,7 @@ export function MarsTerrain3D({
                       }
                     }}
                   >
-                    [CENTRAR CÁMARA]
+                     {ui('[FOCUS CAMERA]', '[CENTRAR CÁMARA]')}
                   </button>
                   {onSelectScienceStop && (
                     <button
@@ -2337,11 +2338,11 @@ export function MarsTerrain3D({
                       onClick={() => {
                         onSelectScienceStop(
                           [selectedCuriosityWaypoint.lon, selectedCuriosityWaypoint.lat],
-                          `Curiosity Sol ${selectedCuriosityWaypoint.sol}: ${selectedCuriosityWaypoint.name.split(' (')[0]}`,
+                          `Curiosity Sol ${selectedCuriosityWaypoint.sol}: ${curiosityWaypointTitle(selectedCuriosityWaypoint, language).split(' (')[0]}`,
                         )
                       }}
                     >
-                      [FIJAR DESTINO EVA B]
+                       {ui('[SET PROPOSED DESTINATION B]', '[FIJAR DESTINO PROPUESTO B]')}
                     </button>
                   )}
                 </div>
@@ -2351,34 +2352,34 @@ export function MarsTerrain3D({
             {/* 5. Vista de Perfil Científico Multimisión */}
             {selectedObservationProfile && (
               <>
-                <h3 className="drawer-title">PERFIL CIENTÍFICO MULTIMISIÓN</h3>
+                 <h3 className="drawer-title">{ui('MULTI-MISSION SOURCE PROFILE', 'PERFIL DE FUENTES MULTIMISIÓN')}</h3>
                 <p className="drawer-sub">
-                  {Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(4)}°S · {selectedObservationProfile.targetCoordinates.lon.toFixed(4)}°E · Elev. est. {Math.round(selectedObservationProfile.targetCoordinates.elevationMeters)} m
+                  {Math.abs(selectedObservationProfile.targetCoordinates.lat).toFixed(4)}°S · {selectedObservationProfile.targetCoordinates.lon.toFixed(4)}°E · {ui('modeled height unverified', 'altura modelada sin verificar')}
                 </p>
 
                 <div className="drawer-text-block">
-                  <strong style={{ color: '#00f0ff' }}>Contexto Geológico Identificado:</strong>
-                  <p>{selectedObservationProfile.geologySummary}</p>
+                   <strong style={{ color: '#00f0ff' }}>{ui('Regional geology context:', 'Contexto geológico regional:')}</strong>
+                  <p>{queryScientificObservationProfile(selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat, selectedObservationProfile.targetCoordinates.elevationMeters, language).geologySummary}</p>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong style={{ color: '#f59e0b' }}>Análisis Topográfico Estimado y Riesgos Detectados:</strong>
-                  <p>{selectedObservationProfile.terrainSummary}</p>
+                   <strong style={{ color: '#f59e0b' }}>{ui('Terrain assessment limits:', 'Límites de evaluación del terreno:')}</strong>
+                  <p>{queryScientificObservationProfile(selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat, selectedObservationProfile.targetCoordinates.elevationMeters, language).terrainSummary}</p>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Herencia de Exploración Cercana:</strong>
+                   <strong>{ui('Mission context (not spatially verified here):', 'Contexto de misión (sin verificación espacial):')}</strong>
                   <ul className="subsystems-list">
-                    {selectedObservationProfile.missionHeritageNearby.map((h, idx) => (
+                    {queryScientificObservationProfile(selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat, selectedObservationProfile.targetCoordinates.elevationMeters, language).missionHeritageNearby.map((h, idx) => (
                       <li key={idx}>{h}</li>
                     ))}
                   </ul>
                 </div>
 
                 <div className="drawer-text-block">
-                  <strong>Datasets Oficiales con Cobertura en este Punto:</strong>
+                   <strong>{ui('Candidate sources; coverage at this cursor unverified:', 'Fuentes candidatas; cobertura en este punto sin verificar:')}</strong>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                    {selectedObservationProfile.availableDatasets.map((ds) => (
+                    {queryScientificObservationProfile(selectedObservationProfile.targetCoordinates.lon, selectedObservationProfile.targetCoordinates.lat, selectedObservationProfile.targetCoordinates.elevationMeters, language).availableDatasets.map((ds) => (
                       <div
                         key={ds.datasetId}
                         style={{
@@ -2402,7 +2403,7 @@ export function MarsTerrain3D({
                     className="hud-btn highlight"
                     onClick={() => setIsDataCenterOpen(true)}
                   >
-                    [ABRIR CENTRO CIENTÍFICO]
+                     {ui('[OPEN SCIENCE CENTER]', '[ABRIR CENTRO CIENTÍFICO]')}
                   </button>
                   {onSelectScienceStop && (
                     <button
@@ -2415,7 +2416,7 @@ export function MarsTerrain3D({
                         )
                       }}
                     >
-                      [FIJAR DESTINO EVA B]
+                       {ui('[SET PROPOSED DESTINATION B]', '[FIJAR DESTINO PROPUESTO B]')}
                     </button>
                   )}
                 </div>
@@ -2427,12 +2428,12 @@ export function MarsTerrain3D({
 
       {/* Panel Flotante de Trazabilidad Geodésica de Distancias */}
       {showTraceabilityModal && routeTelemetry && (
-        <aside className="ares-traceability-panel" aria-label="Trazabilidad Geodésica de Distancias">
+         <aside className="ares-traceability-panel" aria-label={ui('Mars distances and simulated terrain estimates', 'Distancias marcianas y estimaciones de terreno simulado')}>
           <div className="trace-header">
             <div className="trace-title">
-              <span>[TRAZABILIDAD GEODÉSICA DE DISTANCIAS]</span>
+               <span>{ui('[MARTIAN GEOMETRY // PROCEDURAL MODEL]', '[GEOMETRÍA MARCIANA // MODELO PROCEDURAL]')}</span>
               <small style={{ color: '#94a3b8', fontSize: '0.62rem' }}>
-                MODELO APROXIMADO GALE // ESFERA R_M = 3,389,500 M
+                  {ui('MARS MEAN RADIUS', 'RADIO MEDIO MARCIANO')} // 3,389,500 M
               </small>
             </div>
             <button
@@ -2446,28 +2447,26 @@ export function MarsTerrain3D({
 
           <div className="trace-summary-grid">
             <div className="trace-card">
-              <label>DISTANCIA HORIZONTAL</label>
+               <label>{ui('HORIZONTAL DISTANCE', 'DISTANCIA HORIZONTAL')}</label>
               <strong>{(routeTelemetry.totalHorizontalMeters / 1000).toFixed(2)} km</strong>
-              <small>Arco esférico Haversine</small>
+               <small>{ui('Martian spherical Haversine', 'Arco esférico Haversine marciano')}</small>
             </div>
             <div className="trace-card">
-              <label>DISTANCIA 3D (CON RELIEVE)</label>
+               <label>{ui('3D DISTANCE (SIMULATED)', 'DISTANCIA 3D (SIMULADA)')}</label>
               <strong style={{ color: '#00f0ff' }}>{(routeTelemetry.total3DMeters / 1000).toFixed(2)} km</strong>
-              <small>+{routeTelemetry.topographicCorrectionPercent}% esfuerzo topográfico</small>
+               <small>+{routeTelemetry.topographicCorrectionPercent}% {ui('procedural model correction, not measured effort', 'corrección del modelo procedural, no esfuerzo medido')}</small>
             </div>
             <div className="trace-card">
-              <label>DESNIVEL ACUMULADO</label>
+               <label>{ui('MODELED ELEVATION CHANGE', 'DESNIVEL MODELADO')}</label>
               <strong style={{ color: '#ff9d00' }}>
                 +{Math.round(routeTelemetry.totalGainMeters)} m / -{Math.round(routeTelemetry.totalLossMeters)} m
               </strong>
-              <small>Elevación estimada del modelo</small>
+                <small>{ui('Procedural Gale model, NOT MOLA profile', 'Modelo procedural Gale, NO perfil MOLA')}</small>
             </div>
             <div className="trace-card">
-              <label>LÍMITE DE RETORNO (WALKBACK)</label>
-              <strong className={`walkback-badge ${walkbackAssessment.status.toLowerCase()}`}>
-                {walkbackAssessment.status}
-              </strong>
-              <small>{walkbackAssessment.distanceKm} km / 8.0 km máx</small>
+               <label>{ui('WALKBACK ASSUMPTION', 'SUPUESTO DE RETORNO')}</label>
+               <strong>{ui('Not a NASA limit or safety assessment', 'No es límite NASA ni evaluación de seguridad')}</strong>
+               <small>{walkbackAssessment.distanceKm} km {ui('calculated route distance', 'de distancia calculada')}</small>
             </div>
           </div>
 
@@ -2475,15 +2474,15 @@ export function MarsTerrain3D({
             <table className="trace-table">
               <thead>
                 <tr>
-                  <th>TRAMO</th>
-                  <th>DESCRIPCIÓN</th>
-                  <th>DIST. HORIZ.</th>
-                  <th>DIST. 3D</th>
-                  <th>ELEV. INI / FIN</th>
-                  <th>DESNIVEL Δz</th>
-                  <th>PEND. MEDIA</th>
-                  <th>TIEMPO MARCHA</th>
-                  <th>TIEMPO ROVER</th>
+                   <th>{ui('LEG', 'TRAMO')}</th>
+                   <th>{ui('DESCRIPTION', 'DESCRIPCIÓN')}</th>
+                   <th>{ui('HORIZ. DIST.', 'DIST. HORIZ.')}</th>
+                   <th>{ui('MODELED 3D', '3D MODELADO')}</th>
+                   <th>{ui('MODEL HEIGHTS', 'ALTURAS MODELO')}</th>
+                   <th>{ui('MODEL Δz', 'MODELO Δz')}</th>
+                   <th>{ui('MODEL SLOPE', 'PEND. MODELO')}</th>
+                   <th>{ui('THEORETICAL WALK', 'MARCHA TEÓRICA')}</th>
+                   <th>{ui('THEORETICAL ROVER', 'ROVER TEÓRICO')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2507,28 +2506,28 @@ export function MarsTerrain3D({
           </div>
 
           <p className="trace-footnote">
-            <strong>Metodología de Validación:</strong> Distancias calculadas sobre la esfera marciana utilizando el radio medio canónico R_M = 3,389,500 m. La distancia tridimensional integra la componente vertical estimada sobre la malla procedural de Gale Crater. Las alturas y pendientes simuladas no constituyen mediciones topográficas verificadas de NASA ni evaluaciones de seguridad operacional; uso exploratorio y educativo.
+             <strong>{ui('Method and limitations:', 'Método y límites:')}</strong> {ui('Horizontal distances approximate Mars as a sphere (mean radius 3,389,500 m). All height, slope, 3D distance and travel-time values here depend on a procedural scene, not a validated Gale DEM. Not for operational navigation.', 'Las distancias horizontales aproximan Marte como esfera (radio medio 3 389 500 m). Las alturas, pendientes, distancias 3D y tiempos dependen de una escena procedural, no de un DEM validado de Gale. No apto para navegación operacional.')}
           </p>
         </aside>
       )}
 
       {/* ZONA 4: HUD INFERIOR TELEMETRÍA & WAYPOINTS */}
-      <footer className={`ares-hud-bottom ${isInspectorOpen ? 'has-inspector-open' : ''}`} aria-label="Monitoreo de Caminata EVA">
+       <footer className={`ares-hud-bottom ${isInspectorOpen ? 'has-inspector-open' : ''}`} aria-label={ui('Exploratory route summary', 'Resumen de ruta exploratoria')}>
         <div className="hud-bottom-eva">
           <div className="eva-distance-block">
-            <span className="eva-distance-label">DISTANCIA DE RUTA EVA (3D)</span>
+             <span className="eva-distance-label">{ui('MODELED EVA ROUTE DISTANCE', 'DISTANCIA EVA MODELADA')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <strong className="eva-distance-val">
-                {totalRouteMeters > 0 ? `${(totalRouteMeters / 1000).toFixed(2)} km` : '0.00 km (Sin trazar)'}
+                 {totalRouteMeters > 0 ? `${(totalRouteMeters / 1000).toFixed(2)} km` : ui('0.00 km (not drawn)', '0,00 km (sin trazar)')}
               </strong>
               {routeTelemetry && (
                 <button
                   type="button"
                   className="traceability-pill-btn"
                   onClick={() => setShowTraceabilityModal(!showTraceabilityModal)}
-                  title="Abrir panel de trazabilidad geodésica de distancias"
+                   title={ui('Open distance and model limitations', 'Abrir distancias y límites del modelo')}
                 >
-                  {showTraceabilityModal ? '[CERRAR TRAZABILIDAD]' : '[VER TRAZABILIDAD]'}
+                   {showTraceabilityModal ? ui('[CLOSE DETAILS]', '[CERRAR DETALLES]') : ui('[VIEW DETAILS]', '[VER DETALLES]')}
                 </button>
               )}
             </div>
@@ -2536,10 +2535,8 @@ export function MarsTerrain3D({
 
           <div className="hud-walkback-gauge">
             <div className="walkback-labels">
-              <span className={`walkback-badge ${walkbackAssessment.status.toLowerCase()}`}>
-                {walkbackAssessment.label}
-              </span>
-              <span>{walkbackAssessment.distanceKm} km / 8.0 km máx</span>
+               <span>{ui('Illustrative distance, NOT a NASA walkback limit', 'Distancia ilustrativa, NO límite de retorno NASA')}</span>
+               <span>{walkbackAssessment.distanceKm} km</span>
             </div>
             <div className="walkback-track">
               <div
@@ -2551,7 +2548,7 @@ export function MarsTerrain3D({
         </div>
 
         {/* Carrusel Horizontal de Waypoints / Hitos */}
-        <div className="hud-waypoints-carousel" aria-label="Hitos de Navegación">
+         <div className="hud-waypoints-carousel" aria-label={ui('Illustrative landmarks', 'Hitos ilustrativos')}>
           <button
             type="button"
             className={`waypoint-chip lz-chip ${showLandingBriefing ? 'active' : ''}`}
@@ -2564,9 +2561,9 @@ export function MarsTerrain3D({
             className="waypoint-chip"
             style={{ borderColor: 'rgba(245, 158, 11, 0.5)', color: '#f59e0b' }}
             onClick={() => setIsMissionComparisonOpen(true)}
-            title="Comparar travesía de 32 km de Curiosity con ruta EVA planificada"
+             title={ui('Compare historical Curiosity context with hypothetical EVA', 'Comparar contexto histórico de Curiosity con EVA hipotética')}
           >
-            [COMPARAR CON CURIOSITY]
+             {ui('[COMPARE CURIOSITY]', '[COMPARAR CURIOSITY]')}
           </button>
           <button
             type="button"
@@ -2578,9 +2575,9 @@ export function MarsTerrain3D({
             onClick={() => {
               setRouteViewMode(prev => prev === 'both' ? 'eva' : prev === 'eva' ? 'curiosity' : 'both')
             }}
-            title="Alternar entre la Ruta EVA de astronautas y la Travesía histórica de Curiosity"
+             title={ui('Toggle proposed EVA and illustrative Curiosity path', 'Alternar EVA propuesta y recorrido Curiosity ilustrativo')}
           >
-            {routeViewMode === 'both' ? '[VISTA: AMBAS RUTAS]' : routeViewMode === 'eva' ? '[VISTA: SOLO RUTA EVA]' : '[VISTA: SOLO CURIOSITY]'}
+             {routeViewMode === 'both' ? ui('[VIEW: BOTH]', '[VISTA: AMBAS]') : routeViewMode === 'eva' ? ui('[VIEW: EVA]', '[VISTA: EVA]') : ui('[VIEW: CURIOSITY]', '[VISTA: CURIOSITY]')}
           </button>
           {GALE_DISCOVERIES.map((disc) => (
             <button
@@ -2589,7 +2586,7 @@ export function MarsTerrain3D({
               className={`waypoint-chip ${selectedDiscovery?.id === disc.id ? 'active' : ''}`}
               onClick={() => focusOnDiscovery(disc)}
             >
-              [SOL {disc.sol}: {disc.name.split(' · ')[0].toUpperCase()}]
+               [{ui('SCIENCE', 'CIENCIA')}: {localizedGaleDiscovery(disc, language).name.split(' · ')[0].toUpperCase()}]
             </button>
           ))}
         </div>
@@ -2659,9 +2656,9 @@ export function MarsTerrain3D({
           type="button"
           className="ares-clean-view-exit"
           onClick={() => setIsCleanViewMode(false)}
-          title="Restaurar todos los paneles tácticos (Esc)"
+           title={ui('Restore all panels (Esc)', 'Restaurar todos los paneles (Esc)')}
         >
-          [RESTAURAR PANELES HUD]
+           {ui('[RESTORE PANELS]', '[RESTAURAR PANELES]')}
         </button>
       )}
     </div>

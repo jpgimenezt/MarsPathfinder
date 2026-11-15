@@ -28,6 +28,7 @@ import { changeZoom, createGlobalView, createJezeroView, fitCtx, fitGlobal, fitI
 import { STOP_ORDER, type StopId, type Stops } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
 import { type TerrainMissionRoute, type TerrainRouteResult } from '../features/route/terrainPathfinder'
+import { useLanguage } from '../features/i18n/appI18n'
 
 export type { LayerState } from '../features/map/wmtsLayerManager'
 export type MapMode = { type: 'explore' | 'edit-region' } | { type: 'place' | 'move'; id: StopId }
@@ -59,6 +60,8 @@ const markers: Record<StopId, { color: string; text: string }> = {
 }
 
 export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpen, onRegionChange, onPlace, onMove, onInvalid, onLayerState, onBaseState, baseRetry, suggestedRoute, riskThresholds }: Props) {
+  const { language } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   const element = useRef<HTMLDivElement>(null)
   const map = useRef<Map | null>(null)
   const fallback = useRef<ImageLayer<ImageStatic> | null>(null)
@@ -134,7 +137,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
         url: `${import.meta.env.BASE_URL}data/mars-viking-global-1024.webp`,
         projection: marsProjection,
         imageExtent: [-180, -90, 180, 90],
-        attributions: 'Respaldo global colorizado de baja resolución (≈21 km/píxel ecuatorial): NASA Ames/USGS · Viking MDIM 2.1',
+        attributions: 'Low-resolution colorized global fallback (≈21 km/pixel at equator): NASA Ames/USGS · Viking MDIM 2.1',
       }),
     })
     const local = new ImageLayer({
@@ -142,7 +145,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
         url: `${import.meta.env.BASE_URL}data/ctx-jezero-tile-z10.png`,
         projection: marsProjection,
         imageExtent: FALLBACK_EXTENT,
-        attributions: 'Respaldo estático: NASA/JPL-Caltech/USGS · MRO CTX · Mars Trek, tesela WMTS zoom 10',
+        attributions: 'Static fallback: NASA/JPL-Caltech/USGS · MRO CTX · Mars Trek, zoom-10 WMTS tile',
       }),
     })
     fallback.current = local
@@ -510,30 +513,30 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
   return (
     <div className="map-shell">
       <div className={`map ${scope === 'jezero' && mode.type !== 'explore' && mode.type !== 'edit-region' ? 'map--placing' : ''}`} ref={element}
-        role="application" aria-label={scope === 'global' ? 'Vista 2D global de Marte: relieve visual MOLA, sin planificación de rutas.' :
-           'Mapa de Jezero: región manual naranja, cobertura CTX comprobada turquesa. La imagen fuera de CTX puede no estar disponible.'} />
-      <div className="nav-tools" aria-label="Controles de navegación del mapa">
-        <button type="button" aria-label="Acercar mapa" title="Acercar" disabled={!zoom.in}
+        role="application" aria-label={scope === 'global' ? ui('Global 2D Mars view: visual MOLA relief, no route planning.', 'Vista 2D global de Marte: relieve visual MOLA, sin planificación de rutas.') :
+           ui('Jezero map: orange manual region, turquoise audited CTX coverage. Imagery outside CTX may be unavailable.', 'Mapa de Jezero: región manual naranja, cobertura CTX comprobada turquesa. La imagen fuera de CTX puede no estar disponible.')} />
+      <div className="nav-tools" aria-label={ui('Map navigation controls', 'Controles de navegación del mapa')}>
+        <button type="button" aria-label={ui('Zoom in', 'Acercar mapa')} title={ui('Zoom in', 'Acercar')} disabled={!zoom.in}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), 0.75) }}>+</button>
-        <button type="button" aria-label="Alejar mapa" title="Alejar" disabled={!zoom.out}
+        <button type="button" aria-label={ui('Zoom out', 'Alejar mapa')} title={ui('Zoom out', 'Alejar')} disabled={!zoom.out}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), -0.75) }}>−</button>
         <button type="button" className="nav-home"
-          aria-label={scope === 'global' ? 'Reencuadrar Marte global' : 'Ver Jezero completo'}
+          aria-label={scope === 'global' ? ui('Fit global Mars', 'Reencuadrar Marte global') : ui('Fit Jezero', 'Ver Jezero completo')}
           onClick={() => { if (map.current) (scope === 'global' ? fitGlobal : fitJezero)(
             map.current.getView(), map.current.getSize() ?? [900, 650], panelRef.current) }}>
-          {scope === 'global' ? '◎' : 'Ver Jezero completo'}</button>
+          {scope === 'global' ? '◎' : ui('Fit Jezero', 'Ver Jezero completo')}</button>
         {scope === 'jezero' && <button type="button" className="nav-preset" onClick={() => {
           if (map.current) fitCtx(map.current.getView(), map.current.getSize() ?? [900, 650], panelRef.current)
-        }}>Ver sector CTX</button>}
+        }}>{ui('Fit CTX sector', 'Ver sector CTX')}</button>}
       </div>
       <div className="map-hint" aria-live="polite">
-        {scope === 'global' ? 'Contexto MOLA global · no disponible para planificación' :
-          mode.type === 'edit-region' ? 'Región manual naranja · arrastrá esquinas, bordes o el interior' :
-           mode.type === 'explore' ? 'Viking: contexto global · CTX turquesa: detalle auditado · editá región desde Ruta' :
-          `${mode.type === 'move' ? 'Mover' : 'Colocar'} ${'id' in mode ? mode.id : ''} · tocá la región manual. También podés arrastrar marcadores existentes.`}
+        {scope === 'global' ? ui('Global MOLA context · planning unavailable', 'Contexto MOLA global · no disponible para planificación') :
+          mode.type === 'edit-region' ? ui('Orange manual region · drag corners, edges or interior', 'Región manual naranja · arrastrá esquinas, bordes o el interior') :
+           mode.type === 'explore' ? ui('Viking: global context · turquoise CTX: audited detail · edit region from Route', 'Viking: contexto global · CTX turquesa: detalle auditado · editá región desde Ruta') :
+          `${mode.type === 'move' ? ui('Move', 'Mover') : ui('Place', 'Colocar')} ${'id' in mode ? mode.id : ''} · ${ui('tap the manual region or drag an existing marker.', 'tocá la región manual. También podés arrastrar marcadores existentes.')}`}
       </div>
-      {regionError && <div className="region-error" role="alert">Región no modificada: tamaño mínimo o límite del editor en Jezero.
-        <button type="button" onClick={() => setRegionError(false)} aria-label="Cerrar aviso de región">×</button></div>}
+      {regionError && <div className="region-error" role="alert">{ui('Region unchanged: minimum size or Jezero editor limit.', 'Región no modificada: tamaño mínimo o límite del editor en Jezero.')}
+        <button type="button" onClick={() => setRegionError(false)} aria-label={ui('Dismiss region warning', 'Cerrar aviso de región')}>×</button></div>}
     </div>
   )
 }

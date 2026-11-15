@@ -60,7 +60,7 @@ export interface CommsDictionary {
 export const COMMS_TRANSLATIONS: Record<SupportedLanguage, CommsDictionary> = {
   en: {
     headerTitle: 'ARES COPILOT',
-    headerSubtitle: 'NASA SPACE APPS 2026 // REAL-TIME SPEECH & TACTICAL COPILOT',
+    headerSubtitle: 'NASA SPACE APPS 2026 // VOICE & SCIENCE COPILOT',
     demoBadgeEn: '🌐 INTERNATIONAL DEMO MODE',
     demoBadgeEs: 'SWITCH TO SPANISH',
     states: {
@@ -90,7 +90,7 @@ export const COMMS_TRANSLATIONS: Record<SupportedLanguage, CommsDictionary> = {
       transmitting: '🔴 TRANSMITTING... (CLICK TO SEND)',
       stop: 'STOP',
       micActive: 'MIC ACTIVE',
-      micMuted: 'MUTED',
+      micMuted: 'SILENCIADO',
       handsFree: 'HANDS-FREE',
       wakeWord: 'WAKE WORD',
       send: 'TRANSMIT',

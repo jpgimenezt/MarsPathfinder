@@ -60,6 +60,8 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   private playbackCtx: AudioContext | null = null
   private nextPlayTime = 0
   private activeAudioSources: AudioBufferSourceNode[] = []
+  private isTurnCompleted = true
+  private turnCompletionTimeout: any = null
 
   private reconnectAttempts = 0
   private maxReconnectAttempts = 3
@@ -67,8 +69,8 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
   constructor(initialConfig?: Partial<VoiceConfig>) {
     this.config = {
-      voiceId: initialConfig?.voiceId || 'carlos', // Voz natural en español por defecto
-      language: initialConfig?.language || 'es', // Español por defecto
+      voiceId: initialConfig?.voiceId || 'matthew',
+      language: initialConfig?.language || 'en',
       endpointUrl: resolveGatewayEndpoint(initialConfig?.endpointUrl),
       interactionMode: initialConfig?.interactionMode || 'HANDS_FREE',
       volume: initialConfig?.volume ?? 1.0,
@@ -224,6 +226,10 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   }
 
   public flushAudioBuffers(): void {
+    if (this.turnCompletionTimeout) {
+      clearTimeout(this.turnCompletionTimeout)
+      this.turnCompletionTimeout = null
+    }
     for (const source of this.activeAudioSources) {
       try {
         source.stop()
@@ -235,6 +241,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
   }
 
   public interrupt(): void {
+    this.isTurnCompleted = true
     this.flushAudioBuffers()
     // Notificar al gateway que se interrumpió el turno (Barge-In)
     this.sendWsMessage({ type: 'interrupt' })
@@ -433,18 +440,48 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
       source.onended = () => {
         this.activeAudioSources = this.activeAudioSources.filter(s => s !== source)
-        if (this.activeAudioSources.length === 0 && this.state === 'SPEAKING') {
-          // Si estamos en modo Hands-Free, volver automáticamente a escuchar
-          if (this.config.interactionMode === 'HANDS_FREE') {
-            this.setState('LISTENING')
-            this.startListening()
-          } else {
-            this.setState('LISTENING')
-          }
-        }
+        this.checkPlaybackCompletion()
       }
     } catch (err: unknown) {
       console.warn('[NOVA SONIC PROVIDER] Error reproduciendo chunk de audio:', err)
+    }
+  }
+
+  /**
+   * Verifica de forma robusta la finalización de la reproducción antes de reabrir el micrófono,
+   * evitando que micro-pausas entre chunks de audio activen el micro y causen falso barge-in.
+   */
+  private checkPlaybackCompletion(): void {
+    if (this.turnCompletionTimeout) {
+      clearTimeout(this.turnCompletionTimeout)
+      this.turnCompletionTimeout = null
+    }
+
+    if (this.activeAudioSources.length > 0) return
+
+    if (this.isTurnCompleted) {
+      this.finishPlaybackTurn()
+    } else {
+      // Ventana de gracia esperando posibles chunks adicionales en tránsito
+      this.turnCompletionTimeout = setTimeout(() => {
+        if (this.activeAudioSources.length === 0 && this.state === 'SPEAKING') {
+          this.finishPlaybackTurn()
+        }
+      }, 1000)
+    }
+  }
+
+  private finishPlaybackTurn(): void {
+    if (this.state === 'SPEAKING') {
+      this.setState('LISTENING')
+      if (this.config.interactionMode === 'HANDS_FREE' && !this.config.isMuted) {
+        // Pausa de 350ms para que el eco en el ambiente acústico decaiga por completo
+        setTimeout(() => {
+          if (this.state === 'LISTENING') {
+            this.startListening()
+          }
+        }, 350)
+      }
     }
   }
 
@@ -464,6 +501,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
         }
 
         case 'barge_in': {
+          this.isTurnCompleted = true
           this.flushAudioBuffers()
           for (const l of this.listeners) {
             l.onBargeIn?.()
@@ -472,6 +510,8 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
         }
 
         case 'completion_end': {
+          this.isTurnCompleted = true
+          this.checkPlaybackCompletion()
           for (const l of this.listeners) {
             l.onCompletionEnd?.()
           }
@@ -487,6 +527,11 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
         case 'audio_chunk': {
           if (data.pcmBase64) {
+            this.isTurnCompleted = false
+            if (this.turnCompletionTimeout) {
+              clearTimeout(this.turnCompletionTimeout)
+              this.turnCompletionTimeout = null
+            }
             this.setState('SPEAKING')
             await this.enqueueSynthesizedAudio(data.pcmBase64)
           }

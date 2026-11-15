@@ -2,7 +2,7 @@
  * ARES MISSION COMMS — ADAPTIVE FLOATING ASSISTANT
  * Compact UI · Voice Orb · Non-blocking Interaction
  * 
- * - Idioma predeterminado: ESPAÑOL (es-US) en UI, motor de voz y system prompt.
+ * - English by default; global EN/ES selection controls UI, recognition and voice.
  * - Reconocimiento bilingüe continuo con comprensión semántica y normalización léxica.
  * - Sesión conversacional persistente: multi-turno continuo sin reactivar "Hola ARES" tras cada respuesta.
  * - Soporte de interrupciones (Barge-In) con vaciado inmediato de buffers de audio.
@@ -50,6 +50,7 @@ import {
   repairAcousticHallucinations,
 } from '../features/voice/bilingualCommandRegistry'
 import { resolveMissionKnowledge } from '../features/science/missionKnowledgeResolver'
+import { useLanguage } from '../features/i18n/appI18n'
 import '../styles/missionComms.css'
 
 interface PendingConfirmationState {
@@ -139,6 +140,8 @@ export function AresMissionCommsModal({
   contextInput,
   currentStops,
 }: AresMissionCommsModalProps) {
+  const { language, setLanguage } = useLanguage()
+  const ui = (en: string, es: string) => language === 'en' ? en : es
   // 1. Separación clara de estados (Sección 8)
   const [presentationMode, setPresentationMode] = useState<PresentationMode>(isOpen ? 'compact' : 'orb')
   const [connectionState, setConnectionState] = useState<ConnectionState>('connected')
@@ -146,13 +149,13 @@ export function AresMissionCommsModal({
   const [voiceState, setVoiceState] = useState<VoiceState>('LISTENING')
 
   // 2. Idioma predeterminado: ESPAÑOL en todos los niveles (Sección 1 y 3)
-  const [activeLanguage, setActiveLanguage] = useState<SupportedLanguage>('es')
-  const [responseLanguage, setResponseLanguage] = useState<SupportedLanguage>('es')
-  const [uiLanguage, setUiLanguage] = useState<SupportedLanguage>('es')
-  const [languageSelection, setLanguageSelection] = useState<LanguageSelection>('es')
+  const [activeLanguage, setActiveLanguage] = useState<SupportedLanguage>(language)
+  const [responseLanguage, setResponseLanguage] = useState<SupportedLanguage>(language)
+  const [uiLanguage, setUiLanguage] = useState<SupportedLanguage>(language)
+  const [languageSelection, setLanguageSelection] = useState<LanguageSelection>(language)
 
   // 3. Voces naturales de Amazon Nova 2.5 Sonic (carlos para español, matthew para inglés)
-  const [selectedVoice, setSelectedVoice] = useState<'carlos' | 'lupe' | 'matthew' | 'tiffany'>('carlos')
+  const [selectedVoice, setSelectedVoice] = useState<'carlos' | 'lupe' | 'matthew' | 'tiffany'>(language === 'en' ? 'matthew' : 'carlos')
   const [isWakeWordActive, setIsWakeWordActive] = useState<boolean>(true)
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('HANDS_FREE')
   const [isMuted, setIsMuted] = useState(false)
@@ -194,7 +197,7 @@ export function AresMissionCommsModal({
     {
       id: 'init-msg',
       role: 'assistant',
-      text: COMMS_TRANSLATIONS.es.welcomeMessage,
+      text: COMMS_TRANSLATIONS[language].welcomeMessage,
       isFinal: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     },
@@ -214,6 +217,18 @@ export function AresMissionCommsModal({
   transcriptsRef.current = transcripts
   const responseLanguageRef = useRef<SupportedLanguage>(responseLanguage)
   responseLanguageRef.current = responseLanguage
+  useEffect(() => {
+    setResponseLanguage(language)
+    setActiveLanguage(language)
+    setUiLanguage(language)
+    setLanguageSelection(language)
+    const nextVoice = language === 'en' ? 'matthew' : 'carlos'
+    setSelectedVoice(nextVoice)
+    providerRef.current?.updateConfig({ language, voiceId: nextVoice })
+    wakeWordDetectorRef.current?.setLanguage(language)
+    setTranscripts(previous => previous.map(event =>
+      event.id === 'init-msg' ? { ...event, text: COMMS_TRANSLATIONS[language].welcomeMessage } : event))
+  }, [language])
   const executeCommandRef = useRef<((cmd: string) => Promise<void>) | null>(null)
   const handleInterruptRef = useRef<() => void>(() => {})
   const handleDisconnectRef = useRef<() => void>(() => {})
@@ -351,6 +366,7 @@ export function AresMissionCommsModal({
       // 2. Verificar comando explícito de cambio de idioma (Sección 3)
       const requestedLang = checkLanguageSwitchCommand(cleanedCommand)
       if (requestedLang) {
+        setLanguage(requestedLang)
         setResponseLanguage(requestedLang)
         setUiLanguage(requestedLang)
         setActiveLanguage(requestedLang)
@@ -371,7 +387,7 @@ export function AresMissionCommsModal({
           {
             id: `ai-sw-${Date.now()}`,
             role: 'assistant',
-            text: `[SISTEMA]: ${switchMsg}`,
+            text: `[${requestedLang === 'en' ? 'SYSTEM' : 'SISTEMA'}]: ${switchMsg}`,
             isFinal: true,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           },
@@ -392,17 +408,31 @@ export function AresMissionCommsModal({
         setConversationState('executing_tool')
         setCurrentExecutionInfo({
           action: resolved.tool,
-          description: `Ejecutando ${resolved.tool}...`,
+          description: `${responseLanguage === 'en' ? 'Executing' : 'Ejecutando'} ${resolved.tool}...`,
         })
 
         const req: ToolExecutionRequest = {
           tool: resolved.tool,
+          language: responseLanguage,
           input: resolved.params || {},
         }
         const res = await toolEngineRef.current.executeTool(req)
+        if (res.pendingConfirmationId) {
+          setPendingConfirm({
+            id: res.pendingConfirmationId,
+            tool: resolved.tool,
+            message: responseLanguage === 'en'
+              ? `Confirm execution of ${resolved.tool}? This changes the proposed plan or simulation.`
+              : `¿Confirmás ejecutar ${resolved.tool}? Se modificará el plan propuesto o la simulación.`,
+            securityLevel: res.securityLevel,
+          })
+          setPresentationMode('compact')
+        }
 
-        const actionText = res.success
-          ? res.actionPerformed || (responseLanguage === 'en' ? `Command '${resolved.tool}' completed.` : `Comando '${resolved.tool}' completado.`)
+        const actionText = res.pendingConfirmationId
+          ? responseLanguage === 'en' ? 'Waiting for your confirmation.' : 'Esperando tu confirmación.'
+          : res.success
+          ? responseLanguage === 'en' ? `Command '${resolved.tool}' completed.` : res.actionPerformed || `Comando '${resolved.tool}' completado.`
           : (responseLanguage === 'en' ? `Could not execute '${resolved.tool}': ${res.output.error || 'Notice'}` : `No se pudo ejecutar '${resolved.tool}': ${res.output.error || 'Aviso táctico'}`)
 
         setCurrentExecutionInfo({
@@ -497,7 +527,7 @@ export function AresMissionCommsModal({
         } catch {}
       }
 
-      // 6. Fallback a agente serverless con timeout estricto de 10s (sin bloqueos de 2 minutos)
+      // 6. Fallback a agente serverless con timeout táctico de 30s para razonamiento multimisión
       showSubtitle(responseLanguage === 'en' ? 'Consulting orbital satellite telemetry...' : 'Consultando telemetría de satélite en órbita...', 'assistant', 3000)
 
       try {
@@ -506,7 +536,7 @@ export function AresMissionCommsModal({
           .slice(-6)
           .map(t => ({ role: t.role, content: t.text }))
 
-        const res = await queryMarsAgent(commandText, historyPayload, 10000)
+        const res = await queryMarsAgent(commandText, historyPayload, 30000, responseLanguageRef.current)
         const cleanReply = (res.reply || '').replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
 
         setTranscripts(prev => [
@@ -555,6 +585,7 @@ export function AresMissionCommsModal({
       wakeWordDetectorRef.current = new LocalWakeWordDetector()
     }
     const detector = wakeWordDetectorRef.current
+    detector.setLanguage(responseLanguageRef.current)
 
     // Despertar con "Hey, ARES" o "Hola, ARES"
     const unsubscribeWake = detector.subscribe((event: WakeWordEvent) => {
@@ -718,14 +749,28 @@ export function AresMissionCommsModal({
         // Minimizar al orbe automáticamente durante la ejecución (Sección 2 C)
         setPresentationMode('minimized')
         setConversationState('executing_tool')
-        setCurrentExecutionInfo({ action: tool, description: `Ejecutando ${tool}...` })
+        setCurrentExecutionInfo({ action: tool, description: `${responseLanguageRef.current === 'en' ? 'Executing' : 'Ejecutando'} ${tool}...` })
 
-        const req: ToolExecutionRequest = { tool, input, toolUseId }
+        const req: ToolExecutionRequest = { tool, input, toolUseId, language: responseLanguageRef.current }
         const res = await toolEngineRef.current.executeTool(req)
 
-        const summaryText = res.success
-          ? res.actionPerformed || `Comando '${tool}' completado.`
-          : `No se pudo ejecutar '${tool}': ${res.output.error || 'Operación abortada'}`
+        const locale = responseLanguageRef.current
+        if (res.pendingConfirmationId) {
+          setPendingConfirm({
+            id: res.pendingConfirmationId,
+            tool,
+            message: locale === 'en'
+              ? `Confirm execution of ${tool}? This changes the proposed plan or simulation.`
+              : `¿Confirmás ejecutar ${tool}? Se modificará el plan propuesto o la simulación.`,
+            securityLevel: res.securityLevel,
+          })
+          setPresentationMode('compact')
+        }
+        const summaryText = res.pendingConfirmationId
+          ? locale === 'en' ? 'Waiting for your confirmation.' : 'Esperando tu confirmación.'
+          : res.success
+          ? locale === 'en' ? `Command '${tool}' completed.` : res.actionPerformed || `Comando '${tool}' completado.`
+          : locale === 'en' ? `Could not execute '${tool}': ${res.output.error || 'Operation aborted'}` : `No se pudo ejecutar '${tool}': ${res.output.error || 'Operación abortada'}`
 
         setCurrentExecutionInfo({ action: tool, description: summaryText })
         showSubtitle(summaryText, 'assistant', 5000)
@@ -735,13 +780,15 @@ export function AresMissionCommsModal({
           {
             id: `tool-${Date.now()}`,
             role: 'assistant',
-            text: `[ACCIÓN TÁCTICA]: ${summaryText}`,
+            text: `[${locale === 'en' ? 'ACTION' : 'ACCIÓN'}]: ${summaryText}`,
             isFinal: true,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           },
         ])
 
-        return res.output
+        return res.pendingConfirmationId && locale === 'en'
+          ? { ...res.output, message: `Awaiting explicit user confirmation for ${tool}; do not claim it was executed.` }
+          : res.output
       },
       onError: err => {
         console.warn('[MISSION COMMS PROVIDER] Nota:', err.message)
@@ -757,10 +804,10 @@ export function AresMissionCommsModal({
   // Sincronizar contexto compacto del mapa con ARES
   useEffect(() => {
     if (providerRef.current) {
-      const compact = buildCompactMissionContext(contextInput)
+      const compact = buildCompactMissionContext({ ...contextInput, language })
       providerRef.current.updateMissionContext(compact as unknown as Record<string, unknown>)
     }
-  }, [contextInput])
+  }, [contextInput, language])
 
   // Scroll automático en transcripciones
   useEffect(() => {
@@ -880,6 +927,7 @@ export function AresMissionCommsModal({
   // ==========================================
   const handleToggleDemoMode = () => {
     const nextLang: SupportedLanguage = responseLanguage === 'en' ? 'es' : 'en'
+    setLanguage(nextLang)
     const nextVoice = nextLang === 'en' ? 'matthew' : 'carlos'
     setResponseLanguage(nextLang)
     setUiLanguage(nextLang)
@@ -898,7 +946,7 @@ export function AresMissionCommsModal({
       {
         id: `demo-${Date.now()}`,
         role: 'assistant',
-        text: `[SISTEMA]: ${msg}`,
+        text: `[${nextLang === 'en' ? 'SYSTEM' : 'SISTEMA'}]: ${msg}`,
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       },
@@ -1015,8 +1063,8 @@ export function AresMissionCommsModal({
         id: `conf-res-${Date.now()}`,
         role: 'assistant',
         text: proceed
-          ? `[CONFIRMADO]: ${result.actionPerformed || 'Operación completada.'}`
-          : '[ACCION ABORTADA POR ASTRONAUTA]',
+          ? language === 'en' ? '[CONFIRMED]: Operation completed.' : `[CONFIRMADO]: ${result.actionPerformed || 'Operación completada.'}`
+          : language === 'en' ? '[OPERATION ABORTED]' : '[ACCIÓN ABORTADA]',
         isFinal: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       },
@@ -1072,7 +1120,7 @@ export function AresMissionCommsModal({
                 type="button"
                 className={`ares-demo-badge-btn ${showDiagnostics ? 'demo-active' : ''}`}
                 onClick={() => setShowDiagnostics(prev => !prev)}
-                title="Abrir / Cerrar Diagnóstico Acústico (Web Audio API & RMS)"
+                title={ui('Toggle audio diagnostics (Web Audio API & RMS)', 'Abrir / Cerrar Diagnóstico Acústico (Web Audio API & RMS)')}
               >
                 📊 DIAG
               </button>
@@ -1082,7 +1130,7 @@ export function AresMissionCommsModal({
                 type="button"
                 className="ares-demo-badge-btn"
                 onClick={handleToggleDemoMode}
-                title={responseLanguage === 'en' ? 'Cambiar a Español' : 'Switch to English'}
+                title={responseLanguage === 'en' ? 'Switch to Spanish' : 'Cambiar a inglés'}
               >
                 {responseLanguage === 'en' ? '🌐 EN' : '🇦🇷 ES'}
               </button>
@@ -1092,8 +1140,8 @@ export function AresMissionCommsModal({
                 type="button"
                 className="ares-comms-close-btn"
                 onClick={() => setPresentationMode('orb')}
-                aria-label="Minimizar a Orbe Flotante"
-                title="Minimizar a Orbe (convive con mapa 3D)"
+                aria-label={ui('Minimize to floating orb', 'Minimizar a Orbe Flotante')}
+                title={ui('Minimize to orb', 'Minimizar a Orbe')}
               >
                 <MinimizeIcon />
               </button>
@@ -1103,8 +1151,8 @@ export function AresMissionCommsModal({
                 type="button"
                 className="ares-comms-close-btn"
                 onClick={handleDisconnect}
-                aria-label="Cerrar comunicaciones"
-                title="Cerrar comunicaciones"
+                aria-label={ui('Close communications', 'Cerrar comunicaciones')}
+                title={ui('Close communications', 'Cerrar comunicaciones')}
               >
                 <CloseIcon />
               </button>
@@ -1113,18 +1161,18 @@ export function AresMissionCommsModal({
 
           {/* Panel Diagnóstico de Audio Acústico (Web Audio API & RMS) */}
           {showDiagnostics && telemetry && (
-            <div className="ares-comms-diagnostics-card" role="region" aria-label="Diagnóstico de Audio">
+            <div className="ares-comms-diagnostics-card" role="region" aria-label={ui('Audio diagnostics', 'Diagnóstico de Audio')}>
               <div className="ares-diag-header">
                 <span className="ares-diag-title">📡 TELEMETRÍA DE AUDIO EN VIVO // WEB AUDIO API</span>
                 <span className="ares-diag-status">{telemetry.trackState.toUpperCase()}</span>
               </div>
               <div className="ares-diag-grid">
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">Dispositivo:</span>
+                  <span className="ares-diag-label">{ui('Device:', 'Dispositivo:')}</span>
                   <span className="ares-diag-val" title={telemetry.deviceLabel}>{telemetry.deviceLabel.slice(0, 22)}...</span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">Permiso:</span>
+                  <span className="ares-diag-label">{ui('Permission:', 'Permiso:')}</span>
                   <span className="ares-diag-val">{telemetry.permissionState.toUpperCase()}</span>
                 </div>
                 <div className="ares-diag-item">
@@ -1132,25 +1180,25 @@ export function AresMissionCommsModal({
                   <span className="ares-diag-val">{telemetry.audioContextState} ({telemetry.sampleRate} Hz)</span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">Procesador:</span>
+                  <span className="ares-diag-label">{ui('Processor:', 'Procesador:')}</span>
                   <span className="ares-diag-val">{telemetry.workletActive ? 'AudioWorklet (16kHz)' : telemetry.workletFallback ? 'ScriptProcessor' : 'Idle'}</span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">RMS Actual:</span>
+                  <span className="ares-diag-label">{ui('Current RMS:', 'RMS Actual:')}</span>
                   <span className="ares-diag-val">{audioMetrics.rms.toFixed(4)} ({audioMetrics.db} dBFS)</span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">Pico Máximo:</span>
+                  <span className="ares-diag-label">{ui('Peak:', 'Pico Máximo:')}</span>
                   <span className="ares-diag-val">{audioMetrics.peak.toFixed(4)}</span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">VAD (Voz):</span>
+                  <span className="ares-diag-label">{ui('VAD (speech):', 'VAD (Voz):')}</span>
                   <span className={`ares-diag-val ${audioMetrics.isVoiceActive ? 'vad-active' : 'vad-idle'}`}>
                     {audioMetrics.isVoiceActive ? '🟢 VOZ DETECTADA' : '⚪ SILENCIO'}
                   </span>
                 </div>
                 <div className="ares-diag-item">
-                  <span className="ares-diag-label">Enlace Gateway:</span>
+                  <span className="ares-diag-label">{ui('Gateway link:', 'Enlace Gateway:')}</span>
                   <span className="ares-diag-val">{voiceState}</span>
                 </div>
               </div>
@@ -1168,7 +1216,7 @@ export function AresMissionCommsModal({
 
           {/* Barra de Controles de Voz */}
           <div className="ares-comms-controls-bar">
-            <div className="ares-comms-btn-group" role="toolbar" aria-label="Controles principales de voz">
+            <div className="ares-comms-btn-group" role="toolbar" aria-label={ui('Main voice controls', 'Controles principales de voz')}>
               <button
                 type="button"
                 className={`ares-comms-action-btn primary ${conversationState === 'listening' ? 'active-listening' : ''}`}
@@ -1185,19 +1233,19 @@ export function AresMissionCommsModal({
                     )
                   }
                 }}
-                aria-label={conversationState === 'listening' ? 'A la escucha' : 'Hablar con ARES (escucha activa)'}
-                title="Hablar (Activa escucha manos libres continua)"
+                aria-label={conversationState === 'listening' ? ui('Listening', 'A la escucha') : ui('Talk to ARES (active listening)', 'Hablar con ARES (escucha activa)')}
+                title={ui('Talk (start continuous hands-free listening)', 'Hablar (Activa escucha manos libres continua)')}
               >
                 <MicIcon />
-                <span>{conversationState === 'listening' ? 'A LA ESCUCHA...' : '🎤 HABLAR'}</span>
+                <span>{conversationState === 'listening' ? ui('LISTENING…', 'A LA ESCUCHA…') : ui('🎤 TALK', '🎤 HABLAR')}</span>
               </button>
 
               <button
                 type="button"
                 className="ares-comms-action-btn stop"
                 onClick={handleInterrupt}
-                aria-label="Interrumpir respuesta (Barge-In)"
-                title="Interrumpir respuesta (Barge-In)"
+                aria-label={ui('Interrupt response (barge-in)', 'Interrumpir respuesta (Barge-In)')}
+                title={ui('Interrupt response (barge-in)', 'Interrumpir respuesta (Barge-In)')}
               >
                 <StopSquareIcon />
               </button>
@@ -1211,8 +1259,8 @@ export function AresMissionCommsModal({
                   setIsMuted(next)
                   providerRef.current?.mute(next)
                 }}
-                aria-label={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
-                title={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
+                aria-label={isMuted ? ui('Unmute microphone', 'Activar micrófono') : ui('Mute microphone', 'Silenciar micrófono')}
+                title={isMuted ? ui('Unmute microphone', 'Activar micrófono') : ui('Mute microphone', 'Silenciar micrófono')}
               >
                 {isMuted ? <MicOffIcon /> : <MicIcon />}
               </button>
@@ -1226,8 +1274,8 @@ export function AresMissionCommsModal({
                   setInteractionMode(nextMode)
                   providerRef.current?.updateConfig({ interactionMode: nextMode })
                 }}
-                aria-label={interactionMode === 'HANDS_FREE' ? 'Modo Manos Libres continuo' : 'Modo Push to talk'}
-                title="Modo Manos Libres continuo"
+                aria-label={interactionMode === 'HANDS_FREE' ? ui('Continuous hands-free mode', 'Modo manos libres continuo') : ui('Push-to-talk mode', 'Modo pulsar para hablar')}
+                title={ui('Continuous hands-free mode', 'Modo Manos Libres continuo')}
               >
                 <span>{interactionMode === 'HANDS_FREE' ? 'MANOS LIBRES' : 'PTT'}</span>
               </button>
@@ -1237,14 +1285,14 @@ export function AresMissionCommsModal({
                 type="button"
                 className={`ares-comms-action-btn toggle ${isWakeWordActive ? 'active wake-active' : ''}`}
                 onClick={() => setIsWakeWordActive(prev => !prev)}
-                aria-label={isWakeWordActive ? 'Wake Word Activo ("Hola ARES" / "Hey ARES")' : 'Wake Word Desactivado'}
-                title={isWakeWordActive ? 'Wake Word Activo ("Hola ARES" / "Hey ARES")' : 'Wake Word Desactivado'}
+                aria-label={isWakeWordActive ? ui('Wake word enabled ("Hey ARES" / "Hola ARES")', 'Wake Word Activo ("Hola ARES" / "Hey ARES")') : ui('Wake word disabled', 'Wake Word Desactivado')}
+                title={isWakeWordActive ? ui('Wake word enabled ("Hey ARES" / "Hola ARES")', 'Wake Word Activo ("Hola ARES" / "Hey ARES")') : ui('Wake word disabled', 'Wake Word Desactivado')}
               >
                 <span>{isWakeWordActive ? '👂 WAKE: ON' : '👂 WAKE: OFF'}</span>
               </button>
             </div>
 
-            <div className="ares-comms-btn-group" role="toolbar" aria-label="Configuración de voz y síntesis">
+            <div className="ares-comms-btn-group" role="toolbar" aria-label={ui('Voice and synthesis settings', 'Configuración de voz y síntesis')}>
               {/* Selector de Idioma */}
               <div className="ares-comms-setting-item">
                 <select
@@ -1254,6 +1302,7 @@ export function AresMissionCommsModal({
                     const next = e.target.value as LanguageSelection
                     setLanguageSelection(next)
                     if (next === 'en' || next === 'es') {
+                      setLanguage(next)
                       const nextVoice = next === 'es' ? 'carlos' : 'matthew'
                       setResponseLanguage(next)
                       setUiLanguage(next)
@@ -1262,10 +1311,10 @@ export function AresMissionCommsModal({
                       providerRef.current?.updateConfig({ language: next, voiceId: nextVoice })
                     }
                   }}
-                  aria-label="Selector de idioma de respuesta"
-                  title="Selector de idioma de respuesta"
+                  aria-label={ui('Response language', 'Selector de idioma de respuesta')}
+                  title={ui('Response language', 'Selector de idioma de respuesta')}
                 >
-                  <option value="es">ES (Español)</option>
+                  <option value="es">ES (Español / Spanish)</option>
                   <option value="en">EN (English)</option>
                   <option value="auto">AUTO</option>
                 </select>
@@ -1282,13 +1331,13 @@ export function AresMissionCommsModal({
                     providerRef.current?.updateConfig({ voiceId: next })
                   }}
                   style={{ width: '100%' }}
-                  aria-label="Voz natural de Amazon Nova Sonic"
-                  title="Voz natural de Amazon Nova Sonic"
+                  aria-label={ui('Amazon Nova Sonic voice', 'Voz natural de Amazon Nova Sonic')}
+                  title={ui('Amazon Nova Sonic voice', 'Voz natural de Amazon Nova Sonic')}
                 >
-                  <option value="carlos">Carlos (ES · Natural Masculina)</option>
-                  <option value="lupe">Lupe (ES · Natural Femenina)</option>
-                  <option value="matthew">Matthew (EN · Natural Masculina)</option>
-                  <option value="tiffany">Tiffany (EN · Natural Femenina)</option>
+                  <option value="carlos">Carlos (ES · {ui('male', 'masculina')})</option>
+                  <option value="lupe">Lupe (ES · {ui('female', 'femenina')})</option>
+                  <option value="matthew">Matthew (EN · {ui('male', 'masculina')})</option>
+                  <option value="tiffany">Tiffany (EN · {ui('female', 'femenina')})</option>
                 </select>
               </div>
 
@@ -1306,8 +1355,8 @@ export function AresMissionCommsModal({
                     providerRef.current?.setVolume(v)
                   }}
                   className="ares-comms-volume-slider"
-                  aria-label={`Control de volumen: ${Math.round(volume * 100)}%`}
-                  title={`Volumen: ${Math.round(volume * 100)}%`}
+                  aria-label={`${ui('Volume control', 'Control de volumen')}: ${Math.round(volume * 100)}%`}
+                  title={`${ui('Volume', 'Volumen')}: ${Math.round(volume * 100)}%`}
                 />
               </div>
             </div>
@@ -1347,7 +1396,7 @@ export function AresMissionCommsModal({
             {pendingConfirm && (
               <div className="ares-comms-confirmation-card" role="alert">
                 <div className="ares-confirmation-header">
-                  <span>⚠️ [CONFIRMACIÓN TÁCTICA // NIVEL {pendingConfirm.securityLevel}]</span>
+                  <span>⚠️ [{ui('ACTION CONFIRMATION // LEVEL', 'CONFIRMACIÓN DE ACCIÓN // NIVEL')} {pendingConfirm.securityLevel}]</span>
                 </div>
                 <div className="ares-confirmation-prompt">{pendingConfirm.message}</div>
                 <div className="ares-confirmation-actions">
@@ -1400,15 +1449,15 @@ export function AresMissionCommsModal({
                 placeholder={t.inputPlaceholder}
                 value={inputMessage}
                 onChange={e => setInputMessage(e.target.value)}
-                aria-label="Escribe tu instrucción de voz o texto para ARES"
+                aria-label={ui('Type a voice or text command for ARES', 'Escribe tu instrucción de voz o texto para ARES')}
               />
             </div>
             <button
               type="submit"
               className="ares-comms-send-btn"
               disabled={!inputMessage.trim()}
-              aria-label="Transmitir orden a ARES"
-              title="Transmitir orden a ARES"
+              aria-label={ui('Send command to ARES', 'Transmitir orden a ARES')}
+              title={ui('Send command to ARES', 'Transmitir orden a ARES')}
             >
               <SendIcon />
             </button>
@@ -1466,7 +1515,7 @@ export function AresMissionCommsModal({
                   type="button"
                   className="ares-orb-mini-btn"
                   onClick={() => setPresentationMode('compact')}
-                  title="Expandir panel de misión"
+                  title={ui('Expand mission panel', 'Expandir panel de misión')}
                 >
                   <ExpandIcon />
                 </button>
@@ -1477,7 +1526,7 @@ export function AresMissionCommsModal({
                     handleInterrupt()
                     setPresentationMode('orb')
                   }}
-                  title="Detener acción"
+                  title={ui('Stop action', 'Detener acción')}
                 >
                   ✕
                 </button>
@@ -1492,11 +1541,11 @@ export function AresMissionCommsModal({
               onClick={handleOrbClick}
               role="button"
               tabIndex={0}
-              title="Actívame con 'Hey ARES' o haz clic aquí para abrir la consola"
+              title={ui("Say 'Hey ARES' or click to open the console", "Actívame con 'Hey ARES' o haz clic aquí para abrir la consola")}
             >
               <span className="ares-orb-callout-pulse" aria-hidden="true" />
               <span className="ares-orb-callout-text">
-                Actívame con <strong className="ares-orb-callout-keyword">"Hey ARES"</strong>
+                {ui('Wake me with', 'Actívame con')} <strong className="ares-orb-callout-keyword">"{language === 'en' ? 'Hey ARES' : 'Hola ARES'}"</strong>
               </span>
             </div>
           )}
@@ -1533,8 +1582,8 @@ export function AresMissionCommsModal({
                 onDoubleClick={handleOrbDoubleClick}
                 role="button"
                 tabIndex={0}
-                aria-label={`Ares Copilot Orb (${conversationState}). Arrastra para reposicionar o haz clic para abrir.`}
-                title="Ares Copilot // Clic para abrir · Arrastra para mover libremente · Doble clic para restablecer posición"
+                aria-label={ui(`Ares Copilot orb (${conversationState}). Drag to move or click to open.`, `Orbe Ares Copilot (${conversationState}). Arrastrá para mover o hacé clic para abrir.`)}
+                title={ui('Ares Copilot // Click to open · Drag to move · Double-click to reset position', 'Ares Copilot // Clic para abrir · Arrastra para mover libremente · Doble clic para restablecer posición')}
                 style={{
                   transform: `scale(${orbScale})`,
                   boxShadow: `0 0 ${orbGlow}px ${glowColor}, inset 0 0 ${Math.round(orbGlow / 2)}px ${glowColor}`,

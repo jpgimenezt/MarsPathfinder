@@ -17,9 +17,10 @@ describe('ARES MISSION COMMS - buildCompactMissionContext', () => {
     expect(context.geography.centerCoords.lat).toBe(-4.68)
     expect(context.geography.centerCoords.lon).toBe(137.4)
     expect(context.geography.elevationMeters).toBe(-2100)
-    expect(context.geography.elevationStatus).toBe('DERIVED')
-    expect(context.geography.selectedTargetName).toBe('Crestas Boxwork de Mount Sharp')
+    expect(context.geography.elevationStatus).toBe('SIMULATED')
+    expect(context.geography.selectedTargetName).toContain('Illustrative science target')
     expect(context.activeLayers.length).toBeGreaterThanOrEqual(3)
+    expect(context.activeLayers.find(layer => layer.id === 'gale_dem')).toMatchObject({ provenance: 'SIMULATED', isDemNumeric: false })
     expect(context.habitat.status).toBe('SIMULATED_ACTIVE')
     expect(context.habitat.provenance).toBe('SIMULATED')
     expect(context.epistemicNote).toContain('3,389.5 km')
@@ -34,7 +35,7 @@ describe('ARES MISSION COMMS - buildCompactMissionContext', () => {
     expect(context.geography.region).toBe('JEZERO')
     expect(context.geography.elevationMeters).toBeNull()
     expect(context.geography.elevationStatus).toBe('UNAVAILABLE')
-    expect(context.route.hazardsEvaluation).toContain('Sin DEM numérico local')
+    expect(context.route.hazardsEvaluation).toContain('INSUFFICIENT DATA')
   })
 
   it('evalúa correctamente los límites de caminata marciana con radio de Marte en rutas activas', () => {
@@ -53,6 +54,7 @@ describe('ARES MISSION COMMS - buildCompactMissionContext', () => {
     expect(context.route.totalDistanceKm).toBeLessThan(5.0)
     expect(context.route.walkbackAssessment?.status).toBe('NOMINAL')
     expect(context.route.walkbackAssessment?.nominalLimitKm).toBe(5.0)
+    expect(context.route.walkbackAssessment?.label).toContain('NOT a NASA EVA limit')
   })
 
   it('indica precaución o exceso de límite si la caminata supera 5 km', () => {

@@ -142,3 +142,47 @@ export const MISSION_DISCOVERY_STOPS: TourStop[] = [
     flightDurationSeconds: 16,
   },
 ]
+
+// English presentation content only. Coordinates, acquisition dates and
+// camera paths are inherited unchanged; modeled elevations are not verified.
+const EN_TOUR_CONTENT: Record<string, Pick<TourStop, 'title' | 'subtitle' | 'geologicalUnit' | 'scientificValue'>> = {
+  'tour-bradbury': {
+    title: 'Bradbury Landing / conceptual LZ-1', subtitle: 'Curiosity landing context; Base Alpha is simulated',
+    geologicalUnit: 'mNh: Bradbury context (regional alluvial units)',
+    scientificValue: 'Bradbury Landing is Curiosity’s documented landing site. The human habitat and LZ-1 designation are conceptual; no landing safety or local pressure has been verified for this model.',
+  },
+  'tour-yellowknife': {
+    title: 'Yellowknife Bay (John Klein)', subtitle: 'Ancient lakebed and habitability context',
+    geologicalUnit: 'eHh: Sheepbed mudstone context',
+    scientificValue: 'Curiosity examined mudstones consistent with a past habitable aqueous environment. This is evidence of ancient conditions, not evidence of life.',
+  },
+  'tour-bagnold': {
+    title: 'Bagnold Dunes', subtitle: 'Active dark aeolian dune field',
+    geologicalUnit: 'AHv: dark dune context',
+    scientificValue: 'Curiosity investigated active Martian dune processes. Tour camera positions are illustrative, not independently surveyed stop locations.',
+  },
+  'tour-verarubin': {
+    title: 'Vera Rubin Ridge', subtitle: 'Hematite-bearing ridge',
+    geologicalUnit: 'eHh: Blunts Point geological context',
+    scientificValue: 'The hematite-bearing ridge provides a record of changing conditions in the sedimentary history of Gale Crater.',
+  },
+  'tour-glentorridon': {
+    title: 'Glen Torridon', subtitle: 'Clay-bearing geological context',
+    geologicalUnit: 'eHh: regional clay-bearing unit',
+    scientificValue: 'Curiosity investigated clay-bearing sedimentary rocks, providing context for ancient water and changing environmental conditions.',
+  },
+  'tour-pontours': {
+    title: 'Pontours', subtitle: 'Ancient mud-crack context',
+    geologicalUnit: 'lApm: lacustrine-to-evaporitic context',
+    scientificValue: 'Polygonal cracks studied by Curiosity may record episodes of wet and dry conditions; these features do not establish a precise local route surface.',
+  },
+  'tour-gedizvallis': {
+    title: 'Gediz Vallis ridge and Mount Sharp flank', subtitle: 'Late-stage water-related deposit context',
+    geologicalUnit: 'lApm: regional debris-flow context',
+    scientificValue: 'Gediz Vallis provides evidence for water-related processes late in Gale’s history. Simulated tour elevation and viewpoint remain unvalidated.',
+  },
+}
+
+export function localizedDiscoveryStop(stop: TourStop, language: 'en' | 'es'): TourStop {
+  return language === 'en' ? { ...stop, ...EN_TOUR_CONTENT[stop.id] } : stop
+}

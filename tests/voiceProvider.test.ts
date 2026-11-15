@@ -14,6 +14,11 @@ describe('ARES MISSION COMMS - AmazonNovaSonicProvider', () => {
     expect(provider.config.volume).toBe(0.8)
     expect(provider.config.isMuted).toBe(false)
   })
+  it('usa inglés y Matthew al crear una sesión sin idioma explícito', () => {
+    const provider = new AmazonNovaSonicProvider()
+    expect(provider.config.language).toBe('en')
+    expect(provider.config.voiceId).toBe('matthew')
+  })
 
   it('resuelve correctamente endpoints seguros wss:// para producción', () => {
     // Si se pasa explícito

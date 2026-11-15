@@ -8,6 +8,7 @@ import type { LayerState } from '../src/features/map/wmtsLayerManager'
 import type { MapMode, MapScope } from '../src/components/MapView'
 import type { Region } from '../src/features/map/planningRegion'
 import { App } from '../src/app/App'
+import { LanguageProvider, LANGUAGE_STORAGE_KEY } from '../src/features/i18n/appI18n'
 
 let placePoint: ((id: StopId, point: MarsPoint) => void) | undefined
 let dragPoint: ((id: StopId, point: MarsPoint) => void) | undefined
@@ -67,15 +68,17 @@ function point(id: StopId, value: MarsPoint) {
   act(() => placePoint!(id, value))
 }
 async function setup() {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, 'es') // Legacy interaction assertions remain in Spanish.
   element = document.createElement('div')
   document.body.append(element)
   root = createRoot(element)
-  await act(async () => { root.render(<App />) })
+  await act(async () => { root.render(<LanguageProvider><App /></LanguageProvider>) })
   click('.mock-jezero')
 }
 afterEach(() => {
   if (root) act(() => root.unmount())
   element?.remove()
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY)
   placePoint = undefined
   dragPoint = undefined
   rejectPoint = undefined
@@ -83,6 +86,27 @@ afterEach(() => {
 })
 
 describe('interacción explícita del recorrido', () => {
+  it('muestra planificador y avisos DEM en inglés al primer ingreso y cambia a ES sin perder la ruta', async () => {
+    localStorage.removeItem(LANGUAGE_STORAGE_KEY)
+    element = document.createElement('div')
+    document.body.append(element)
+    root = createRoot(element)
+    await act(async () => root.render(<LanguageProvider><App /></LanguageProvider>))
+    expect(document.documentElement.lang).toBe('en')
+    click('.mock-jezero')
+    expect(element.querySelector('.drawer h2')?.textContent).toContain('exploratory route')
+    expect(element.querySelector('.terrain-planner')?.textContent).toContain('Not suitable for operational navigation')
+    click('.stop:nth-child(1) button')
+    point('A', [77.4, 18.4])
+    const selector = element.querySelector<HTMLSelectElement>('#app-language')!
+    await act(async () => {
+      selector.value = 'es'
+      selector.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(document.documentElement.lang).toBe('es')
+    expect(element.querySelector('.terrain-planner')?.textContent).toContain('No apta para navegación operacional')
+    expect(mapStops.A).toEqual([77.4, 18.4])
+  })
   it('distingue fallo y reintento de Viking del estado CTX sin borrar la ruta', async () => {
     await setup()
     click('.stop:nth-child(1) button')
@@ -165,7 +189,8 @@ describe('interacción explícita del recorrido', () => {
     element = document.createElement('div')
     document.body.append(element)
     root = createRoot(element)
-    await act(async () => { root.render(<App />) })
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, 'es')
+    await act(async () => { root.render(<LanguageProvider><App /></LanguageProvider>) })
     expect(element.querySelector('[data-testid="mapa"]')).toBeNull()
     click('.mock-fail')
     expect(mapScope).toBe('global')
@@ -207,7 +232,7 @@ describe('interacción explícita del recorrido', () => {
     expect(mapStops.A).toEqual([77.40, 18.38])
     click('.route-actions button:nth-child(2)')
     expect(mapStops).toEqual({})
-    expect(element.querySelector('.route-total strong')?.textContent).toBe('Sin datos')
+    expect(element.querySelector('.route-total strong')?.textContent).toBe('Información insuficiente')
     click('.route-actions button:first-child')
     expect(mapStops.B).toEqual([77.44, 18.40])
   })

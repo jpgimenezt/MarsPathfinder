@@ -1212,7 +1212,7 @@
 .ares-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 10001;
   background: rgba(3, 7, 18, 0.85);
   backdrop-filter: blur(8px);
   display: flex;
@@ -2577,6 +2577,17 @@ body.is-clean-view .ares-science-disclaimer-bar {
 
 /* Responsividad para pantallas móviles */
 @media (max-width: 768px) {
+  .ares-modal-backdrop { padding: 8px; }
+  .ares-modal-container { width: 100%; max-height: calc(100dvh - 16px); }
+  .ares-modal-header { padding: 12px; }
+  .ares-modal-header > div { min-width: 0; }
+  .ares-modal-footer { padding: 8px 12px; }
+  .ares-data-center-layout { flex-direction: column; min-height: 0; overflow-y: auto; }
+  .dataset-sidebar { width: 100%; flex: 0 0 auto; max-height: 33dvh; overflow-y: auto; }
+  .dataset-detail-panel { box-sizing: border-box; min-width: 0; width: 100%; flex: 0 0 auto; padding: 14px; overflow: visible; overflow-wrap: anywhere; }
+  .ds-metadata-table-grid { grid-template-columns: minmax(0, 1fr); }
+  .ds-badges-row { flex-wrap: wrap; }
+  .surface-gallery-layout { flex-direction: column; overflow-y: auto; min-height: 0; }
   .tour-science-card {
     width: 100%;
     bottom: 10px;

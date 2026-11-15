@@ -222,3 +222,25 @@ export function compareCuriosityWithEva(
     },
   }
 }
+
+/** English display names for illustrative Curiosity tour markers.
+ * Do not interpret tour coordinates, dates or elevations as independently verified.
+ * Keep stable source identifiers and Spanish source records unchanged.
+ */
+const CURIOSITY_ENGLISH_TITLES: Record<string, string> = {
+  'msl-sol0': "Bradbury Landing (MSL landing site)",
+  'msl-sol126': "Yellowknife Bay (John Klein / Cumberland site)",
+  'msl-sol590': "The Kimberley (sandstone outcrops)",
+  'msl-sol753': "Pahrump Hills (Mount Sharp foothills)",
+  'msl-sol1190': "Bagnold Dunes (active dune field)",
+  'msl-sol1440': "Murray Buttes (sedimentary buttes)",
+  'msl-sol1809': "Vera Rubin Ridge (hematite-bearing ridge)",
+  'msl-sol2300': "Glen Torridon (clay-bearing unit)",
+  'msl-sol2700': "Greenheugh Pediment (Siccar Point area)",
+  'msl-sol3148': "Pontours (sulfate transition context)",
+  'msl-sol3800': "Gediz Vallis Ridge and boxwork context",
+}
+
+export function curiosityWaypointTitle(point: CuriosityTraversePoint, language: 'en' | 'es'): string {
+  return language === 'en' ? CURIOSITY_ENGLISH_TITLES[point.id] ?? point.name : point.name
+}

@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 import { MolaElevationLegend } from '../src/components/MolaElevationLegend'
+import { LanguageProvider, LANGUAGE_STORAGE_KEY } from '../src/features/i18n/appI18n'
 import { MOLA_LEGEND_URL, MOLA_LOOKUP_URL, MOLA_PALETTE, molaGradient } from '../src/features/globe/molaPalette'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -22,14 +23,16 @@ describe('referencias oficiales MOLA', () => {
     expect(MOLA_LOOKUP_URL).toContain('molateam_contour_31rgb_steps.csv')
   })
   it('la leyenda se abre con controles nativos y no propone alturas por píxel', () => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, 'es')
     const element = document.createElement('div')
     const root = createRoot(element)
-    act(() => root.render(<MolaElevationLegend />))
+    act(() => root.render(<LanguageProvider><MolaElevationLegend /></LanguageProvider>))
     expect(element.querySelector('details summary')?.textContent).toBe('Referencias de elevación')
     expect(element.textContent).toContain('areoide marciano')
     expect(element.textContent).toContain('no permite deducir una cota precisa')
     expect(element.textContent).toContain('El azul no es agua')
     expect(element.querySelectorAll('a')).toHaveLength(2)
     act(() => root.unmount())
+    localStorage.removeItem(LANGUAGE_STORAGE_KEY)
   })
 })

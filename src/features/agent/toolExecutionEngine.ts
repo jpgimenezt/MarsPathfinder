@@ -31,6 +31,7 @@ export interface ToolDefinition<TArgs extends z.ZodTypeAny = z.ZodTypeAny> {
 
 export interface ToolExecutionRequest {
   tool: string
+  language?: 'en' | 'es'
   input: Record<string, unknown>
   toolUseId?: string
 }
@@ -584,13 +585,14 @@ export class ToolExecutionEngine {
     request: ToolExecutionRequest,
     options: { confirmed?: boolean } = {}
   ): Promise<ToolExecutionResult> {
+    const es = request.language === 'es'
     const def = this.resolveToolDefinition(request.tool)
     if (!def) {
       return {
         tool: request.tool,
         toolUseId: request.toolUseId,
         success: false,
-        output: { error: `Herramienta desconocida: ${request.tool}` },
+        output: { error: es ? `Herramienta desconocida: ${request.tool}` : `Unknown tool: ${request.tool}` },
         securityLevel: 1,
       }
     }
@@ -615,7 +617,7 @@ export class ToolExecutionEngine {
     // Si la herramienta requiere confirmación y aún no fue confirmada por el usuario
     if (def.requiresConfirmation && !options.confirmed) {
       const confirmationId = `conf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-      const message = def.confirmationPrompt ? def.confirmationPrompt(validatedInput) : `¿Confirmar ejecución de ${def.name}?`
+      const message = es ? (def.confirmationPrompt ? def.confirmationPrompt(validatedInput) : `¿Confirmar ejecución de ${def.name}?`) : `Confirm execution of ${def.name}? Review the proposed change before proceeding.`
 
       return new Promise<ToolExecutionResult>(resolve => {
         this.pendingConfirmations.set(confirmationId, {
@@ -643,14 +645,14 @@ export class ToolExecutionEngine {
 
     // Ejecución directa de la acción
     try {
-      const output = await this.dispatchAction(def.name, validatedInput)
+      const output = await this.dispatchAction(def.name, validatedInput, request.language ?? 'en')
       return {
         tool: request.tool,
         toolUseId: request.toolUseId,
         success: true,
         output,
         securityLevel: def.securityLevel,
-        actionPerformed: `Herramienta ${def.name} ejecutada con éxito.`,
+        actionPerformed: es ? `Herramienta ${def.name} ejecutada con éxito.` : `Tool ${def.name} executed successfully.`,
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -696,7 +698,8 @@ export class ToolExecutionEngine {
   /**
    * Despacha la lógica interna de cada herramienta conectada al estado real
    */
-  private async dispatchAction(name: string, input: any): Promise<Record<string, unknown>> {
+  private async dispatchAction(name: string, input: any, language: 'en' | 'es' = 'en'): Promise<Record<string, unknown>> {
+    const es = language === 'es'
     switch (name) {
       case 'getCurrentMissionContext': {
         const snapshot = this.handlers.getContextSnapshot()
@@ -755,7 +758,7 @@ export class ToolExecutionEngine {
         return {
           status: 'SCREEN_SWITCHED',
           screen,
-          message: `Vista cambiada a ${screen === 'terrain3d' ? 'Gale Crater 3D' : screen === 'globe' ? 'Globo Orbital Marciano' : 'Mapa 2D de Jezero Crater'}.`,
+          message: es ? `Vista cambiada a ${screen === 'terrain3d' ? 'Gale Crater 3D' : screen === 'globe' ? 'Globo Orbital Marciano' : 'Mapa 2D de Jezero Crater'}.` : `View switched to ${screen === 'terrain3d' ? 'Gale Crater 3D' : screen === 'globe' ? 'Mars orbital globe' : 'Jezero 2D map'}.`,
         }
       }
 
@@ -765,20 +768,18 @@ export class ToolExecutionEngine {
         const region = String(rawRegion).toUpperCase()
         if (region.includes('GALE') || region.includes('SHARP') || region.includes('BOXWORK')) {
           return {
-            region: 'Cráter Gale / Mount Sharp',
-            geology:
-              'Estructuras minerales de tipo boxwork formadas por percolación de fluidos subterráneos hidrotermales.',
-            curiosityFindings:
-              'Explorado en 2024-2025. Registra la transición entre arcillas lacustres ricas en agua y sulfatos áridos.',
-            safetyLimits: 'Relieve escarpado en la base de Mount Sharp; pendientes > 20° NO-GO para caminata a pie.',
+            region: es ? 'Cráter Gale / Mount Sharp' : 'Gale Crater / Mount Sharp',
+            geology: es ? 'Estructuras minerales de tipo boxwork formadas por percolación de fluidos subterráneos hidrotermales.' : 'Boxwork ridges may reflect ancient groundwater circulation; details require geological validation.',
+            curiosityFindings: es ? 'Explorado en 2024-2025. Registra la transición entre arcillas lacustres ricas en agua y sulfatos áridos.' : 'Curiosity studies the transition from clay-rich strata to sulfate-bearing layers in Gale; this is regional context, not a site measurement.',
+            safetyLimits: es ? 'Terreno procedural: no hay límites EVA operacionales verificados.' : 'Procedural terrain; no validated operational EVA slope limits or local hazard assessment.',
             provenance: 'OBSERVED_MSL_CURIOSITY_AND_ORBITAL',
           }
         }
         return {
-          region: 'Cráter Jezero',
-          geology: 'Abanico deltaico fluvial con sedimentos de grano fino ricas en esmectitas y carbonatos lacustres.',
-          scienceGoal: 'Potencial de preservación de biofirmas microbianas del antiguo lago.',
-          safetyLimits: 'Sin DTM métrico validado en el ROI completo; obstáculos submétricos no evaluados.',
+          region: es ? 'Cráter Jezero' : 'Jezero Crater',
+          geology: es ? 'Abanico deltaico fluvial con sedimentos de grano fino ricas en esmectitas y carbonatos lacustres.' : 'Ancient fluvial delta with fine-grained lake deposits, including clay- and carbonate-bearing sediments.',
+          scienceGoal: es ? 'Potencial de preservación de biofirmas microbianas del antiguo lago.' : 'Study potential preservation of ancient microbial biosignatures.',
+          safetyLimits: es ? 'Sin DTM métrico validado en el ROI completo; obstáculos submétricos no evaluados.' : 'No validated meter-scale DTM across the full ROI; sub-meter hazards unassessed.',
           provenance: 'OBSERVED_M2020_PERSEVERANCE',
         }
       }
@@ -796,7 +797,7 @@ export class ToolExecutionEngine {
           status: 'WAYPOINT_CREATED',
           stopId,
           point: [lon, lat],
-          label: stopName ?? `Punto ${stopId}`,
+          label: stopName ?? (es ? `Punto ${stopId}` : `Waypoint ${stopId}`),
         }
       }
 
@@ -816,7 +817,7 @@ export class ToolExecutionEngine {
         this.handlers.openComparisonModal?.(input.showModal ?? true)
         return {
           status: 'COMPARISON_VIEW_OPENED',
-          message: 'Mostrando comparador entre ruta de Curiosity y el plan EVA.',
+          message: es ? 'Mostrando comparador entre ruta de Curiosity y el plan EVA.' : 'Showing the illustrative Curiosity and proposed EVA route comparison.',
         }
       }
 
@@ -847,7 +848,7 @@ export class ToolExecutionEngine {
 
       case 'getHabitatStatus': {
         return {
-          colony: 'Base Ares Alpha',
+          colony: es ? 'Base Ares Alpha' : 'Ares Alpha Base (simulation)',
           modules: DEFAULT_COLONY_MODULES.length,
           activeGenerators: 4,
           powerKw: 145.0,
@@ -872,7 +873,7 @@ export class ToolExecutionEngine {
         this.handlers.openSurfaceIntelligenceModal?.(input.open ?? true)
         return {
           status: 'SURFACE_INTELLIGENCE_OPENED',
-          message: 'Catálogo de inteligencia de superficie abierto.',
+          message: es ? 'Catálogo de inteligencia de superficie abierto.' : 'Surface intelligence catalog opened.',
         }
       }
 
@@ -880,7 +881,7 @@ export class ToolExecutionEngine {
         this.handlers.openGuidedTour?.(input.open ?? true)
         return {
           status: 'GUIDED_TOUR_DISPATCHED',
-          message: 'Guía interactiva de ARES iniciada.',
+          message: es ? 'Guía interactiva de ARES iniciada.' : 'ARES interactive guide opened.',
         }
       }
 
@@ -888,7 +889,7 @@ export class ToolExecutionEngine {
         this.handlers.triggerEdlDescent?.()
         return {
           status: 'EDL_DESCENT_DISPATCHED',
-          message: 'Secuencia de descenso orbital EDL iniciada.',
+          message: es ? 'Secuencia de descenso orbital EDL iniciada.' : 'Educational EDL camera sequence started; not flight telemetry.',
         }
       }
 
@@ -896,7 +897,7 @@ export class ToolExecutionEngine {
         this.handlers.triggerOrbitAscent?.()
         return {
           status: 'ORBIT_ASCENT_DISPATCHED',
-          message: 'Ascendiendo a órbita espacial alta de Marte.',
+          message: es ? 'Ascendiendo a órbita espacial alta de Marte.' : 'Moving the camera to a high Mars orbit view.',
         }
       }
 
@@ -904,7 +905,7 @@ export class ToolExecutionEngine {
         this.handlers.focusBaseLZ1?.()
         return {
           status: 'BASE_LZ1_FOCUSED',
-          message: 'Enfocando Sitio Candidato Principal LZ-1 Base Bradbury.',
+          message: es ? 'Enfocando Sitio Candidato Principal LZ-1 Base Bradbury.' : 'Focusing on the conceptual LZ-1 Bradbury base.',
         }
       }
 
@@ -912,7 +913,7 @@ export class ToolExecutionEngine {
         this.handlers.triggerPanoramaColony?.()
         return {
           status: 'PANORAMA_DISPATCHED',
-          message: 'Iniciando recorrido panorámico 360 de la Base Alfa.',
+          message: es ? 'Iniciando recorrido panorámico 360 de la Base Alfa.' : 'Starting the conceptual Alpha Base panorama.',
         }
       }
 
@@ -920,7 +921,7 @@ export class ToolExecutionEngine {
         this.handlers.setCleanViewMode?.(input.active ?? true)
         return {
           status: 'CLEAN_VIEW_DISPATCHED',
-          message: 'Modo de pantalla limpia activado. Presiona Esc para restaurar.',
+          message: es ? 'Modo de pantalla limpia activado. Presiona Esc para restaurar.' : 'Clean display enabled. Press Esc to restore the controls.',
         }
       }
 
@@ -929,7 +930,7 @@ export class ToolExecutionEngine {
         return {
           status: 'ROUTE_VIEW_MODE_CHANGED',
           mode: input.mode ?? 'toggle',
-          message: `Visualización de rutas alternada.`,
+          message: es ? 'Visualización de rutas alternada.' : 'Route display mode changed.',
         }
       }
 
@@ -937,7 +938,7 @@ export class ToolExecutionEngine {
         this.handlers.setTacticalDockCollapsed?.(input.collapsed !== undefined ? input.collapsed : 'toggle')
         return {
           status: 'DOCK_COLLAPSE_CHANGED',
-          message: 'Consola de control táctico actualizada.',
+          message: es ? 'Consola de control táctico actualizada.' : 'Tactical control console updated.',
         }
       }
 
@@ -946,7 +947,7 @@ export class ToolExecutionEngine {
         return {
           status: 'DOCK_TAB_CHANGED',
           tab: input.tab,
-          message: `Pestaña cambiada a ${input.tab === 'layers' ? 'Capas Científicas' : input.tab === 'camera' ? 'Cámara' : 'Base Alfa'}.`,
+          message: es ? `Pestaña cambiada a ${input.tab === 'layers' ? 'Capas Científicas' : input.tab === 'camera' ? 'Cámara' : 'Base Alfa'}.` : `Tab changed to ${input.tab === 'layers' ? 'Scientific Layers' : input.tab === 'camera' ? 'Camera' : 'Alpha Base'}.`,
         }
       }
 
@@ -954,7 +955,7 @@ export class ToolExecutionEngine {
         this.handlers.openDataCenterModal?.(input.open ?? true)
         return {
           status: 'DATA_CENTER_OPENED',
-          message: 'Abriendo catálogo centralizado de datos científicos NASA.',
+          message: es ? 'Abriendo catálogo centralizado de datos científicos NASA.' : 'Opening the NASA science dataset catalog.',
         }
       }
 
@@ -989,7 +990,7 @@ export class ToolExecutionEngine {
           return {
             instrument: 'MRO CTX (Context Camera)',
             resolution: '5 - 6 m/px',
-            family: 'Óptica regional en escala de grises',
+            family: es ? 'Óptica regional en escala de grises' : 'Regional grayscale orbital imaging',
             is_numeric_dem: false,
             provenance: 'OBSERVED',
           }
@@ -998,8 +999,8 @@ export class ToolExecutionEngine {
           return {
             instrument: 'MGS MOLA (Mars Orbiter Laser Altimeter)',
             resolution: '463 m/px global',
-            family: 'Altimetría láser global / Hillshade',
-            is_numeric_dem: true,
+            family: es ? 'Imagen de relieve sombreado derivada de altimetría' : 'Color-shaded relief derived from global laser altimetry',
+            is_numeric_dem: false,
             provenance: 'OBSERVED',
           }
         }
@@ -1007,7 +1008,7 @@ export class ToolExecutionEngine {
           return {
             instrument: 'Odyssey THEMIS (Thermal Emission Imaging System)',
             resolution: '100 m/px IR',
-            family: 'Infrarrojo térmico diurno/nocturno',
+            family: es ? 'Infrarrojo térmico diurno/nocturno' : 'Day/night thermal infrared imaging',
             is_numeric_dem: false,
             provenance: 'OBSERVED',
           }
@@ -1046,7 +1047,7 @@ export class ToolExecutionEngine {
       }
 
       default:
-        throw new Error(`Acción sin despachador: ${name}`)
+        throw new Error(es ? `Acción sin despachador: ${name}` : `Unsupported tool action: ${name}`)
     }
   }
 }
