@@ -1,0 +1,219 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Martian Navigation and Science Tools",
+    "version": "1.0.0",
+    "description": "Herramientas geoespaciales y de validación científica en Marte para Amazon Bedrock Agents en misiones EVA (NASA Space Apps 2026)."
+  },
+  "paths": {
+    "/calculate_mars_distance": {
+      "post": {
+        "summary": "Calcula la distancia de gran círculo en Marte usando radio medio marciano (3,389.5 km)",
+        "description": "Calcula la distancia geodésica esférica precisa entre dos pares de coordenadas planetocéntricas en Marte.",
+        "operationId": "calculateMarsDistance",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lat1": {
+                    "type": "number",
+                    "description": "Latitud planetocéntrica del origen en grados decimales (-90 a 90)"
+                  },
+                  "lon1": {
+                    "type": "number",
+                    "description": "Longitud Este del origen en grados decimales (-180 a 180 o 0 a 360)"
+                  },
+                  "lat2": {
+                    "type": "number",
+                    "description": "Latitud planetocéntrica del destino en grados decimales (-90 a 90)"
+                  },
+                  "lon2": {
+                    "type": "number",
+                    "description": "Longitud Este del destino en grados decimales (-180 a 180 o 0 a 360)"
+                  }
+                },
+                "required": ["lat1", "lon1", "lat2", "lon2"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cálculo de distancia geodésica marciana",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "distance_km": { "type": "number" },
+                    "distance_meters": { "type": "number" },
+                    "mars_radius_used_km": { "type": "number" },
+                    "estimated_walk_duration_hours": { "type": "number" },
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lookup_mission_dataset": {
+      "post": {
+        "summary": "Consulta especificaciones verificadas de conjuntos de datos de misiones NASA para Marte",
+        "description": "Devuelve metadatos de proveniencia, resolución, naturaleza de datos y limitaciones de un sensor orbital o de superficie.",
+        "operationId": "lookupMissionDataset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instrument_or_mission": {
+                    "type": "string",
+                    "description": "Nombre o acrónimo del instrumento/misión (ej. CTX, MOLA, THEMIS, HIRISE, CRISM, PERSEVERANCE_MASTCAMZ, CURIOSITY)"
+                  }
+                },
+                "required": ["instrument_or_mission"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Metadatos y proveniencia del conjunto de datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "instrument": { "type": "string" },
+                    "mission": { "type": "string" },
+                    "resolution": { "type": "string" },
+                    "data_family": { "type": "string" },
+                    "is_numeric_dem": { "type": "boolean" },
+                    "limitations": { "type": "string" },
+                    "official_source_url": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get_science_targets": {
+      "post": {
+        "summary": "Obtiene puntos de interés científico comprobados en Marte (Jezero o Gale/Mount Sharp)",
+        "description": "Retorna paradas geológicas documentadas con justificación de ciencia para la planificación de EVA.",
+        "operationId": "getScienceTargets",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "region": {
+                    "type": "string",
+                    "description": "Región de exploración: 'JEZERO' o 'GALE_MOUNT_SHARP'",
+                    "enum": ["JEZERO", "GALE_MOUNT_SHARP"]
+                  }
+                },
+                "required": ["region"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista de objetivos científicos comprobados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "region": { "type": "string" },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "lat": { "type": "number" },
+                          "lon": { "type": "number" },
+                          "science_significance": { "type": "string" },
+                          "rover_mission": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evaluate_eva_feasibility": {
+      "post": {
+        "summary": "Evalúa la viabilidad y seguridad de una caminata marciana según límites fisiológicos y de terreno",
+        "description": "Aplica reglas de walkback limit, pendientes críticas y categoriza la incertidumbre de datos.",
+        "operationId": "evaluateEvaFeasibility",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "total_distance_km": {
+                    "type": "number",
+                    "description": "Distancia total estimada de la caminata en km"
+                  },
+                  "eva_mode": {
+                    "type": "string",
+                    "description": "Modo de movilidad: 'FOOT' (a pie sin vehículo) o 'ROVER' (asistido por rover)",
+                    "enum": ["FOOT", "ROVER"]
+                  },
+                  "estimated_slope_deg": {
+                    "type": "number",
+                    "description": "Pendiente máxima estimada en grados (opcional)"
+                  },
+                  "has_meter_scale_dem": {
+                    "type": "boolean",
+                    "description": "Indica si se cuenta con un DEM de alta resolución (sub-métrica o 1-2 m) en el trayecto"
+                  }
+                },
+                "required": ["total_distance_km", "eva_mode"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dictamen de viabilidad de la EVA",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "feasibility": { "type": "string" },
+                    "walkback_status": { "type": "string" },
+                    "slope_assessment": { "type": "string" },
+                    "unassessed_hazards_warning": { "type": "string" },
+                    "consumables_margin_percent": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

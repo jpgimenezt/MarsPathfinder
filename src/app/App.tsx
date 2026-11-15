@@ -1,10 +1,12 @@
 import { lazy, Suspense, useCallback, useReducer, useState } from 'react'
 import { MapView, type LayerState, type MapMode, type MapScope } from '../components/MapView'
 import { GlobeBoundary } from '../components/GlobeBoundary'
+import { AresAgentChat } from '../components/AresAgentChat'
 import { sources, type LayerId } from '../data/sourceManifest'
 import { insideRoi } from '../features/map/marsProjection'
 import { initialRoutePlan, routeLegs, routePlanReducer, STOP_ORDER, type StopId } from '../features/route/routePlan'
 import type { MarsPoint } from '../features/route/marsDistance'
+import '../styles/agentChat.css'
 
 type Panel = 'route' | 'layers' | 'science'
 const MarsGlobe = lazy(() => import('../components/MarsGlobe').then(module => ({ default: module.MarsGlobe })))
@@ -30,6 +32,7 @@ export function App() {
   const [mode, setMode] = useState<MapMode>({ type: 'explore' })
   const [scope, setScope] = useState<MapScope>('jezero')
   const [panel, setPanel] = useState<Panel | null>('route')
+  const [isAgentOpen, setIsAgentOpen] = useState(false)
   const source = sources.find(item => item.id === selected)!
   const legs = routeLegs(plan.stops)
   const count = STOP_ORDER.filter(id => plan.stops[id]).length
@@ -60,8 +63,18 @@ export function App() {
         <div className="brand"><span className="brand-mark" aria-hidden="true">⌾</span>
           <div><span className="eyebrow">ATLAS DE EXPLORACIÓN MARCIANA</span><h1>Ares<span>Route</span></h1></div>
         </div>
-        <div className="header-right"><span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
-          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span></div>
+        <div className="header-right">
+          <button
+            type="button"
+            className="hud-trigger-btn"
+            onClick={() => setIsAgentOpen(true)}
+            title="Abrir Copiloto Táctico ARES-AI (AWS Serverless Bedrock)"
+          >
+            <span className="hud-trigger-icon" aria-hidden="true">🤖</span> ARES-AI COPILOT
+          </button>
+          <span className="header-location"><span className="status-dot" /> {screen === 'globe' ? 'MARTE · GLOBO 3D' : scope === 'global' ? 'MARTE · VISTA GLOBAL' : 'JEZERO · MARTE'}</span>
+          <span className="header-disclaimer">Prototipo educativo · No apto para uso operacional</span>
+        </div>
       </header>
 
       {screen === 'globe' ? <main className="globe-main">
@@ -79,6 +92,15 @@ export function App() {
             {panelButton('route', 'Ruta')}
             {panelButton('layers', 'Capas')}
             {panelButton('science', 'Ciencia y riesgos')}
+            <button
+              type="button"
+              className="tab"
+              onClick={() => setIsAgentOpen(true)}
+              style={{ color: '#00f0ff' }}
+              title="Copiloto Táctico IA (Amazon Bedrock)"
+            >
+              🤖 Copiloto IA
+            </button>
           </nav>
           <button type="button" className="scope-toggle" onClick={() => {
             setScope(current => current === 'jezero' ? 'global' : 'jezero')
@@ -180,6 +202,13 @@ export function App() {
           'Fondo de respaldo: una tesela CTX real limitada al sector. Fuera de ella: sin datos. Créditos: NASA/JPL-Caltech/USGS · MRO CTX; NASA/JPL-Caltech · MGS MOLA; NASA/JPL-Caltech/ASU · Mars Odyssey THEMIS · Mars Trek.'}</span>
         <strong>Prototipo independiente · No apto para uso operacional.</strong>
       </footer>
+
+      <AresAgentChat
+        isOpen={isAgentOpen}
+        onClose={() => setIsAgentOpen(false)}
+        currentStops={plan.stops}
+        totalDistanceMeters={legs.total}
+      />
     </div>
   )
 }
