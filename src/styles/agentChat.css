@@ -274,7 +274,29 @@
   cursor: pointer;
   pointer-events: auto;
   overflow: visible;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease, right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Evitar colisión espacial con el drawer inspector derecho */
+body.has-right-drawer .ares-fab-trigger {
+  right: 392px;
+}
+
+@media (max-width: 900px) {
+  body.has-right-drawer .ares-fab-trigger {
+    right: 344px;
+  }
+}
+
+@media (max-width: 768px) {
+  body.has-right-drawer .ares-fab-trigger {
+    display: none !important;
+  }
+}
+
+/* Ocultar en modo pantalla limpia */
+body.is-clean-view .ares-fab-trigger {
+  display: none !important;
 }
 
 .ares-fab-trigger:hover {
