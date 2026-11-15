@@ -83,7 +83,7 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
 
   constructor(initialConfig?: Partial<VoiceConfig>) {
     this.config = {
-      voiceId: initialConfig?.voiceId || 'tiffany', // Voz poliglota por defecto
+      voiceId: initialConfig?.voiceId || 'carlos', // Voz natural en español por defecto
       language: initialConfig?.language || 'es', // Español por defecto
       endpointUrl:
         initialConfig?.endpointUrl ||
@@ -109,7 +109,9 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     try {
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
       if (!this.playbackCtx) {
-        this.playbackCtx = new AudioCtxClass({ sampleRate: 24000 })
+        // Inicializar AudioContext a la frecuencia nativa del hardware (p. ej. 48kHz o 44.1kHz en macOS)
+        // Web Audio resampleará limpiamente el buffer de 24kHz sin desfasar el reloj ni acelerar el audio (cero efecto helio)
+        this.playbackCtx = new AudioCtxClass()
         this.analyserAssistant = this.playbackCtx.createAnalyser()
         this.analyserAssistant.fftSize = 64
         this.analyserAssistant.connect(this.playbackCtx.destination)
@@ -414,7 +416,9 @@ export class AmazonNovaSonicProvider implements VoiceProvider {
     try {
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext
       if (!this.playbackCtx) {
-        this.playbackCtx = new AudioCtxClass({ sampleRate: 24000 })
+        // Inicializar AudioContext a la frecuencia nativa del hardware (p. ej. 48kHz o 44.1kHz en macOS)
+        // Web Audio resampleará limpiamente el buffer de 24kHz sin desfasar el reloj ni acelerar el audio (cero efecto helio)
+        this.playbackCtx = new AudioCtxClass()
         this.analyserAssistant = this.playbackCtx.createAnalyser()
         this.analyserAssistant.fftSize = 64
         this.analyserAssistant.connect(this.playbackCtx.destination)

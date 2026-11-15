@@ -47,6 +47,21 @@ export class BedrockNovaSonicSession {
     })
   }
 
+  public resolveVoiceForLanguage(voiceId: string, language: string): string {
+    const langLower = (language || 'es').toLowerCase()
+    if (langLower.startsWith('es')) {
+      if (voiceId === 'tiffany') return 'lupe'
+      if (voiceId === 'matthew') return 'carlos'
+      if (voiceId === 'carlos' || voiceId === 'lupe') return voiceId
+      return 'carlos'
+    } else {
+      if (voiceId === 'carlos') return 'matthew'
+      if (voiceId === 'lupe') return 'tiffany'
+      if (voiceId === 'matthew' || voiceId === 'tiffany') return voiceId
+      return 'matthew'
+    }
+  }
+
   /**
    * Inicia la sesión de streaming bidireccional con Bedrock
    */
@@ -95,7 +110,7 @@ export class BedrockNovaSonicSession {
                     sampleRateHertz: GATEWAY_CONFIG.sampleRateOutput,
                     sampleSizeBits: 16,
                     channelCount: 1,
-                    voiceId: self.voiceId,
+                    voiceId: self.resolveVoiceForLanguage(self.voiceId, language),
                   },
                   toolConfiguration: {
                     tools: BACKEND_BEDROCK_TOOLS,

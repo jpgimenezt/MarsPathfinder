@@ -145,8 +145,8 @@ export function AresMissionCommsModal({
   const [uiLanguage, setUiLanguage] = useState<SupportedLanguage>('es')
   const [languageSelection, setLanguageSelection] = useState<LanguageSelection>('es')
 
-  // 3. Voz políglota para conversación continua bilingüe sin reinicialización (Sección 1)
-  const [selectedVoice, setSelectedVoice] = useState<'carlos' | 'lupe' | 'matthew' | 'tiffany'>('tiffany')
+  // 3. Voces naturales de Amazon Nova 2.5 Sonic (carlos para español, matthew para inglés)
+  const [selectedVoice, setSelectedVoice] = useState<'carlos' | 'lupe' | 'matthew' | 'tiffany'>('carlos')
   const [isWakeWordActive, setIsWakeWordActive] = useState<boolean>(true)
   const [interactionMode, setInteractionMode] = useState<InteractionMode>('HANDS_FREE')
   const [isMuted, setIsMuted] = useState(false)
@@ -268,8 +268,10 @@ export function AresMissionCommsModal({
         setActiveLanguage(requestedLang)
         setLanguageSelection(requestedLang)
 
-        // Informar a Nova Sonic sin destruir la sesión persistente
-        providerRef.current?.updateConfig({ language: requestedLang })
+        const nextVoice = requestedLang === 'en' ? 'matthew' : 'carlos'
+        setSelectedVoice(nextVoice)
+        // Informar a Nova Sonic con la voz natural correspondiente al idioma
+        providerRef.current?.updateConfig({ language: requestedLang, voiceId: nextVoice })
 
         const switchMsg = requestedLang === 'en'
           ? 'Switched to English. I will continue answering in English for all upcoming mission operations.'
@@ -632,11 +634,13 @@ export function AresMissionCommsModal({
   // ==========================================
   const handleToggleDemoMode = () => {
     const nextLang: SupportedLanguage = responseLanguage === 'en' ? 'es' : 'en'
+    const nextVoice = nextLang === 'en' ? 'matthew' : 'carlos'
     setResponseLanguage(nextLang)
     setUiLanguage(nextLang)
     setActiveLanguage(nextLang)
     setLanguageSelection(nextLang)
-    providerRef.current?.updateConfig({ language: nextLang })
+    setSelectedVoice(nextVoice)
+    providerRef.current?.updateConfig({ language: nextLang, voiceId: nextVoice })
 
     const msg =
       nextLang === 'en'
@@ -831,10 +835,12 @@ export function AresMissionCommsModal({
                     const next = e.target.value as LanguageSelection
                     setLanguageSelection(next)
                     if (next === 'en' || next === 'es') {
+                      const nextVoice = next === 'es' ? 'carlos' : 'matthew'
                       setResponseLanguage(next)
                       setUiLanguage(next)
                       setActiveLanguage(next)
-                      providerRef.current?.updateConfig({ language: next })
+                      setSelectedVoice(nextVoice)
+                      providerRef.current?.updateConfig({ language: next, voiceId: nextVoice })
                     }
                   }}
                   title="Selector de idioma de respuesta"
@@ -845,7 +851,7 @@ export function AresMissionCommsModal({
                 </select>
               </div>
 
-              {/* Selector de Voz Políglota */}
+              {/* Selector de Voces Naturales de Amazon Nova 2.5 Sonic */}
               <div className="ares-comms-setting-item">
                 <select
                   className="ares-comms-select"
@@ -855,12 +861,12 @@ export function AresMissionCommsModal({
                     setSelectedVoice(next)
                     providerRef.current?.updateConfig({ voiceId: next })
                   }}
-                  title="Selector de voz de sintetizador"
+                  title="Voz natural de Amazon Nova Sonic"
                 >
-                  <option value="tiffany">Tiffany (ES/EN)</option>
-                  <option value="matthew">Matthew (EN/ES)</option>
-                  <option value="carlos">Carlos (ES)</option>
-                  <option value="lupe">Lupe (ES)</option>
+                  <option value="carlos">Carlos (ES · Natural Masculina)</option>
+                  <option value="lupe">Lupe (ES · Natural Femenina)</option>
+                  <option value="matthew">Matthew (EN · Natural Masculina)</option>
+                  <option value="tiffany">Tiffany (EN · Natural Femenina)</option>
                 </select>
               </div>
 

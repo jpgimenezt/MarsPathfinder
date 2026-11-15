@@ -293,16 +293,71 @@ export function speakLocalSpeech(
     }
 
     const utterance = new SpeechSynthesisUtterance(cleanText)
-    utterance.lang = language === 'en' ? 'en-US' : 'es-ES'
-    utterance.rate = 1.05
-    utterance.pitch = 0.98
+    const isSpanish = language === 'es'
+    utterance.lang = isSpanish ? 'es-US' : 'en-US'
+    utterance.rate = 0.98 // Cadencia táctica natural y comprensible
+    utterance.pitch = 0.92 // Tono sobrio, cálido y resonante de misión (elimina cualquier efecto helio o chillón)
 
-    // Intentar seleccionar una voz natural disponible
+    // Selección inteligente de voces naturales y profesionales
     const voices = window.speechSynthesis.getVoices?.() || []
-    const targetLangPrefix = language === 'en' ? 'en' : 'es'
-    const matchedVoice = voices.find(v => v.lang.toLowerCase().startsWith(targetLangPrefix))
-    if (matchedVoice) {
-      utterance.voice = matchedVoice
+    const langPrefix = isSpanish ? 'es' : 'en'
+
+    const scoreVoice = (v: SpeechSynthesisVoice): number => {
+      const name = v.name.toLowerCase()
+      const lang = v.lang.toLowerCase()
+      let score = 0
+
+      // Descartar absolutamente voces de novedad, caricaturescas o de tono helio/infantil
+      if (
+        name.includes('junior') || name.includes('bad news') || name.includes('albert') ||
+        name.includes('fred') || name.includes('zarvox') || name.includes('trinoids') ||
+        name.includes('whisper') || name.includes('princess') || name.includes('hysterical') ||
+        name.includes('bells') || name.includes('boing') || name.includes('bubbles') ||
+        name.includes('cellos') || name.includes('deranged') || name.includes('good news') ||
+        name.includes('organ') || name.includes('ralph') || name.includes('jester')
+      ) {
+        return -1000
+      }
+
+      // Coincidencia estricta de idioma
+      if (lang.startsWith(langPrefix)) {
+        score += 100
+      } else {
+        return -500 // Evitar hablar español con voz exclusivamente inglesa o viceversa
+      }
+
+      // Regiones preferidas
+      if (isSpanish) {
+        if (lang.includes('es-us') || lang.includes('es-419') || lang.includes('es-mx')) score += 40
+        if (lang.includes('es-es') || lang.includes('es-ar')) score += 30
+      } else {
+        if (lang.includes('en-us')) score += 40
+        if (lang.includes('en-gb')) score += 30
+      }
+
+      // Calidad de síntesis (voces neuronales y premium)
+      if (name.includes('natural') || name.includes('neural') || name.includes('online')) score += 50
+      if (name.includes('premium') || name.includes('enhanced') || name.includes('google')) score += 40
+
+      // Voces reconocidas de alta fidelidad para español
+      if (isSpanish) {
+        if (name.includes('carlos') || name.includes('jorge') || name.includes('diego') || name.includes('alvaro')) score += 35
+        if (name.includes('lupe') || name.includes('monica') || name.includes('paulina') || name.includes('dalia') || name.includes('soledad')) score += 30
+      } else {
+        if (name.includes('matthew') || name.includes('guy') || name.includes('ryan') || name.includes('daniel')) score += 35
+        if (name.includes('tiffany') || name.includes('jenny') || name.includes('aria') || name.includes('samantha')) score += 30
+      }
+
+      return score
+    }
+
+    const eligible = voices
+      .map(v => ({ voice: v, score: scoreVoice(v) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+
+    if (eligible.length > 0) {
+      utterance.voice = eligible[0].voice
     }
 
     utterance.onstart = () => callbacks?.onStart?.()
