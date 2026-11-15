@@ -4,6 +4,7 @@ import { Vector3 } from 'three'
 // SphereGeometry usa u=0 en x=-1 (-180°), u=0.5 en x=+1 (0°),
 // u=0.75 en z=-1 (+90°). La textura cubre -180°…+180°.
 export const JEZERO_CRATER: readonly [longitude: number, latitude: number] = [77.69, 18.41]
+export const GALE_CRATER: readonly [longitude: number, latitude: number] = [137.44, -5.37]
 
 export function surfacePoint(longitude: number, latitude: number, radius = 1): Vector3 {
   if (![longitude, latitude, radius].every(Number.isFinite) ||

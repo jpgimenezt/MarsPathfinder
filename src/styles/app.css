@@ -33,6 +33,45 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .status-dot { background: #62dab9; box-shadow: 0 0 10px #62dab988; width: 7px; height: 7px; border-radius: 50%; }
 .header-disclaimer { color: #e6b791; }
 
+.header-nav-modes {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(23, 39, 44, 0.85);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 240, 255, 0.22);
+}
+.nav-mode-btn {
+  background: transparent;
+  color: #becdca;
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 13px;
+  white-space: nowrap;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.nav-mode-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.nav-mode-btn.active {
+  background: #00f0ff;
+  color: #04090e;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+}
+.nav-mode-btn.nav-mode-agent {
+  color: #38bdf8;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+}
+.nav-mode-btn.nav-mode-agent.active {
+  background: #00f0ff;
+  color: #04090e;
+}
+
 .toolbar {
   min-height: 76px; padding: 12px clamp(18px, 3vw, 46px);
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
@@ -82,6 +121,8 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   padding: 10px 14px; border-radius: 9px; font-size: .78rem; font-weight: 700;
 }
 .scope-toggle:hover { background: #386354; }
+.terrain-return { background: #132f38; border-color: #00f0ff; color: #00f0ff; }
+.terrain-return:hover { background: rgba(0, 240, 255, 0.2); }
 .globe-return { background: #43382e; border-color: #c99e71; color: #ffe2b6; }
 
 .globe-main { min-height: 620px; }
