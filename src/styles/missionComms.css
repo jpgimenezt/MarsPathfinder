@@ -137,20 +137,27 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d {
 .ares-comms-panel {
   position: relative;
   pointer-events: auto;
-  width: 360px;
-  max-width: calc(100vw - 32px);
-  height: 520px;
-  max-height: calc(100vh - 100px);
-  background: rgba(9, 14, 20, 0.94);
-  backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(99, 212, 229, 0.4);
+  width: 440px;
+  max-width: calc(100vw - 28px);
+  height: 580px;
+  max-height: calc(100vh - 90px);
+  background: rgba(9, 14, 20, 0.96);
+  backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(99, 212, 229, 0.45);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(99, 212, 229, 0.2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.88), 0 0 28px rgba(99, 212, 229, 0.22);
   overflow: hidden;
   font-family: var(--font-mono);
   animation: comms-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 480px) {
+  .ares-comms-panel {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 40px);
+  }
 }
 
 @keyframes comms-slide-up {
@@ -637,34 +644,43 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
    ========================================================= */
 .ares-comms-controls-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: rgba(17, 27, 37, 0.7);
+  flex-direction: column;
+  padding: 8px 14px;
+  background: rgba(17, 27, 37, 0.75);
   border-bottom: 1px solid rgba(99, 212, 229, 0.2);
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .ares-comms-btn-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
 }
 
 .ares-comms-action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-size: 0.78rem;
+  padding: 6px 12px;
+  min-height: 36px;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s ease;
   border: 1px solid;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.ares-comms-action-btn:focus-visible {
+  outline: 2px solid var(--color-telemetry-cyan);
+  outline-offset: 2px;
 }
 
 .ares-comms-action-btn.primary {
@@ -704,8 +720,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-action-btn.toggle {
   background: transparent;
-  border-color: rgba(130, 145, 158, 0.4);
-  color: var(--color-titanium-grey);
+  border-color: rgba(130, 145, 158, 0.45);
+  color: #cbd5e1;
+}
+.ares-comms-action-btn.toggle:hover {
+  border-color: var(--color-telemetry-cyan);
+  color: var(--color-ice-white);
 }
 .ares-comms-action-btn.toggle.active {
   border-color: var(--color-telemetry-cyan);
@@ -716,55 +736,70 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-setting-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.75rem;
-  color: var(--color-titanium-grey);
+  color: #cbd5e1;
+}
+
+.ares-comms-setting-item.voice-select-item {
+  flex: 1 1 auto;
+  min-width: 170px;
 }
 
 .ares-comms-select {
   background: var(--color-deep-graphite);
-  border: 1px solid rgba(99, 212, 229, 0.3);
+  border: 1px solid rgba(99, 212, 229, 0.35);
   color: var(--color-ice-white);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  min-height: 36px;
+  border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   cursor: pointer;
+  transition: border-color 0.15s ease;
+  max-width: 100%;
+}
+
+.ares-comms-select:focus-visible {
+  outline: 2px solid var(--color-telemetry-cyan);
+  outline-offset: 2px;
+  border-color: var(--color-telemetry-cyan);
 }
 
 .ares-comms-volume-slider {
-  width: 70px;
+  width: 65px;
   accent-color: var(--color-telemetry-cyan);
   cursor: pointer;
+  height: 16px;
 }
 
 /* =========================================================
    CANVAS DE VISUALIZACIÓN DINÁMICA DE AUDIO
    ========================================================= */
 .ares-comms-visualizer-container {
-  padding: 10px 20px;
+  padding: 4px 14px;
   background: rgba(9, 14, 20, 0.9);
   border-bottom: 1px solid rgba(99, 212, 229, 0.15);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .ares-comms-visualizer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
-  color: var(--color-titanium-grey);
+  color: #94a3b8;
 }
 
 .ares-comms-waveform-canvas {
   width: 100%;
-  height: 52px;
+  height: 28px;
   background: rgba(17, 27, 37, 0.5);
   border: 1px solid rgba(99, 212, 229, 0.2);
-  border-radius: 6px;
+  border-radius: 4px;
   display: block;
 }
 
@@ -774,10 +809,30 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 212, 229, 0.45) rgba(9, 14, 20, 0.7);
+}
+
+.ares-comms-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ares-comms-body::-webkit-scrollbar-track {
+  background: rgba(9, 14, 20, 0.7);
+  border-radius: 3px;
+}
+
+.ares-comms-body::-webkit-scrollbar-thumb {
+  background: rgba(99, 212, 229, 0.35);
+  border-radius: 3px;
+}
+
+.ares-comms-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 212, 229, 0.65);
 }
 
 .ares-comms-msg-row {
@@ -820,17 +875,18 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-bubble {
   background: var(--color-deep-graphite);
-  border: 1px solid rgba(99, 212, 229, 0.2);
+  border: 1px solid rgba(99, 212, 229, 0.28);
   border-radius: 8px;
   padding: 10px 14px;
-  color: var(--color-ice-white);
-  font-size: 0.85rem;
-  line-height: 1.45;
+  color: #f1f5f9;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .ares-comms-msg-row.user .ares-comms-bubble {
-  background: rgba(215, 123, 80, 0.1);
-  border-color: rgba(215, 123, 80, 0.35);
+  background: rgba(215, 123, 80, 0.14);
+  border-color: rgba(215, 123, 80, 0.42);
 }
 
 .ares-comms-msg-meta {
@@ -839,8 +895,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 5px;
-  font-size: 0.68rem;
-  color: var(--color-titanium-grey);
+  font-size: 0.72rem;
+  color: #94a3b8;
 }
 
 .ares-comms-msg-sender {

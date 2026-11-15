@@ -89,11 +89,50 @@ export const FocusGeographicTargetSchema = z.object({
 
 export const ToggleScientificLayerSchema = z.object({
   layerId: z.string().describe("Identificador de capa (ej: 'ctx', 'mola', 'themis', 'gale_dem', 'geology')"),
-  enabled: z.boolean().describe('Estado deseado de la capa (true para encender, false para apagar)'),
+  enabled: z.boolean().optional().default(true).describe('Estado deseado de la capa (true para encender, false para apagar)'),
+}).passthrough().transform(data => {
+  const raw = String(data.layerId || '').toLowerCase()
+  let layerId = raw
+  if (raw.includes('ctx_mosaic') || raw.includes('mosaico') || raw.includes('blockadj')) {
+    layerId = 'ctx_mosaic'
+  } else if (raw.includes('ctx')) {
+    layerId = 'ctx'
+  } else if (raw.includes('themis') || raw.includes('termica') || raw.includes('inercia')) {
+    layerId = 'themis'
+  } else if (raw.includes('mola') || raw.includes('elevacion') || raw.includes('relieve') || raw.includes('hipsometrica')) {
+    layerId = 'mola'
+  } else if (raw.includes('crism') || raw.includes('mineral') || raw.includes('espectral')) {
+    layerId = 'crism'
+  } else if (raw.includes('geolog') || raw.includes('usgs') || raw.includes('estratigrafia')) {
+    layerId = 'geology'
+  } else if (raw.includes('rad') || raw.includes('radiacion') || raw.includes('dosimetria')) {
+    layerId = 'radiation'
+  } else if (raw.includes('pendiente') || raw.includes('slope') || raw.includes('locomocion')) {
+    layerId = 'slope'
+  } else if (raw.includes('dem') || raw.includes('gale_dem')) {
+    layerId = 'gale_dem'
+  }
+  return {
+    layerId,
+    enabled: data.enabled ?? true,
+  }
 })
 
 export const SwitchScreenViewSchema = z.object({
-  screen: z.enum(['terrain3d', 'globe', 'map']).describe('Pantalla o modo de visualización a activar'),
+  screen: z.string().optional().describe('Pantalla o modo de visualización a activar'),
+  view: z.string().optional().describe('Alias para la vista deseada'),
+  target: z.string().optional().describe('Objetivo de pantalla'),
+}).passthrough().transform(data => {
+  const raw = String(data.screen || data.view || data.target || 'terrain3d').toLowerCase()
+  let screen: 'terrain3d' | 'globe' | 'map' = 'terrain3d'
+  if (raw.includes('globe') || raw.includes('globo') || raw.includes('orbital') || raw.includes('orbita')) {
+    screen = 'globe'
+  } else if (raw.includes('map') || raw.includes('jezero') || raw.includes('2d') || raw.includes('mapa')) {
+    screen = 'map'
+  } else {
+    screen = 'terrain3d'
+  }
+  return { screen }
 })
 
 export const ExplainSelectedRegionSchema = z.object({
@@ -135,11 +174,41 @@ export const PauseDiscoveryTourSchema = z.object({})
 export const GetHabitatStatusSchema = z.object({})
 
 export const ActivateMissionSimulationSchema = z.object({
-  scenario: z.enum(['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY']).describe('Escenario de simulación a activar'),
+  scenario: z.string().optional().describe('Escenario de simulación a activar'),
+  scenarioType: z.string().optional().describe('Alias de escenario de simulación'),
+  type: z.string().optional().describe('Tipo de simulación'),
+}).passthrough().transform(data => {
+  const raw = String(data.scenario || data.scenarioType || data.type || 'DESCENT_EDL').toUpperCase()
+  let scenario: 'DESCENT_EDL' | 'EVA_TRAVERSE' | 'DUST_STORM_CONTINGENCY' = 'DESCENT_EDL'
+  if (raw.includes('TRAVERSE') || raw.includes('EVA') || raw.includes('CAMINATA') || raw.includes('ROVER') || raw.includes('MARCHA')) {
+    scenario = 'EVA_TRAVERSE'
+  } else if (raw.includes('STORM') || raw.includes('DUST') || raw.includes('SOLAR') || raw.includes('TORMENTA') || raw.includes('POLVO')) {
+    scenario = 'DUST_STORM_CONTINGENCY'
+  } else {
+    scenario = 'DESCENT_EDL'
+  }
+  return {
+    scenario,
+    scenarioType: scenario,
+  }
 })
 
 export const TriggerMissionContingencySchema = z.object({
-  contingencyType: z.enum(['RADIO_LOSS', 'SUIT_LEAK_MINOR', 'BATTERY_LOW', 'SLOPE_HAZARD']).describe('Tipo de contingencia de entrenamiento'),
+  contingencyType: z.string().optional().describe('Tipo de contingencia de entrenamiento'),
+  type: z.string().optional().describe('Alias de contingencia'),
+}).passthrough().transform(data => {
+  const raw = String(data.contingencyType || data.type || 'RADIO_LOSS').toUpperCase()
+  let contingencyType: 'RADIO_LOSS' | 'SUIT_LEAK_MINOR' | 'BATTERY_LOW' | 'SLOPE_HAZARD' = 'RADIO_LOSS'
+  if (raw.includes('LEAK') || raw.includes('TRAJE') || raw.includes('SUIT')) {
+    contingencyType = 'SUIT_LEAK_MINOR'
+  } else if (raw.includes('BATTERY') || raw.includes('BATERIA') || raw.includes('POWER')) {
+    contingencyType = 'BATTERY_LOW'
+  } else if (raw.includes('SLOPE') || raw.includes('PENDIENTE') || raw.includes('HAZARD')) {
+    contingencyType = 'SLOPE_HAZARD'
+  } else {
+    contingencyType = 'RADIO_LOSS'
+  }
+  return { contingencyType }
 })
 
 // Control táctico por voz de botones HUD y Consola
@@ -160,7 +229,20 @@ export const SetCleanViewModeSchema = z.object({
 })
 
 export const SetRouteViewModeSchema = z.object({
-  mode: z.enum(['both', 'eva', 'curiosity', 'toggle']).optional().default('toggle').describe('Modo de visualización de rutas'),
+  mode: z.string().optional().describe('Modo de visualización de rutas'),
+}).passthrough().transform(data => {
+  const raw = String(data.mode || 'toggle').toLowerCase()
+  let mode: 'both' | 'eva' | 'curiosity' | 'toggle' = 'toggle'
+  if (raw.includes('both') || raw.includes('ambas')) {
+    mode = 'both'
+  } else if (raw.includes('curiosity') || raw.includes('msl')) {
+    mode = 'curiosity'
+  } else if (raw.includes('eva') || raw.includes('caminata')) {
+    mode = 'eva'
+  } else {
+    mode = 'toggle'
+  }
+  return { mode }
 })
 
 export const SetTacticalDockCollapsedSchema = z.object({
@@ -169,7 +251,18 @@ export const SetTacticalDockCollapsedSchema = z.object({
 })
 
 export const SetTacticalDockTabSchema = z.object({
-  tab: z.enum(['layers', 'camera', 'colony']).describe('Pestaña de la consola a activar'),
+  tab: z.string().optional().describe('Pestaña de la consola a activar'),
+}).passthrough().transform(data => {
+  const raw = String(data.tab || 'layers').toLowerCase()
+  let tab: 'layers' | 'camera' | 'colony' = 'layers'
+  if (raw.includes('cam') || raw.includes('cámara')) {
+    tab = 'camera'
+  } else if (raw.includes('col') || raw.includes('base') || raw.includes('alfa')) {
+    tab = 'colony'
+  } else {
+    tab = 'layers'
+  }
+  return { tab }
 })
 
 export const OpenDataCenterSchema = z.object({
@@ -300,10 +393,10 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
   activateMissionSimulation: {
     name: 'activateMissionSimulation',
     description: 'Activa un escenario de simulación (descenso EDL, travesía o contingencia atmosférica).',
-    securityLevel: 4,
+    securityLevel: 2,
     schema: ActivateMissionSimulationSchema,
-    requiresConfirmation: true,
-    confirmationPrompt: (args: any) => `¿Activar la simulación de misión para el escenario ${args.scenario}?`,
+    requiresConfirmation: false,
+    confirmationPrompt: (args: any) => `¿Activar la simulación de misión para el escenario ${args?.scenario ?? 'DESCENT_EDL'}?`,
   },
   openSurfaceIntelligence: {
     name: 'openSurfaceIntelligence',
@@ -765,6 +858,9 @@ export class ToolExecutionEngine {
 
       case 'activateMissionSimulation': {
         this.handlers.setCleanViewMode?.(true)
+        if (input.scenario === 'DESCENT_EDL') {
+          this.handlers.triggerEdlDescent?.()
+        }
         return {
           status: 'SIMULATION_ACTIVATED',
           scenario: input.scenario,

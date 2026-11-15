@@ -197,11 +197,180 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
         json: JSON.stringify({
           type: 'object',
           properties: {
+            scenario: {
+              type: 'string',
+              enum: ['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY', 'EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
+              description: 'Escenario de simulación / Simulation scenario',
+            },
             scenarioType: {
               type: 'string',
-              enum: ['EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
-              description: 'Tipo de simulación',
+              enum: ['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY', 'EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
+              description: 'Alias de escenario / Scenario alias',
             },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'switchScreenView',
+      description: 'Cambia entre las pantallas principales de visualización: Gale 3D ("terrain3d"), Globo Orbital ("globe") o Jezero 2D ("map"). / Switches between main view screens.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            screen: {
+              type: 'string',
+              enum: ['terrain3d', 'globe', 'map'],
+              description: 'Identificador de la pantalla de visualización',
+            },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'triggerEDLDescent',
+      description: 'Inicia la maniobra cinematográfica de entrada, descenso y aterrizaje (EDL) hacia la Base LZ-1 Bradbury. / Triggers EDL descent cinematic to Base LZ-1.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {},
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'triggerOrbitAscent',
+      description: 'Asciende la cámara y nave a órbita espacial alta alrededor de Marte. / Triggers orbital ascent view.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {},
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'focusBaseLZ1',
+      description: 'Enfoca la cámara táctica en el sitio candidato LZ-1 Base Bradbury. / Focuses camera on LZ-1 Base Bradbury.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {},
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'triggerPanoramaColony',
+      description: 'Inicia el recorrido panorámico interactivo de 360 grados por la Colonia Base Alfa. / Triggers 360 panorama tour of Base Alfa colony.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {},
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'openDataCenter',
+      description: 'Abre o cierra el catálogo central de datos científicos de NASA (MOLA, CTX, THEMIS, CRISM). / Opens NASA scientific data catalog.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            open: { type: 'boolean', description: 'true para abrir, false para cerrar' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'openSurfaceIntelligence',
+      description: 'Abre el panel de inteligencia de superficie marciana y objetivos geológicos. / Opens Surface Intelligence modal.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            open: { type: 'boolean', description: 'true para abrir, false para cerrar' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'setCleanViewMode',
+      description: 'Activa o desactiva la pantalla completa limpia para observación pura sin paneles. / Toggles clean HUD view mode.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            active: { type: 'boolean', description: 'true para activar pantalla limpia, false para restaurar' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'setRouteViewMode',
+      description: 'Alterna o define el modo de visualización de rutas (ambas, solo eva o solo curiosity). / Sets route overlay visibility.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            mode: { type: 'string', enum: ['both', 'eva', 'curiosity', 'toggle'], description: 'Modo de ruta' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'setTacticalDockCollapsed',
+      description: 'Colapsa o expande la consola táctica de capas y controles izquierda. / Collapses or expands left tactical dock.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            collapsed: { type: 'boolean', description: 'true para colapsar, false para abrir' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'setTacticalDockTab',
+      description: 'Cambia entre las pestañas de la consola táctica (Capas Científicas "layers", Cámara "camera", Base Alfa "colony"). / Sets tactical dock tab.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            tab: { type: 'string', enum: ['layers', 'camera', 'colony'], description: 'Pestaña a activar' },
+          },
+        }),
+      },
+    },
+  },
+  {
+    toolSpec: {
+      name: 'openGuidedTour',
+      description: 'Abre o inicia la guía interactiva paso a paso del sistema ARES. / Opens guided tour.',
+      inputSchema: {
+        json: JSON.stringify({
+          type: 'object',
+          properties: {
+            open: { type: 'boolean', description: 'true para abrir' },
           },
         }),
       },

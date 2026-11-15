@@ -1168,7 +1168,7 @@ export function AresMissionCommsModal({
 
           {/* Barra de Controles de Voz */}
           <div className="ares-comms-controls-bar">
-            <div className="ares-comms-btn-group">
+            <div className="ares-comms-btn-group" role="toolbar" aria-label="Controles principales de voz">
               <button
                 type="button"
                 className={`ares-comms-action-btn primary ${conversationState === 'listening' ? 'active-listening' : ''}`}
@@ -1185,6 +1185,7 @@ export function AresMissionCommsModal({
                     )
                   }
                 }}
+                aria-label={conversationState === 'listening' ? 'A la escucha' : 'Hablar con ARES (escucha activa)'}
                 title="Hablar (Activa escucha manos libres continua)"
               >
                 <MicIcon />
@@ -1195,6 +1196,7 @@ export function AresMissionCommsModal({
                 type="button"
                 className="ares-comms-action-btn stop"
                 onClick={handleInterrupt}
+                aria-label="Interrumpir respuesta (Barge-In)"
                 title="Interrumpir respuesta (Barge-In)"
               >
                 <StopSquareIcon />
@@ -1209,6 +1211,7 @@ export function AresMissionCommsModal({
                   setIsMuted(next)
                   providerRef.current?.mute(next)
                 }}
+                aria-label={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
                 title={isMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
               >
                 {isMuted ? <MicOffIcon /> : <MicIcon />}
@@ -1223,6 +1226,7 @@ export function AresMissionCommsModal({
                   setInteractionMode(nextMode)
                   providerRef.current?.updateConfig({ interactionMode: nextMode })
                 }}
+                aria-label={interactionMode === 'HANDS_FREE' ? 'Modo Manos Libres continuo' : 'Modo Push to talk'}
                 title="Modo Manos Libres continuo"
               >
                 <span>{interactionMode === 'HANDS_FREE' ? 'MANOS LIBRES' : 'PTT'}</span>
@@ -1233,13 +1237,14 @@ export function AresMissionCommsModal({
                 type="button"
                 className={`ares-comms-action-btn toggle ${isWakeWordActive ? 'active wake-active' : ''}`}
                 onClick={() => setIsWakeWordActive(prev => !prev)}
+                aria-label={isWakeWordActive ? 'Wake Word Activo ("Hola ARES" / "Hey ARES")' : 'Wake Word Desactivado'}
                 title={isWakeWordActive ? 'Wake Word Activo ("Hola ARES" / "Hey ARES")' : 'Wake Word Desactivado'}
               >
                 <span>{isWakeWordActive ? '👂 WAKE: ON' : '👂 WAKE: OFF'}</span>
               </button>
             </div>
 
-            <div className="ares-comms-btn-group">
+            <div className="ares-comms-btn-group" role="toolbar" aria-label="Configuración de voz y síntesis">
               {/* Selector de Idioma */}
               <div className="ares-comms-setting-item">
                 <select
@@ -1257,6 +1262,7 @@ export function AresMissionCommsModal({
                       providerRef.current?.updateConfig({ language: next, voiceId: nextVoice })
                     }
                   }}
+                  aria-label="Selector de idioma de respuesta"
                   title="Selector de idioma de respuesta"
                 >
                   <option value="es">ES (Español)</option>
@@ -1266,7 +1272,7 @@ export function AresMissionCommsModal({
               </div>
 
               {/* Selector de Voces Naturales de Amazon Nova 2.5 Sonic */}
-              <div className="ares-comms-setting-item">
+              <div className="ares-comms-setting-item voice-select-item">
                 <select
                   className="ares-comms-select"
                   value={selectedVoice}
@@ -1275,6 +1281,8 @@ export function AresMissionCommsModal({
                     setSelectedVoice(next)
                     providerRef.current?.updateConfig({ voiceId: next })
                   }}
+                  style={{ width: '100%' }}
+                  aria-label="Voz natural de Amazon Nova Sonic"
                   title="Voz natural de Amazon Nova Sonic"
                 >
                   <option value="carlos">Carlos (ES · Natural Masculina)</option>
@@ -1298,6 +1306,7 @@ export function AresMissionCommsModal({
                     providerRef.current?.setVolume(v)
                   }}
                   className="ares-comms-volume-slider"
+                  aria-label={`Control de volumen: ${Math.round(volume * 100)}%`}
                   title={`Volumen: ${Math.round(volume * 100)}%`}
                 />
               </div>
@@ -1305,8 +1314,8 @@ export function AresMissionCommsModal({
           </div>
 
           {/* Visualizador de Onda */}
-          <div className="ares-comms-visualizer-container" style={{ padding: '4px 12px' }}>
-            <canvas ref={canvasRef} width={340} height={32} className="ares-comms-waveform-canvas" />
+          <div className="ares-comms-visualizer-container">
+            <canvas ref={canvasRef} width={420} height={28} className="ares-comms-waveform-canvas" />
           </div>
 
           {/* Historial de Conversación */}
@@ -1382,7 +1391,7 @@ export function AresMissionCommsModal({
             }}
           >
             <div className="ares-comms-input-wrapper">
-              <span className="ares-comms-prefix">❯</span>
+              <span className="ares-comms-prefix" aria-hidden="true">❯</span>
               <input
                 ref={textInputRef}
                 id={inputId}
@@ -1391,12 +1400,14 @@ export function AresMissionCommsModal({
                 placeholder={t.inputPlaceholder}
                 value={inputMessage}
                 onChange={e => setInputMessage(e.target.value)}
+                aria-label="Escribe tu instrucción de voz o texto para ARES"
               />
             </div>
             <button
               type="submit"
               className="ares-comms-send-btn"
               disabled={!inputMessage.trim()}
+              aria-label="Transmitir orden a ARES"
               title="Transmitir orden a ARES"
             >
               <SendIcon />

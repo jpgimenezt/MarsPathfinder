@@ -129,4 +129,45 @@ describe('ARES MISSION COMMS - ToolExecutionEngine', () => {
     expect(result.output.mars_radius_km).toBe(3389.5)
     expect(result.output.distance_km).toBeCloseTo(9.959, 1)
   })
+
+  it('ejecuta activateMissionSimulation tolerando parámetros vacíos o aliases de Bedrock', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+
+    // Caso 1: Sin argumentos {}
+    const r1 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: {},
+    })
+    expect(r1.success).toBe(true)
+    expect(r1.output.scenario).toBe('DESCENT_EDL')
+    expect(r1.output.provenance).toBe('SIMULATED')
+
+    // Caso 2: Con scenarioType de Nova Sonic
+    const r2 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: { scenarioType: 'EDL_DESCENT' },
+    })
+    expect(r2.success).toBe(true)
+    expect(r2.output.scenario).toBe('DESCENT_EDL')
+
+    // Caso 3: Contingencia o tormenta
+    const r3 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: { scenarioType: 'DUST_STORM' },
+    })
+    expect(r3.success).toBe(true)
+    expect(r3.output.scenario).toBe('DUST_STORM_CONTINGENCY')
+  })
+
+  it('normaliza nombres de capas en toggleScientificLayer', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const r = await engine.executeTool({
+      tool: 'toggleScientificLayer',
+      input: { layerId: 'THEMIS Inercia Térmica' },
+    })
+    expect(r.success).toBe(true)
+    expect(r.output.layerId).toBe('themis')
+    expect(r.output.enabled).toBe(true)
+    expect(mockHandlers.toggleLayer).toHaveBeenCalledWith('themis', true)
+  })
 })
