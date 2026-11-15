@@ -413,6 +413,7 @@ export function AresMissionCommsModal({
 
         const req: ToolExecutionRequest = {
           tool: resolved.tool,
+          language: responseLanguage,
           input: resolved.params || {},
         }
         const res = await toolEngineRef.current.executeTool(req)
@@ -750,7 +751,7 @@ export function AresMissionCommsModal({
         setConversationState('executing_tool')
         setCurrentExecutionInfo({ action: tool, description: `${responseLanguageRef.current === 'en' ? 'Executing' : 'Ejecutando'} ${tool}...` })
 
-        const req: ToolExecutionRequest = { tool, input, toolUseId }
+        const req: ToolExecutionRequest = { tool, input, toolUseId, language: responseLanguageRef.current }
         const res = await toolEngineRef.current.executeTool(req)
 
         const locale = responseLanguageRef.current
