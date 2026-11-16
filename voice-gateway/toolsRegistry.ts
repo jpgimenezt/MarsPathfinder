@@ -199,11 +199,13 @@ export const BACKEND_BEDROCK_TOOLS: BedrockToolSpec[] = [
           properties: {
             scenario: {
               type: 'string',
-              description: 'Escenario de simulación opcional: DESCENT_EDL, EVA_TRAVERSE o DUST_STORM_CONTINGENCY',
+              enum: ['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY', 'EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
+              description: 'Escenario de simulación / Simulation scenario',
             },
             scenarioType: {
               type: 'string',
-              description: 'Alias alternativo de escenario de simulación',
+              enum: ['DESCENT_EDL', 'EVA_TRAVERSE', 'DUST_STORM_CONTINGENCY', 'EDL_DESCENT', 'SOLAR_STORM', 'TRAVERSE_EXTREME', 'DUST_STORM'],
+              description: 'Alias de escenario / Scenario alias',
             },
           },
         }),

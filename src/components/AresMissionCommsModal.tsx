@@ -241,17 +241,6 @@ export function AresMissionCommsModal({
     }
   }, [isOpen])
 
-  // Accesibilidad de teclado: Tecla Escape para minimizar el panel modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && presentationMode === 'compact') {
-        setPresentationMode('orb')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [presentationMode])
-
   // Desvanecer subtítulo flotante tras periodo de silencio
   const showSubtitle = useCallback((text: string, role: 'user' | 'assistant' = 'assistant', durationMs = 5000) => {
     if (!text || !text.trim()) return
@@ -1253,7 +1242,7 @@ export function AresMissionCommsModal({
 
               <button
                 type="button"
-                className="ares-comms-action-btn stop icon-only"
+                className="ares-comms-action-btn stop"
                 onClick={handleInterrupt}
                 aria-label={ui('Interrupt response (barge-in)', 'Interrumpir respuesta (Barge-In)')}
                 title={ui('Interrupt response (barge-in)', 'Interrumpir respuesta (Barge-In)')}
@@ -1264,7 +1253,7 @@ export function AresMissionCommsModal({
               {/* Silenciar micrófono */}
               <button
                 type="button"
-                className={`ares-comms-action-btn toggle icon-only ${isMuted ? 'active' : ''}`}
+                className={`ares-comms-action-btn toggle ${isMuted ? 'active' : ''}`}
                 onClick={() => {
                   const next = !isMuted
                   setIsMuted(next)
@@ -1303,9 +1292,9 @@ export function AresMissionCommsModal({
               </button>
             </div>
 
-            <div className="ares-comms-btn-group ares-comms-settings-group" role="toolbar" aria-label={ui('Voice and synthesis settings', 'Configuración de voz y síntesis')}>
+            <div className="ares-comms-btn-group" role="toolbar" aria-label={ui('Voice and synthesis settings', 'Configuración de voz y síntesis')}>
               {/* Selector de Idioma */}
-              <div className="ares-comms-setting-item lang-select-item">
+              <div className="ares-comms-setting-item">
                 <select
                   className="ares-comms-select"
                   value={languageSelection}
@@ -1325,7 +1314,7 @@ export function AresMissionCommsModal({
                   aria-label={ui('Response language', 'Selector de idioma de respuesta')}
                   title={ui('Response language', 'Selector de idioma de respuesta')}
                 >
-                  <option value="es">ES (Español)</option>
+                  <option value="es">ES (Español / Spanish)</option>
                   <option value="en">EN (English)</option>
                   <option value="auto">AUTO</option>
                 </select>
@@ -1352,7 +1341,7 @@ export function AresMissionCommsModal({
                 </select>
               </div>
 
-              <div className="ares-comms-setting-item volume-item">
+              <div className="ares-comms-setting-item">
                 <VolumeIcon />
                 <input
                   type="range"

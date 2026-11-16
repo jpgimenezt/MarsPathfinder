@@ -131,12 +131,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d {
 .ares-comms-panel {
   position: relative;
   pointer-events: auto;
-  width: 460px;
-  max-width: calc(100vw - 24px);
-  height: 600px;
-  max-height: calc(100vh - 84px);
-  background: rgba(28, 20, 17, 0.97);
-  backdrop-filter: blur(20px);
+  width: 440px;
+  max-width: calc(100vw - 28px);
+  height: 580px;
+  max-height: calc(100vh - 90px);
+  background: rgba(28, 20, 17, 0.96);
+  backdrop-filter: blur(18px);
   border: 1.5px solid rgba(201, 154, 112, 0.45);
   border-radius: 12px;
   display: flex;
@@ -148,12 +148,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d {
 }
 
 @media (max-width: 480px) {
-  .ares-comms-overlay {
-    padding: 8px !important;
-  }
   .ares-comms-panel {
-    width: calc(100vw - 16px) !important;
-    max-height: calc(100vh - 24px) !important;
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 40px);
   }
 }
 
@@ -642,9 +639,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-controls-bar {
   display: flex;
   flex-direction: column;
-  padding: 10px 14px;
-  background: rgba(44, 32, 26, 0.85);
-  border-bottom: 1px solid rgba(201, 154, 112, 0.25);
+  padding: 8px 14px;
+  background: rgba(44, 32, 26, 0.75);
+  border-bottom: 1px solid rgba(201, 154, 112, 0.2);
   gap: 8px;
 }
 
@@ -652,7 +649,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -661,25 +658,18 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 12px;
-  min-height: 38px;
+  padding: 6px 12px;
+  min-height: 36px;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   font-family: var(--font-mono);
   cursor: pointer;
   transition: all 0.18s ease;
   border: 1px solid;
   touch-action: manipulation;
   white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ares-comms-action-btn.icon-only {
-  width: 38px;
-  min-width: 38px;
-  padding: 0;
 }
 
 .ares-comms-action-btn:focus-visible {
@@ -688,9 +678,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-action-btn.primary {
-  flex: 1 1 120px;
-  min-width: 110px;
-  background: linear-gradient(135deg, rgba(201, 154, 112, 0.28), rgba(201, 154, 112, 0.12));
+  background: linear-gradient(135deg, rgba(201, 154, 112, 0.25), rgba(201, 154, 112, 0.1));
   border-color: var(--color-telemetry-cyan);
   color: var(--color-ice-white);
 }
@@ -715,9 +703,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-action-btn.stop {
-  background: rgba(255, 68, 68, 0.18);
+  background: rgba(255, 68, 68, 0.15);
   border-color: #ff5555;
-  color: #ff8888;
+  color: #ff7777;
 }
 .ares-comms-action-btn.stop:hover {
   background: #ff4444;
@@ -725,20 +713,18 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-action-btn.toggle {
-  background: rgba(28, 20, 17, 0.6);
-  border-color: rgba(179, 152, 131, 0.5);
-  color: #f0e2d3;
+  background: transparent;
+  border-color: rgba(179, 152, 131, 0.45);
+  color: #e7d5c2;
 }
 .ares-comms-action-btn.toggle:hover {
   border-color: var(--color-telemetry-cyan);
-  color: #ffffff;
-  background: rgba(201, 154, 112, 0.18);
+  color: var(--color-ice-white);
 }
 .ares-comms-action-btn.toggle.active {
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
-  background: rgba(201, 154, 112, 0.16);
-  box-shadow: 0 0 8px rgba(201, 154, 112, 0.25);
+  background: rgba(201, 154, 112, 0.12);
 }
 
 .ares-comms-setting-item {
@@ -746,38 +732,26 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  color: #f0e2d3;
-}
-
-.ares-comms-setting-item.lang-select-item {
-  flex: 0 0 auto;
-  min-width: 105px;
+  color: #e7d5c2;
 }
 
 .ares-comms-setting-item.voice-select-item {
-  flex: 1 1 160px;
-  min-width: 130px;
-}
-
-.ares-comms-setting-item.volume-item {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 170px;
 }
 
 .ares-comms-select {
   background: var(--color-deep-graphite);
-  border: 1px solid rgba(201, 154, 112, 0.38);
+  border: 1px solid rgba(201, 154, 112, 0.35);
   color: var(--color-ice-white);
   padding: 6px 10px;
-  min-height: 38px;
+  min-height: 36px;
   border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   cursor: pointer;
   transition: border-color 0.15s ease;
-  width: 100%;
+  max-width: 100%;
 }
 
 .ares-comms-select:focus-visible {
@@ -797,9 +771,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
    CANVAS DE VISUALIZACIÓN DINÁMICA DE AUDIO
    ========================================================= */
 .ares-comms-visualizer-container {
-  padding: 6px 14px;
-  background: rgba(28, 20, 17, 0.92);
-  border-bottom: 1px solid rgba(201, 154, 112, 0.18);
+  padding: 4px 14px;
+  background: rgba(28, 20, 17, 0.9);
+  border-bottom: 1px solid rgba(201, 154, 112, 0.15);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -829,13 +803,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-body {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(201, 154, 112, 0.45) rgba(20, 15, 12, 0.75);
+  scrollbar-color: rgba(201, 154, 112, 0.45) rgba(28, 20, 17, 0.7);
 }
 
 .ares-comms-body::-webkit-scrollbar {
@@ -843,24 +816,23 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-body::-webkit-scrollbar-track {
-  background: rgba(20, 15, 12, 0.75);
+  background: rgba(28, 20, 17, 0.7);
   border-radius: 3px;
 }
 
 .ares-comms-body::-webkit-scrollbar-thumb {
-  background: rgba(201, 154, 112, 0.45);
+  background: rgba(201, 154, 112, 0.35);
   border-radius: 3px;
 }
 
 .ares-comms-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(201, 154, 112, 0.75);
+  background: rgba(201, 154, 112, 0.65);
 }
 
 .ares-comms-msg-row {
   display: flex;
-  gap: 10px;
-  max-width: 92%;
-  width: auto;
+  gap: 12px;
+  max-width: 88%;
 }
 
 .ares-comms-msg-row.user {
@@ -881,47 +853,34 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: center;
   flex-shrink: 0;
   border: 1px solid;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
 }
 
 .ares-comms-msg-row.user .ares-comms-avatar {
-  background: rgba(215, 123, 80, 0.2);
+  background: rgba(215, 123, 80, 0.15);
   border-color: var(--color-martian-copper);
   color: var(--color-martian-copper);
 }
 
 .ares-comms-msg-row.assistant .ares-comms-avatar {
-  background: rgba(201, 154, 112, 0.2);
+  background: rgba(201, 154, 112, 0.15);
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
 }
 
 .ares-comms-bubble {
-  background: rgba(36, 26, 21, 0.94);
-  border: 1px solid rgba(201, 154, 112, 0.32);
-  border-radius: 10px;
+  background: var(--color-deep-graphite);
+  border: 1px solid rgba(201, 154, 112, 0.28);
+  border-radius: 8px;
   padding: 10px 14px;
-  color: #f7ede2;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  line-height: 1.55;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  word-break: break-word;
-  overflow-wrap: break-word;
+  color: #f5e7d7;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .ares-comms-msg-row.user .ares-comms-bubble {
-  background: rgba(215, 123, 80, 0.18);
-  border-color: rgba(215, 123, 80, 0.5);
-  color: #fff6ee;
-}
-
-.ares-comms-msg-row.assistant .ares-comms-bubble {
-  background: rgba(36, 26, 21, 0.94);
-  border-color: rgba(201, 154, 112, 0.35);
-  color: #f8fafc;
+  background: rgba(215, 123, 80, 0.14);
+  border-color: rgba(215, 123, 80, 0.42);
 }
 
 .ares-comms-msg-meta {
@@ -929,15 +888,14 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   font-size: 0.72rem;
-  font-family: var(--font-mono);
-  color: #cbd5e1;
+  color: #c6ae99;
 }
 
 .ares-comms-msg-sender {
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .ares-comms-msg-row.user .ares-comms-msg-sender {
@@ -1039,16 +997,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   align-items: center;
   background: var(--color-space-black);
-  border: 1px solid rgba(201, 154, 112, 0.35);
+  border: 1px solid rgba(201, 154, 112, 0.3);
   border-radius: 6px;
   padding: 0 12px;
-  min-height: 40px;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.ares-comms-input-wrapper:focus-within {
-  border-color: var(--color-telemetry-cyan);
-  box-shadow: 0 0 10px rgba(201, 154, 112, 0.35);
 }
 
 .ares-comms-prefix {
@@ -1063,15 +1014,13 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   border: none;
   outline: none;
   color: var(--color-ice-white);
-  font-family: var(--font-sans);
-  font-size: 0.88rem;
-  padding: 8px 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 10px 0;
 }
 
 .ares-comms-input::placeholder {
   color: var(--color-titanium-grey);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
 }
 
 .ares-comms-send-btn {
@@ -1080,7 +1029,6 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   border: none;
   border-radius: 6px;
   padding: 10px 16px;
-  min-height: 40px;
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 0.8rem;
@@ -1088,14 +1036,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
   transition: all 0.2s;
 }
 
 .ares-comms-send-btn:hover:not(:disabled) {
   background: #f2d0ac;
   box-shadow: 0 0 12px rgba(201, 154, 112, 0.4);
-  transform: translateY(-1px);
 }
 
 .ares-comms-send-btn:disabled {
@@ -1179,20 +1125,16 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-suggestion-chip {
-  background: rgba(44, 32, 26, 0.85);
-  border: 1px solid rgba(201, 154, 112, 0.35);
-  border-radius: 14px;
-  padding: 6px 12px;
-  min-height: 32px;
+  background: rgba(44, 32, 26, 0.7);
+  border: 1px solid rgba(201, 154, 112, 0.25);
+  border-radius: 12px;
+  padding: 3px 10px;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  color: #f7ede2;
+  font-size: 0.68rem;
+  color: var(--color-ice-white);
   white-space: nowrap;
-  flex-shrink: 0;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
 }
 
 .ares-suggestion-chip:hover {
