@@ -160,7 +160,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     regionLayer.current = regionOutline
     const handles = new VectorLayer({ source: regionHandles.current,
       style: new Style({ image: new CircleStyle({ radius: 11, fill: new Fill({ color: '#f1b776' }),
-        stroke: new Stroke({ color: '#17262a', width: 3 }) }) }) })
+        stroke: new Stroke({ color: '#271b15', width: 3 }) }) }) })
     handlesLayer.current = handles
     routeLayer.current = route
     markerLayerRef.current = markerLayer
@@ -168,7 +168,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       source: new VectorSource({ features: [new Feature({
         geometry: new Polygon([regionRing(ROI)]),
       })] }),
-      style: new Style({ stroke: new Stroke({ color: '#79e9e0', width: 3, lineDash: [3, 5] }) }),
+      style: new Style({ stroke: new Stroke({ color: '#ddb58d', width: 3, lineDash: [3, 5] }) }),
     })
     roiLayer.current = border
     function redrawRoute() {
@@ -187,9 +187,9 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
         } else {
           // Trazado manual activo: conexión directa geodésica seleccionada por el usuario
           segment.setStyle([
-            new Style({ stroke: new Stroke({ color: '#0f172a', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#211712', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
             new Style({ stroke: new Stroke({ color: '#f59e0b', width: 4.5, lineCap: 'round', lineJoin: 'round' }) }),
-            new Style({ stroke: new Stroke({ color: '#00f0ff', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
+            new Style({ stroke: new Stroke({ color: '#f2d0ac', width: 1.8, lineCap: 'round', lineJoin: 'round' }) }),
           ])
         }
         vectors.current.addFeature(segment)
@@ -208,7 +208,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     })
     manager.current = new WmtsLayerManager(layers.current, (id, state) => reportHandler.current(id, state))
     const drag = new Modify({ source: points.current, hitDetection: markerLayer, pixelTolerance: 18,
-      style: new Style({ image: new CircleStyle({ radius: 18, fill: new Fill({ color: '#263a42' }),
+      style: new Style({ image: new CircleStyle({ radius: 18, fill: new Fill({ color: '#392920' }),
         stroke: new Stroke({ color: '#fff0ba', width: 3 }) }) }) })
     modify.current = drag
     instance.addInteraction(drag)
@@ -404,7 +404,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       if (points.length < 2) return
       const feature = new Feature({ geometry: new LineString(points.map(point => [...point])) })
       feature.setStyle([
-        new Style({ stroke: new Stroke({ color: dashed ? '#f4e8d6' : '#0e1b20', width: 9 }) }),
+        new Style({ stroke: new Stroke({ color: dashed ? '#f4e8d6' : '#251b16', width: 9 }) }),
         new Style({ stroke: new Stroke({ color, width: 4, lineDash: dashed ? [7, 7] : undefined }) }),
       ])
       suggestedVectors.current.addFeature(feature)
@@ -502,7 +502,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       feature.setStyle(new Style({
         image: new CircleStyle({
           radius: mode.type === 'move' && mode.id === id ? 17 : 15,
-          fill: new Fill({ color: '#162a32' }),
+          fill: new Fill({ color: '#291f19' }),
           stroke: new Stroke({ color: markers[id].color, width: 4 }),
         }),
         text: new Text({ text: id, fill: new Fill({ color: '#fff' }), font: 'bold 14px sans-serif' }),
@@ -514,7 +514,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
     <div className="map-shell">
       <div className={`map ${scope === 'jezero' && mode.type !== 'explore' && mode.type !== 'edit-region' ? 'map--placing' : ''}`} ref={element}
         role="application" aria-label={scope === 'global' ? ui('Global 2D Mars view: visual MOLA relief, no route planning.', 'Vista 2D global de Marte: relieve visual MOLA, sin planificación de rutas.') :
-           ui('Jezero map: orange manual region, turquoise audited CTX coverage. Imagery outside CTX may be unavailable.', 'Mapa de Jezero: región manual naranja, cobertura CTX comprobada turquesa. La imagen fuera de CTX puede no estar disponible.')} />
+           ui('Jezero map: orange manual region, copper-toned audited CTX coverage. Imagery outside CTX may be unavailable.', 'Mapa de Jezero: región manual naranja, cobertura CTX comprobada en cobre. La imagen fuera de CTX puede no estar disponible.')} />
       <div className="nav-tools" aria-label={ui('Map navigation controls', 'Controles de navegación del mapa')}>
         <button type="button" aria-label={ui('Zoom in', 'Acercar mapa')} title={ui('Zoom in', 'Acercar')} disabled={!zoom.in}
           onClick={() => { if (map.current) changeZoom(map.current.getView(), 0.75) }}>+</button>
@@ -532,7 +532,7 @@ export function MapView({ scope, enabled, opacity, stops, mode, region, panelOpe
       <div className="map-hint" aria-live="polite">
         {scope === 'global' ? ui('Global MOLA context · planning unavailable', 'Contexto MOLA global · no disponible para planificación') :
           mode.type === 'edit-region' ? ui('Orange manual region · drag corners, edges or interior', 'Región manual naranja · arrastrá esquinas, bordes o el interior') :
-           mode.type === 'explore' ? ui('Viking: global context · turquoise CTX: audited detail · edit region from Route', 'Viking: contexto global · CTX turquesa: detalle auditado · editá región desde Ruta') :
+           mode.type === 'explore' ? ui('Viking: global context · copper CTX outline: audited detail · edit region from Route', 'Viking: contexto global · contorno CTX cobre: detalle auditado · editá región desde Ruta') :
           `${mode.type === 'move' ? ui('Move', 'Mover') : ui('Place', 'Colocar')} ${'id' in mode ? mode.id : ''} · ${ui('tap the manual region or drag an existing marker.', 'tocá la región manual. También podés arrastrar marcadores existentes.')}`}
       </div>
       {regionError && <div className="region-error" role="alert">{ui('Region unchanged: minimum size or Jezero editor limit.', 'Región no modificada: tamaño mínimo o límite del editor en Jezero.')}

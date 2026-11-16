@@ -170,4 +170,26 @@ describe('ARES MISSION COMMS - ToolExecutionEngine', () => {
     expect(r.output.enabled).toBe(true)
     expect(mockHandlers.toggleLayer).toHaveBeenCalledWith('themis', true)
   })
+  it('localizes tool outputs and confirmation prompts without changing their stable status codes', async () => {
+    const engine = new ToolExecutionEngine(mockHandlers)
+    const en = await engine.executeTool({ tool: 'switchScreenView', input: { screen: 'map' } })
+    expect(en.output.message).toContain('View switched to Jezero')
+    expect(en.actionPerformed).toContain('executed successfully')
+
+    const es = await engine.executeTool({ tool: 'switchScreenView', language: 'es', input: { screen: 'map' } })
+    expect(es.output.message).toContain('Vista cambiada')
+
+    const enConfirmation = await engine.executeTool({
+      tool: 'createMissionWaypoint', input: { stopId: 'B', lon: 77.4, lat: 18.4 },
+    })
+    expect(enConfirmation.confirmationMessage).toContain('Confirm execution')
+    const esConfirmation = await engine.executeTool({
+      tool: 'createMissionWaypoint', language: 'es', input: { stopId: 'P', lon: 77.4, lat: 18.4 },
+    })
+    expect(esConfirmation.confirmationMessage).toContain('Confirmar')
+    const mola = await engine.executeTool({ tool: 'lookup_mission_dataset', input: { instrument_or_mission: 'MOLA' } })
+    expect(mola.output.is_numeric_dem).toBe(false)
+    expect(mola.output.family).toContain('Color-shaded relief')
+  })
+
 })

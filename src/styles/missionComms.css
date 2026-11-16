@@ -1,22 +1,16 @@
 /**
  * ARES MISSION COMMS - Aerospace / Martian Mission Control Styling
- * Paleta Oficial:
- * - Space Black: #090E14
- * - Deep Graphite: #111B25
- * - Martian Copper: #D77B50
- * - Telemetry Cyan: #63D4E5
- * - Ice White: #E8EDF2
- * - Titanium Grey: #82919E
- * - Warning Amber: #E9B85C
+ * Walnut Mars UI: espresso foundations, copper telemetry, parchment type.
+ * Hazard signals (warnings/errors/success) preserve semantic color distinctions.
  */
 
 :root {
-  --color-space-black: #090E14;
-  --color-deep-graphite: #111B25;
+  --color-space-black: #1b1410;
+  --color-deep-graphite: #2b211b;
   --color-martian-copper: #D77B50;
-  --color-telemetry-cyan: #63D4E5;
-  --color-ice-white: #E8EDF2;
-  --color-titanium-grey: #82919E;
+  --color-telemetry-cyan: #c99a70;
+  --color-ice-white: #f4e8d8;
+  --color-titanium-grey: #baa28d;
   --color-warning-amber: #E9B85C;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -33,12 +27,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(9, 14, 20, 0.95), rgba(17, 27, 37, 0.9));
+  background: linear-gradient(135deg, rgba(28, 20, 17, 0.95), rgba(44, 32, 26, 0.9));
   border: 1.5px solid var(--color-telemetry-cyan);
   border-radius: 40px;
   padding: 8px 18px 8px 10px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 212, 229, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(201, 154, 112, 0.25);
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   color: var(--color-ice-white);
   font-family: var(--font-mono);
@@ -46,8 +40,8 @@
 
 .ares-comms-fab-trigger:hover {
   transform: translateY(-2px) scale(1.02);
-  border-color: #a5f3fc;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 28px rgba(99, 212, 229, 0.45);
+  border-color: #f2d0ac;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 28px rgba(201, 154, 112, 0.45);
 }
 
 .ares-comms-fab-pulse {
@@ -141,13 +135,13 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d {
   max-width: calc(100vw - 28px);
   height: 580px;
   max-height: calc(100vh - 90px);
-  background: rgba(9, 14, 20, 0.96);
+  background: rgba(28, 20, 17, 0.96);
   backdrop-filter: blur(18px);
-  border: 1.5px solid rgba(99, 212, 229, 0.45);
+  border: 1.5px solid rgba(201, 154, 112, 0.45);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.88), 0 0 28px rgba(99, 212, 229, 0.22);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.88), 0 0 28px rgba(201, 154, 112, 0.22);
   overflow: hidden;
   font-family: var(--font-mono);
   animation: comms-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -208,12 +202,12 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: rgba(6, 14, 24, 0.92);
-  border: 1px solid rgba(0, 240, 255, 0.45);
+  background: rgba(34, 24, 20, 0.92);
+  border: 1px solid rgba(201, 154, 112, 0.45);
   border-radius: 20px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(0, 240, 255, 0.22);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(201, 154, 112, 0.22);
   backdrop-filter: blur(12px);
-  color: #cde9f6;
+  color: #f7ede0;
   font-family: 'Space Mono', monospace;
   font-size: 0.74rem;
   letter-spacing: 0.03em;
@@ -224,8 +218,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-orb-callout-badge:hover {
   transform: translateY(-2px) scale(1.03);
-  border-color: #00f0ff;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.4);
+  border-color: #c99a70;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.8), 0 0 20px rgba(201, 154, 112, 0.4);
   color: #ffffff;
 }
 
@@ -233,15 +227,15 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff;
+  background-color: #c99a70;
+  box-shadow: 0 0 8px #c99a70;
   animation: callout-pulse-dot 1.6s infinite;
 }
 
 .ares-orb-callout-keyword {
-  color: #00f0ff;
+  color: #c99a70;
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+  text-shadow: 0 0 8px rgba(201, 154, 112, 0.5);
 }
 
 @keyframes callout-float {
@@ -274,9 +268,9 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, rgba(9, 14, 20, 0.95) 0%, rgba(17, 27, 37, 0.88) 75%);
+  background: radial-gradient(circle, rgba(28, 20, 17, 0.95) 0%, rgba(44, 32, 26, 0.88) 75%);
   border: 2px solid var(--color-telemetry-cyan);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 212, 229, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(201, 154, 112, 0.35);
   transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease, border-color 0.15s ease;
   user-select: none;
   touch-action: none;
@@ -288,18 +282,18 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-floating-orb:hover {
   transform: scale(1.05);
-  border-color: #a5f3fc;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 212, 229, 0.55);
+  border-color: #f2d0ac;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8), 0 0 30px rgba(201, 154, 112, 0.55);
 }
 
 .ares-floating-orb.orb-standby {
-  border-color: rgba(99, 212, 229, 0.6);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(99, 212, 229, 0.25);
+  border-color: rgba(201, 154, 112, 0.6);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(201, 154, 112, 0.25);
 }
 
 .ares-floating-orb.orb-listening {
-  border-color: #38bdf8;
-  box-shadow: 0 0 30px rgba(56, 189, 248, 0.65), 0 0 15px rgba(99, 212, 229, 0.8);
+  border-color: #d0a078;
+  box-shadow: 0 0 30px rgba(201, 154, 112, 0.65), 0 0 15px rgba(201, 154, 112, 0.8);
   animation: orb-pulse-listening 1.8s infinite;
 }
 
@@ -311,7 +305,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-floating-orb.orb-speaking {
   border-color: var(--color-telemetry-cyan);
-  box-shadow: 0 0 35px rgba(99, 212, 229, 0.75), 0 0 18px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 35px rgba(201, 154, 112, 0.75), 0 0 18px rgba(255, 255, 255, 0.5);
   animation: orb-pulse-speaking 0.9s infinite alternate;
 }
 
@@ -331,14 +325,14 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-floating-orb.orb-offline {
-  border-color: rgba(130, 145, 158, 0.4);
+  border-color: rgba(179, 152, 131, 0.4);
   opacity: 0.85;
 }
 
 @keyframes orb-pulse-listening {
-  0% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
-  50% { transform: scale(1.05); box-shadow: 0 0 32px rgba(56, 189, 248, 0.8); }
-  100% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(201, 154, 112, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 32px rgba(201, 154, 112, 0.8); }
+  100% { transform: scale(1); box-shadow: 0 0 15px rgba(201, 154, 112, 0.4); }
 }
 
 @keyframes orb-pulse-speaking {
@@ -355,14 +349,14 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-orb-ring.ring-outer {
   width: 88px;
   height: 88px;
-  border: 1px dashed rgba(99, 212, 229, 0.35);
+  border: 1px dashed rgba(201, 154, 112, 0.35);
   animation: comms-orbit-cw 12s linear infinite;
 }
 
 .ares-orb-ring.ring-middle {
   width: 76px;
   height: 76px;
-  border: 1px solid rgba(99, 212, 229, 0.2);
+  border: 1px solid rgba(201, 154, 112, 0.2);
   animation: comms-orbit-ccw 8s linear infinite;
 }
 
@@ -379,10 +373,10 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   pointer-events: auto;
   max-width: 320px;
   padding: 8px 14px;
-  background: rgba(9, 14, 20, 0.93);
+  background: rgba(28, 20, 17, 0.93);
   border: 1px solid var(--color-telemetry-cyan);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 15px rgba(99, 212, 229, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 15px rgba(201, 154, 112, 0.25);
   backdrop-filter: blur(12px);
   color: var(--color-ice-white);
   font-size: 0.78rem;
@@ -413,7 +407,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: space-between;
   gap: 12px;
   padding: 8px 14px;
-  background: linear-gradient(135deg, rgba(17, 27, 37, 0.95), rgba(9, 14, 20, 0.95));
+  background: linear-gradient(135deg, rgba(44, 32, 26, 0.95), rgba(28, 20, 17, 0.95));
   border: 1px solid var(--color-martian-copper);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(215, 123, 80, 0.35);
@@ -439,8 +433,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-orb-mini-btn {
-  background: rgba(99, 212, 229, 0.15);
-  border: 1px solid rgba(99, 212, 229, 0.35);
+  background: rgba(201, 154, 112, 0.15);
+  border: 1px solid rgba(201, 154, 112, 0.35);
   border-radius: 4px;
   color: var(--color-telemetry-cyan);
   padding: 2px 7px;
@@ -451,7 +445,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-orb-mini-btn:hover {
-  background: rgba(99, 212, 229, 0.3);
+  background: rgba(201, 154, 112, 0.3);
   border-color: var(--color-telemetry-cyan);
 }
 
@@ -478,7 +472,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: space-between;
   padding: 14px 20px;
   background: var(--color-deep-graphite);
-  border-bottom: 1.5px solid rgba(99, 212, 229, 0.3);
+  border-bottom: 1.5px solid rgba(201, 154, 112, 0.3);
   position: relative;
 }
 
@@ -496,7 +490,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, rgba(99, 212, 229, 0.25) 0%, rgba(9, 14, 20, 0.8) 70%);
+  background: radial-gradient(circle, rgba(201, 154, 112, 0.25) 0%, rgba(28, 20, 17, 0.8) 70%);
   position: relative;
 }
 
@@ -550,7 +544,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 /* Estados */
 .ares-status-badge.VOICE_OFFLINE {
-  background: rgba(130, 145, 158, 0.15);
+  background: rgba(179, 152, 131, 0.15);
   border-color: var(--color-titanium-grey);
   color: var(--color-titanium-grey);
 }
@@ -569,7 +563,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-status-badge.LISTENING {
-  background: rgba(99, 212, 229, 0.15);
+  background: rgba(201, 154, 112, 0.15);
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
 }
@@ -590,10 +584,10 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-status-badge.SPEAKING {
-  background: rgba(99, 212, 229, 0.25);
+  background: rgba(201, 154, 112, 0.25);
   border-color: var(--color-ice-white);
   color: var(--color-ice-white);
-  box-shadow: 0 0 10px rgba(99, 212, 229, 0.3);
+  box-shadow: 0 0 10px rgba(201, 154, 112, 0.3);
 }
 .ares-status-badge.SPEAKING .ares-status-dot {
   background: #ffffff;
@@ -622,7 +616,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-close-btn {
   background: transparent;
-  border: 1px solid rgba(130, 145, 158, 0.4);
+  border: 1px solid rgba(179, 152, 131, 0.4);
   color: var(--color-ice-white);
   width: 32px;
   height: 32px;
@@ -636,7 +630,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-close-btn:hover {
   border-color: var(--color-telemetry-cyan);
-  background: rgba(99, 212, 229, 0.1);
+  background: rgba(201, 154, 112, 0.1);
 }
 
 /* =========================================================
@@ -646,8 +640,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   flex-direction: column;
   padding: 8px 14px;
-  background: rgba(17, 27, 37, 0.75);
-  border-bottom: 1px solid rgba(99, 212, 229, 0.2);
+  background: rgba(44, 32, 26, 0.75);
+  border-bottom: 1px solid rgba(201, 154, 112, 0.2);
   gap: 8px;
 }
 
@@ -684,14 +678,14 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-action-btn.primary {
-  background: linear-gradient(135deg, rgba(99, 212, 229, 0.25), rgba(99, 212, 229, 0.1));
+  background: linear-gradient(135deg, rgba(201, 154, 112, 0.25), rgba(201, 154, 112, 0.1));
   border-color: var(--color-telemetry-cyan);
   color: var(--color-ice-white);
 }
 .ares-comms-action-btn.primary:hover {
   background: var(--color-telemetry-cyan);
   color: var(--color-space-black);
-  box-shadow: 0 0 15px rgba(99, 212, 229, 0.4);
+  box-shadow: 0 0 15px rgba(201, 154, 112, 0.4);
 }
 
 .ares-comms-action-btn.active-listening {
@@ -720,8 +714,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-action-btn.toggle {
   background: transparent;
-  border-color: rgba(130, 145, 158, 0.45);
-  color: #cbd5e1;
+  border-color: rgba(179, 152, 131, 0.45);
+  color: #e7d5c2;
 }
 .ares-comms-action-btn.toggle:hover {
   border-color: var(--color-telemetry-cyan);
@@ -730,7 +724,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-action-btn.toggle.active {
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
-  background: rgba(99, 212, 229, 0.12);
+  background: rgba(201, 154, 112, 0.12);
 }
 
 .ares-comms-setting-item {
@@ -738,7 +732,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  color: #cbd5e1;
+  color: #e7d5c2;
 }
 
 .ares-comms-setting-item.voice-select-item {
@@ -748,7 +742,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 
 .ares-comms-select {
   background: var(--color-deep-graphite);
-  border: 1px solid rgba(99, 212, 229, 0.35);
+  border: 1px solid rgba(201, 154, 112, 0.35);
   color: var(--color-ice-white);
   padding: 6px 10px;
   min-height: 36px;
@@ -778,8 +772,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
    ========================================================= */
 .ares-comms-visualizer-container {
   padding: 4px 14px;
-  background: rgba(9, 14, 20, 0.9);
-  border-bottom: 1px solid rgba(99, 212, 229, 0.15);
+  background: rgba(28, 20, 17, 0.9);
+  border-bottom: 1px solid rgba(201, 154, 112, 0.15);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -791,14 +785,14 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: space-between;
   font-size: 0.65rem;
   letter-spacing: 0.1em;
-  color: #94a3b8;
+  color: #c6ae99;
 }
 
 .ares-comms-waveform-canvas {
   width: 100%;
   height: 28px;
-  background: rgba(17, 27, 37, 0.5);
-  border: 1px solid rgba(99, 212, 229, 0.2);
+  background: rgba(44, 32, 26, 0.5);
+  border: 1px solid rgba(201, 154, 112, 0.2);
   border-radius: 4px;
   display: block;
 }
@@ -814,7 +808,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   flex-direction: column;
   gap: 12px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(99, 212, 229, 0.45) rgba(9, 14, 20, 0.7);
+  scrollbar-color: rgba(201, 154, 112, 0.45) rgba(28, 20, 17, 0.7);
 }
 
 .ares-comms-body::-webkit-scrollbar {
@@ -822,17 +816,17 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-body::-webkit-scrollbar-track {
-  background: rgba(9, 14, 20, 0.7);
+  background: rgba(28, 20, 17, 0.7);
   border-radius: 3px;
 }
 
 .ares-comms-body::-webkit-scrollbar-thumb {
-  background: rgba(99, 212, 229, 0.35);
+  background: rgba(201, 154, 112, 0.35);
   border-radius: 3px;
 }
 
 .ares-comms-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 212, 229, 0.65);
+  background: rgba(201, 154, 112, 0.65);
 }
 
 .ares-comms-msg-row {
@@ -868,17 +862,17 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-msg-row.assistant .ares-comms-avatar {
-  background: rgba(99, 212, 229, 0.15);
+  background: rgba(201, 154, 112, 0.15);
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
 }
 
 .ares-comms-bubble {
   background: var(--color-deep-graphite);
-  border: 1px solid rgba(99, 212, 229, 0.28);
+  border: 1px solid rgba(201, 154, 112, 0.28);
   border-radius: 8px;
   padding: 10px 14px;
-  color: #f1f5f9;
+  color: #f5e7d7;
   font-size: 0.88rem;
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
@@ -896,7 +890,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   gap: 12px;
   margin-bottom: 5px;
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: #c6ae99;
 }
 
 .ares-comms-msg-sender {
@@ -973,7 +967,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-abort-btn {
   background: transparent;
   color: var(--color-titanium-grey);
-  border: 1px solid rgba(130, 145, 158, 0.4);
+  border: 1px solid rgba(179, 152, 131, 0.4);
   border-radius: 4px;
   padding: 6px 14px;
   font-family: var(--font-mono);
@@ -995,7 +989,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   gap: 10px;
   padding: 12px 20px;
   background: var(--color-deep-graphite);
-  border-top: 1px solid rgba(99, 212, 229, 0.2);
+  border-top: 1px solid rgba(201, 154, 112, 0.2);
 }
 
 .ares-comms-input-wrapper {
@@ -1003,7 +997,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   align-items: center;
   background: var(--color-space-black);
-  border: 1px solid rgba(99, 212, 229, 0.3);
+  border: 1px solid rgba(201, 154, 112, 0.3);
   border-radius: 6px;
   padding: 0 12px;
 }
@@ -1046,8 +1040,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-comms-send-btn:hover:not(:disabled) {
-  background: #a5f3fc;
-  box-shadow: 0 0 12px rgba(99, 212, 229, 0.4);
+  background: #f2d0ac;
+  box-shadow: 0 0 12px rgba(201, 154, 112, 0.4);
 }
 
 .ares-comms-send-btn:disabled {
@@ -1064,7 +1058,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   justify-content: space-between;
   padding: 8px 20px;
   background: var(--color-space-black);
-  border-top: 1px solid rgba(99, 212, 229, 0.15);
+  border-top: 1px solid rgba(201, 154, 112, 0.15);
   font-size: 0.68rem;
   color: var(--color-titanium-grey);
 }
@@ -1076,8 +1070,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(99, 212, 229, 0.1);
-  border: 1px solid rgba(99, 212, 229, 0.35);
+  background: rgba(201, 154, 112, 0.1);
+  border: 1px solid rgba(201, 154, 112, 0.35);
   border-radius: 4px;
   padding: 4px 10px;
   font-family: var(--font-mono);
@@ -1088,16 +1082,16 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-demo-badge-btn:hover {
-  background: rgba(99, 212, 229, 0.22);
+  background: rgba(201, 154, 112, 0.22);
   border-color: var(--color-telemetry-cyan);
-  box-shadow: 0 0 10px rgba(99, 212, 229, 0.3);
+  box-shadow: 0 0 10px rgba(201, 154, 112, 0.3);
 }
 
 .ares-demo-badge-btn.demo-active {
-  background: linear-gradient(135deg, rgba(99, 212, 229, 0.2), rgba(215, 123, 80, 0.15));
+  background: linear-gradient(135deg, rgba(201, 154, 112, 0.2), rgba(215, 123, 80, 0.15));
   border-color: var(--color-telemetry-cyan);
   color: var(--color-ice-white);
-  box-shadow: 0 0 12px rgba(99, 212, 229, 0.35);
+  box-shadow: 0 0 12px rgba(201, 154, 112, 0.35);
 }
 
 .ares-comms-action-btn.wake-active {
@@ -1112,8 +1106,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   align-items: center;
   gap: 8px;
   padding: 6px 16px;
-  background: rgba(9, 14, 20, 0.85);
-  border-top: 1px solid rgba(99, 212, 229, 0.1);
+  background: rgba(28, 20, 17, 0.85);
+  border-top: 1px solid rgba(201, 154, 112, 0.1);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1131,8 +1125,8 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-suggestion-chip {
-  background: rgba(17, 27, 37, 0.7);
-  border: 1px solid rgba(99, 212, 229, 0.25);
+  background: rgba(44, 32, 26, 0.7);
+  border: 1px solid rgba(201, 154, 112, 0.25);
   border-radius: 12px;
   padding: 3px 10px;
   font-family: var(--font-mono);
@@ -1144,10 +1138,10 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 }
 
 .ares-suggestion-chip:hover {
-  background: rgba(99, 212, 229, 0.18);
+  background: rgba(201, 154, 112, 0.18);
   border-color: var(--color-telemetry-cyan);
   color: var(--color-telemetry-cyan);
-  box-shadow: 0 0 8px rgba(99, 212, 229, 0.25);
+  box-shadow: 0 0 8px rgba(201, 154, 112, 0.25);
   transform: translateY(-1px);
 }
 
@@ -1157,7 +1151,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-comms-diagnostics-card {
   margin: 6px 14px 10px;
   background: rgba(6, 10, 16, 0.94);
-  border: 1px solid rgba(99, 212, 229, 0.35);
+  border: 1px solid rgba(201, 154, 112, 0.35);
   border-radius: 8px;
   padding: 10px 12px;
   box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7), 0 4px 14px rgba(0, 0, 0, 0.5);
@@ -1179,7 +1173,7 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(99, 212, 229, 0.2);
+  border-bottom: 1px solid rgba(201, 154, 112, 0.2);
   padding-bottom: 6px;
   margin-bottom: 8px;
 }
@@ -1240,10 +1234,10 @@ body.has-right-drawer .ares-comms-overlay.screen-terrain3d .ares-floating-orb-wr
 .ares-diag-meter-bar {
   margin-top: 8px;
   height: 6px;
-  background: rgba(17, 27, 37, 0.8);
+  background: rgba(44, 32, 26, 0.8);
   border-radius: 3px;
   overflow: hidden;
-  border: 1px solid rgba(99, 212, 229, 0.2);
+  border: 1px solid rgba(201, 154, 112, 0.2);
 }
 
 .ares-diag-meter-fill {
