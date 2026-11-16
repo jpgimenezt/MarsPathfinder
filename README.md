@@ -163,8 +163,6 @@ AresRoute is architected as an edge-delivered static frontend backed by AWS serv
 
 ### Production Endpoints
 * **Web Application**: `https://aresroute.vercel.app/` (Alternative alias: `https://ares-route.vercel.app`)
-* **AWS Bedrock Lambda URL**: `https://laf33lrf26heqguui3pe3zqjje0rrnaw.lambda-url.us-east-2.on.aws/`
-* **Voice Gateway CloudFront WSS**: `wss://d84hh2yy2ik4.cloudfront.net/voice`
 
 ---
 
@@ -187,9 +185,9 @@ git checkout main
 Create a `.env.local` file in the project root:
 
 ```bash
-# Frontend Environment Configuration
-VITE_AWS_AGENT_ENDPOINT=https://laf33lrf26heqguui3pe3zqjje0rrnaw.lambda-url.us-east-2.on.aws/
-VITE_VOICE_GATEWAY_URL=wss://d84hh2yy2ik4.cloudfront.net/voice
+# Frontend Environment Configuration (set in Vercel or local .env.local)
+VITE_AWS_AGENT_ENDPOINT=https://<your-lambda-url-id>.lambda-url.us-east-2.on.aws/
+VITE_VOICE_GATEWAY_URL=wss://<your-voice-gateway-domain>/voice
 ```
 
 To test the Voice Gateway locally via WebSocket, you can set:
