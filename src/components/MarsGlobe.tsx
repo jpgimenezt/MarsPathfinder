@@ -292,7 +292,7 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
       <p>{ui('Rotate Mars to explore its regions. Visit Gale for an approximate educational 3D terrain reconstruction or Jezero for the scientific 2D map.', 'Girá el planeta y explorá sus regiones. Ingresá a Gale para una reconstrucción 3D educativa aproximada o a Jezero para el mapa científico 2D.')}</p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         {onGaleTerrain && (
-          <button type="button" className="globe-primary" onClick={onGaleTerrain} style={{ background: 'linear-gradient(135deg, #00f0ff, #0284c7)', color: '#04090e', fontWeight: 800 }}>
+          <button type="button" className="globe-primary gale-cta" onClick={onGaleTerrain}>
             [01] GALE CRATER 3D <span aria-hidden="true">↗</span>
           </button>
         )}
@@ -326,9 +326,9 @@ export function MarsGlobe({ onJezero, onGaleTerrain, onFailure }: Props) {
           </button>
           {onGaleTerrain && (
             <button type="button" className="globe-marker gale-marker" ref={galeMarker} onClick={onGaleTerrain}
-              style={{ borderColor: '#00f0ff', color: '#00f0ff' }}
+              style={{ borderColor: 'var(--ares-copper)', color: 'var(--ares-copper-light)' }}
               aria-label={ui('Gale Crater, 5.37 degrees south, 137.44 degrees east. Open 3D terrain view of Mount Sharp', 'Gale Crater, 5.37 grados sur, 137.44 grados este. Abrir visor 3D de terreno y Mount Sharp')}>
-              <span className="globe-arrow" aria-hidden="true" style={{ color: '#00f0ff' }}>⌄</span><span>Gale Crater (Mount Sharp)</span>
+              <span className="globe-arrow" aria-hidden="true" style={{ color: 'var(--ares-copper)' }}>⌄</span><span>Gale Crater (Mount Sharp)</span>
             </button>
           )}
         </>

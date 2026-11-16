@@ -306,8 +306,8 @@ export function App() {
         >
           <div className="ares-insignia" aria-hidden="true">
             <svg viewBox="0 0 40 40" width="28" height="28" className="ares-logo-svg">
-              <polygon points="20,2 38,12 38,28 20,38 2,28 2,12" fill="none" stroke="#00f0ff" strokeWidth="2" />
-              <polygon points="20,9 31,15 31,25 20,31 9,25 9,15" fill="rgba(0, 240, 255, 0.15)" stroke="#ff7300" strokeWidth="1.5" />
+              <polygon points="20,2 38,12 38,28 20,38 2,28 2,12" fill="none" stroke="#c99a70" strokeWidth="2" />
+              <polygon points="20,9 31,15 31,25 20,31 9,25 9,15" fill="rgba(201, 154, 112, 0.18)" stroke="#b77e54" strokeWidth="1.5" />
               <circle cx="20" cy="20" r="3.5" fill="#ffffff" />
             </svg>
           </div>
