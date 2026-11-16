@@ -617,7 +617,10 @@ export class ToolExecutionEngine {
     // Si la herramienta requiere confirmación y aún no fue confirmada por el usuario
     if (def.requiresConfirmation && !options.confirmed) {
       const confirmationId = `conf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-      const message = es ? (def.confirmationPrompt ? def.confirmationPrompt(validatedInput) : `¿Confirmar ejecución de ${def.name}?`) : `Confirm execution of ${def.name}? Review the proposed change before proceeding.`
+      const targetItem = (validatedInput as any)?.stopId ? ` (${(validatedInput as any).stopId})` : ''
+      const message = es
+        ? (def.confirmationPrompt ? def.confirmationPrompt(validatedInput) : `¿Confirmar ejecución de ${def.name}?`)
+        : `Confirm execution of ${def.name}${targetItem}? Review the proposed change before proceeding.`
 
       return new Promise<ToolExecutionResult>(resolve => {
         this.pendingConfirmations.set(confirmationId, {
