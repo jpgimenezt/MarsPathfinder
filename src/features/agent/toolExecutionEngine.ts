@@ -174,12 +174,24 @@ export const PauseDiscoveryTourSchema = z.object({})
 
 export const GetHabitatStatusSchema = z.object({})
 
-export const ActivateMissionSimulationSchema = z.object({
-  scenario: z.string().optional().describe('Escenario de simulación a activar'),
-  scenarioType: z.string().optional().describe('Alias de escenario de simulación'),
-  type: z.string().optional().describe('Tipo de simulación'),
-}).passthrough().transform(data => {
-  const raw = String(data.scenario || data.scenarioType || data.type || 'DESCENT_EDL').toUpperCase()
+export const ActivateMissionSimulationSchema = z.any().transform(rawInput => {
+  let rawStr = 'DESCENT_EDL'
+  if (typeof rawInput === 'string' && rawInput.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(rawInput)
+      if (parsed && typeof parsed === 'object') {
+        rawStr = String(parsed.scenario || parsed.scenarioType || parsed.type || parsed.simulation || parsed.mode || parsed.name || 'DESCENT_EDL')
+      } else {
+        rawStr = rawInput
+      }
+    } catch {
+      rawStr = rawInput
+    }
+  } else if (rawInput && typeof rawInput === 'object') {
+    rawStr = String(rawInput.scenario || rawInput.scenarioType || rawInput.type || rawInput.simulation || rawInput.mode || rawInput.name || 'DESCENT_EDL')
+  }
+
+  const raw = rawStr.toUpperCase()
   let scenario: 'DESCENT_EDL' | 'EVA_TRAVERSE' | 'DUST_STORM_CONTINGENCY' = 'DESCENT_EDL'
   if (raw.includes('TRAVERSE') || raw.includes('EVA') || raw.includes('CAMINATA') || raw.includes('ROVER') || raw.includes('MARCHA')) {
     scenario = 'EVA_TRAVERSE'
@@ -194,11 +206,9 @@ export const ActivateMissionSimulationSchema = z.object({
   }
 })
 
-export const TriggerMissionContingencySchema = z.object({
-  contingencyType: z.string().optional().describe('Tipo de contingencia de entrenamiento'),
-  type: z.string().optional().describe('Alias de contingencia'),
-}).passthrough().transform(data => {
-  const raw = String(data.contingencyType || data.type || 'RADIO_LOSS').toUpperCase()
+export const TriggerMissionContingencySchema = z.any().transform(rawInput => {
+  const data = (rawInput && typeof rawInput === 'object') ? rawInput : {}
+  const raw = String(data.contingencyType || data.type || data.contingency || rawInput || 'RADIO_LOSS').toUpperCase()
   let contingencyType: 'RADIO_LOSS' | 'SUIT_LEAK_MINOR' | 'BATTERY_LOW' | 'SLOPE_HAZARD' = 'RADIO_LOSS'
   if (raw.includes('LEAK') || raw.includes('TRAJE') || raw.includes('SUIT')) {
     contingencyType = 'SUIT_LEAK_MINOR'
@@ -597,8 +607,21 @@ export class ToolExecutionEngine {
       }
     }
 
+    // Sanitizar y normalizar entrada antes de validar
+    let sanitizedInput: unknown = request.input
+    if (typeof sanitizedInput === 'string') {
+      try {
+        sanitizedInput = JSON.parse(sanitizedInput)
+      } catch {
+        // String plano: mantener como valor
+      }
+    }
+    if (sanitizedInput === undefined || sanitizedInput === null) {
+      sanitizedInput = {}
+    }
+
     // Validar esquema de entrada con Zod
-    const parseResult = def.schema.safeParse(request.input)
+    const parseResult = def.schema.safeParse(sanitizedInput)
     if (!parseResult.success) {
       return {
         tool: request.tool,

@@ -157,6 +157,28 @@ describe('ARES MISSION COMMS - ToolExecutionEngine', () => {
     })
     expect(r3.success).toBe(true)
     expect(r3.output.scenario).toBe('DUST_STORM_CONTINGENCY')
+
+    // Caso 4: Parámetros nulos o string plano (evita INVALID_PARAMETERS en Bedrock)
+    const r4 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: { scenario: null } as any,
+    })
+    expect(r4.success).toBe(true)
+    expect(r4.output.scenario).toBe('DESCENT_EDL')
+
+    const r5 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: 'DESCENT_EDL' as any,
+    })
+    expect(r5.success).toBe(true)
+    expect(r5.output.scenario).toBe('DESCENT_EDL')
+
+    const r6 = await engine.executeTool({
+      tool: 'activateMissionSimulation',
+      input: null as any,
+    })
+    expect(r6.success).toBe(true)
+    expect(r6.output.scenario).toBe('DESCENT_EDL')
   })
 
   it('normaliza nombres de capas en toggleScientificLayer', async () => {
