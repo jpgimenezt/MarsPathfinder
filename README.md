@@ -3,7 +3,7 @@
 NASA Space Apps Challenge 2026 · Interactive Multimodal Mission Planning Platform  
 Independent educational and scientific research prototype. Not certified for flight or human surface operations.
 
-Production Deployment: [https://ares-route.vercel.app](https://ares-route.vercel.app)  
+Production Deployment: [https://aresroute.vercel.app/](https://aresroute.vercel.app/) (Alternative alias: [https://ares-route.vercel.app](https://ares-route.vercel.app))  
 Repository: [https://github.com/jpgimenezt/MarsPathfinder](https://github.com/jpgimenezt/MarsPathfinder)  
 Primary Branch: `main`
 
@@ -162,7 +162,7 @@ AresRoute is architected as an edge-delivered static frontend backed by AWS serv
 ```
 
 ### Production Endpoints
-* **Web Application**: `https://ares-route.vercel.app`
+* **Web Application**: `https://aresroute.vercel.app/` (Alternative alias: `https://ares-route.vercel.app`)
 * **AWS Bedrock Lambda URL**: `https://laf33lrf26heqguui3pe3zqjje0rrnaw.lambda-url.us-east-2.on.aws/`
 * **Voice Gateway CloudFront WSS**: `wss://d84hh2yy2ik4.cloudfront.net/voice`
 
@@ -270,7 +270,7 @@ cd aws-agent
 sam build
 sam deploy --guided
 ```
-The deployment outputs an active Function URL with CORS preflight handlers enabled for `https://ares-route.vercel.app` and local development origins.
+The deployment outputs an active Function URL with CORS preflight handlers enabled for `https://aresroute.vercel.app`, `https://ares-route.vercel.app` and local development origins.
 
 ### 6.3 AWS Voice Gateway (ECS Fargate + CloudFront)
 1. **Authenticate Docker with Amazon ECR**:
